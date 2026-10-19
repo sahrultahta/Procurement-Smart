@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Matches the pinning policy (ADR 0011): let new releases age a week first.
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    groups:
+      nextjs:
+        patterns: ['next', 'eslint-config-next', '@next/*']
+      react:
+        patterns: ['react', 'react-dom', '@types/react', '@types/react-dom']
+      drizzle:
+        patterns: ['drizzle-orm', 'drizzle-kit']
+      vitest:
+        patterns: ['vitest', '@vitest/*', 'vite']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

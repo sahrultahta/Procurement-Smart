@@ -1,6 +1,6 @@
 # ADR 0011: Toolchain pins and testing strategy
 
-- Status: Accepted
+- Status: Accepted. The ESLint row is superseded by [ADR 0012](0012-eslint-9-and-install-script-policy.md) (ESLint 9.39.5).
 - Date: 2026-10-18
 
 ## Context

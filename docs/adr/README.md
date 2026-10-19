@@ -14,6 +14,7 @@ Each ADR records one decision: its context, the options considered, the choice m
 | [0008](0008-transactions-and-concurrency.md) | Transactions and concurrency control | Accepted |
 | [0009](0009-append-only-audit.md) | Append-only audit trail enforced by the database | Accepted |
 | [0010](0010-application-command-layer.md) | Transport-agnostic command layer; Server Actions first, REST later | Accepted |
-| [0011](0011-toolchain-and-testing.md) | Toolchain pins and testing strategy | Accepted |
+| [0011](0011-toolchain-and-testing.md) | Toolchain pins and testing strategy | Accepted (ESLint row superseded by 0012) |
+| [0012](0012-eslint-9-and-install-script-policy.md) | ESLint 9 instead of 10; dependency install scripts disabled | Accepted |
 
 "Accepted" means the decision is recorded and the plan is built on it. None of these decisions has been validated by running code yet. Each ADR's **Verification** section names the phase that will prove it or force a revision.

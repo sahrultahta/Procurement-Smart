@@ -1,6 +1,6 @@
 # ProcureFlow implementation plan
 
-- Status: **Phase 0 approved 2026-10-18. Phase 1 in progress.**
+- Status: **Phase 0 approved 2026-10-18. Phase 1 committed 2026-10-19 after maintainer review ([report](reports/phase-1.md)). Phase 2 not started.**
 - Plan date: 2026-10-18
 - Inputs: [architecture](architecture.md), [ADRs](adr/README.md), [user stories](user-stories.md), [state machines](state-machines.md), [schema](schema.md), [API contracts](api-contracts.md), [threat model](threat-model.md)
 
@@ -78,7 +78,7 @@ Scope:
 | P1-AC3 | Boundary rule works: a fixture file importing another module's `infrastructure/` fails lint (asserted by a test using the ESLint Node API) | unit test |
 | P1-AC4 | Importing a `server-only` module from a `'use client'` file fails `next build` (proven once by a temporary fixture, result recorded, fixture removed) | build output in report |
 | P1-AC5 | `db-local start` runs PostgreSQL 18.x bound to 127.0.0.1. Integration test asserts `server_version_num >= 180000`, that `uuidv7()` returns a v7 UUID, and that a serializable Drizzle transaction commits. | integration test |
-| P1-AC6 | Starting the app without `DATABASE_URL` fails fast with a clear message and no secret echo | integration test (spawned process) |
+| P1-AC6 | Starting the app without `DATABASE_URL` fails fast with a clear message and no secret echo | E2E test that spawns `next start` (`tests/e2e/startup-config.spec.ts`) |
 | P1-AC7 | `/api/health` returns 200 with the DB up and 503 with it stopped | integration + E2E smoke |
 | P1-AC8 | `gitleaks` finds no secrets. `npm audit --audit-level=high` is clean or every finding is triaged in the report. | command output |
 | P1-AC9 | CI workflow passes `actionlint`, if available locally. **Actually running it in GitHub Actions is "not verified" until a remote exists.** | report |

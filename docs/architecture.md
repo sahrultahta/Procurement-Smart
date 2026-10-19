@@ -42,6 +42,9 @@ Rules:
 
 - Arrows point from the importing module to the module it may import, and only through that module's `index.ts`. Cycles are forbidden.
 - Every module may also import `shared`, `identity` (actor and request-context types, permission checks), and `audit` (the writer). Those edges are left out of the diagram to keep it readable. `identity` and `audit` themselves import only `shared`.
+- `health` (operational readiness for `GET /api/health`, added in Phase 1) imports only `shared`. It is public by design and returns only up/down status.
+- The graph is encoded once, as `MODULE_DEPENDENCIES` in `eslint.config.mjs`. Change that and this diagram together.
+- `src/server/` is the composition root. `src/server/schema.ts` re-exports every module's tables for drizzle-kit.
 - **Approvals never imports requisitions or purchasing.** When a request completes, approvals calls an `ApprovalOutcomeHandler` port registered by each document module in the composition root (`src/server/`). The callback runs inside the same transaction.
 - **Reporting** reads through SQL views defined in migrations (one per report). It never writes and never imports other modules' internals. This is the one documented exception to "each module owns its tables": the views are its contract.
 - The ESLint `no-restricted-imports` config encodes this graph. Phase 1 adds a test that a forbidden import fails lint.
