@@ -17,5 +17,6 @@ Each ADR records one decision: its context, the options considered, the choice m
 | [0011](0011-toolchain-and-testing.md) | Toolchain pins and testing strategy | Accepted (ESLint row superseded by 0012) |
 | [0012](0012-eslint-9-and-install-script-policy.md) | ESLint 9 instead of 10; dependency install scripts disabled | Accepted |
 | [0013](0013-database-role-bootstrap.md) | Database roles are bootstrapped outside migrations; migrations only grant | Accepted |
+| [0014](0014-identity-and-sign-in.md) | Identity roles, user provisioning, and sign-in hardening | Accepted |
 
 "Accepted" means the decision is recorded and the plan is built on it. None of these decisions has been validated by running code yet. Each ADR's **Verification** section names the phase that will prove it or force a revision.

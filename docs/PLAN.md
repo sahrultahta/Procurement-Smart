@@ -1,6 +1,6 @@
 # ProcureFlow implementation plan
 
-- Status: **Phase 0 approved 2026-10-18. Phase 1 committed 2026-10-19 after maintainer review ([report](reports/phase-1.md)). Phase 2 committed 2026-10-21 after maintainer review ([report](reports/phase-2.md)). Phase 3 not started.**
+- Status: **Phase 0 approved 2026-10-18. Phase 1 committed 2026-10-19 after maintainer review ([report](reports/phase-1.md)). Phase 2 committed 2026-10-21 after maintainer review ([report](reports/phase-2.md)). Phase 3 split into 3a (sign-in and identity) and 3b (administration) on 2026-10-21. Phase 3a committed 2026-10-21 after maintainer review ([report](reports/phase-3a.md)).**
 - Plan date: 2026-10-18
 - Inputs: [architecture](architecture.md), [ADRs](adr/README.md), [user stories](user-stories.md), [state machines](state-machines.md), [schema](schema.md), [API contracts](api-contracts.md), [threat model](threat-model.md)
 
@@ -108,6 +108,12 @@ Scope:
 ---
 
 ## Phase 3: Authentication, users, roles, authorization
+
+> **Split on 2026-10-21 (maintainer decision).**
+> - **3a: sign-in and identity.** Acceptance criteria P3a-AC1 to AC12 are in [reports/phase-3a.md](reports/phase-3a.md).
+> - **3b: administration screens.** Users, roles, departments, and settings, covering P3-AC4/AC5/AC7/AC10 below for the admin commands.
+>
+> The role `buyer` is now `procurement` (ADR 0014).
 
 Scope: Better Auth (email/password, sign-up disabled, DB sessions, DB rate limiting, `nextCookies`); `user_profiles`; departments; `role_assignments`; code-defined role → permission map; request context; `proxy.ts` optimistic redirect; sign-in and sign-out UI; admin screens for users, roles, departments, and settings; bootstrap-admin CLI; fictional seed script; security headers and CSP; choice of accessible UI component approach.
 

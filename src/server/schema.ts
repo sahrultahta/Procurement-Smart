@@ -5,3 +5,5 @@
  */
 export * from '../shared/db/tables';
 export * from '../modules/audit/infrastructure/schema';
+export * from '../modules/identity/infrastructure/auth-schema';
+export * from '../modules/identity/infrastructure/schema';

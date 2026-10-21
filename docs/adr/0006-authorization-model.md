@@ -1,6 +1,6 @@
 # ADR 0006: Code-defined RBAC, scoped assignments, separation-of-duties policies
 
-- Status: Accepted
+- Status: Accepted. Amended by [ADR 0014](0014-identity-and-sign-in.md): `buyer` is renamed `procurement` (same permissions), and every active user gets the base permission `account.read`.
 - Date: 2026-10-18
 
 ## Context

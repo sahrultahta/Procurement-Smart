@@ -89,6 +89,12 @@ flowchart LR
 | AB-10 | Splitting a purchase to stay under thresholds | Not preventable by rule. Detected by the potential-split-purchases report. | Phase 9 |
 | AB-11 | Colluding requester and approver (T4) | Not preventable by SoD. Detected by audit, aging, and spend reports. Residual risk accepted. | n/a |
 
+### Phase 3a status (2026-10-21)
+
+- **S-01** is implemented and verified: DB-backed limit of 5 sign-ins / 60 s per client IP, plus generic errors. **Residual:** the IP comes from `X-Forwarded-For`, which a client can spoof unless a reverse proxy overwrites it. Production must sit behind such a proxy, and Phase 10 configures `trustedProxies` (ADR 0014). There is no per-account limit yet.
+- **S-02** CSP with per-request nonce, **S-03** sign-out and replay, **S-04** closed sign-up, and **T-05** cross-origin Better Auth and Server Action POSTs are all verified (`tests/integration/auth.test.ts`, `tests/e2e/auth.spec.ts`). Better Auth 1.7.7 skips its origin check under `NODE_ENV=test` by default; ProcureFlow forces it on.
+- **I-02**: the account DTO allowlist is verified (`tests/integration/identity.test.ts`). **E-01**: the static role-to-permission matrix is verified. The per-command matrix arrives with the admin commands in Phase 3b.
+
 ## 7. Accepted risks and out of scope
 
 - **DB superuser or schema owner** can alter data and drop triggers. Mitigations are operational: separate credentials, backups, and optional hash-chained audit export in Phase 10.
@@ -98,8 +104,8 @@ flowchart LR
 
 ## 8. Security requirements checklist (verified in phases noted)
 
-- [ ] (P3) Response headers: `Content-Security-Policy` (nonce, `frame-ancestors 'none'`), `Strict-Transport-Security` (production), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` minimal.
-- [ ] (P3) Cookies: `HttpOnly`, `Secure` in production, `SameSite=Lax`, host-only.
+- [x] (P3a) Response headers: `Content-Security-Policy` (nonce, `frame-ancestors 'none'`), `Strict-Transport-Security` (production), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` minimal. Verified by `tests/e2e/security-headers.spec.ts`. HSTS and `upgrade-insecure-requests` are sent only over HTTPS (direct or via `x-forwarded-proto`).
+- [x] (P3a) Cookies: `HttpOnly`, `Secure` in production, `SameSite=Lax`, host-only. `Secure` and `__Secure-` are tied to an HTTPS `BETTER_AUTH_URL` (ADR 0014). Verified by `tests/integration/auth.test.ts` and E2E.
 - [ ] (P1) Environment validated at startup with Zod. The app refuses to start with missing or weak secrets (length ≥ 32 bytes).
 - [x] (P2) The app connects as `procureflow_app` (no DDL). Migrations run as `procureflow_owner`. Verified in Phase 2 by `tests/integration/audit.test.ts` (`current_user`, 42501 on DDL/UPDATE/DELETE/TRUNCATE/DISABLE TRIGGER). Deployment wiring is still Phase 10.
 - [ ] (P3) `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` documented for multi-instance deployments.

@@ -21,7 +21,8 @@ export const MODULE_DEPENDENCIES = {
   reporting: [],
 };
 const IMPLICIT_MODULES = ['identity', 'audit'];
-const FOUNDATION_MODULES = ['health', 'identity', 'audit']; // import only src/shared
+// Import only src/shared. (identity is not here: it writes audit events, so it may use audit.)
+const FOUNDATION_MODULES = ['health', 'audit'];
 
 function boundaryZones() {
   const modules = Object.keys(MODULE_DEPENDENCIES);
@@ -86,7 +87,9 @@ export default defineConfig([
   },
   {
     files: ['src/**/*.{ts,tsx}'],
-    ignores: ['src/shared/env.ts', 'src/instrumentation.ts'],
+    // instrumentation.ts reads NEXT_RUNTIME and proxy.ts reads NODE_ENV: both run before
+    // (or outside) the server-only env module and need only these framework-set values.
+    ignores: ['src/shared/env.ts', 'src/instrumentation.ts', 'src/proxy.ts'],
     rules: {
       'no-restricted-properties': [
         'error',

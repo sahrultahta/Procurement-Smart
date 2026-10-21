@@ -4,7 +4,14 @@ An open-source procurement workflow system: suppliers, purchase requisitions wit
 
 ## Status
 
-**Phase 0 (planning) is approved. Implementation starts with Phase 1. Until a phase report says otherwise, nothing here is working software.** Implementation happens in gated phases, and each phase ends with a report of exactly what was run and what passed (`docs/reports/`).
+**Phases 0–2 are done, and Phase 3a (sign-in and identity) is implemented.** What works today:
+- signing in and out;
+- one-time password-setup links;
+- seven roles with code-defined permissions;
+- an append-only audit trail;
+- decimal-safe money calculations.
+
+**No procurement workflow (requisitions, approvals, orders) is implemented yet.** Work happens in gated phases, and each phase ends with a report of exactly what was run and what passed (`docs/reports/`). Local setup is described in [docs/development.md](docs/development.md).
 
 ## Design documents
 

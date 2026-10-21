@@ -41,7 +41,7 @@ flowchart TD
 Rules:
 
 - Arrows point from the importing module to the module it may import, and only through that module's `index.ts`. Cycles are forbidden.
-- Every module may also import `shared`, `identity` (actor and request-context types, permission checks), and `audit` (the writer). Those edges are left out of the diagram to keep it readable. `identity` and `audit` themselves import only `shared`.
+- Every module may also import `shared`, `identity` (actor and request-context types, permission checks), and `audit` (the writer). Those edges are left out of the diagram to keep it readable. `audit` imports only `shared`. `identity` imports `shared` and `audit`, because provisioning users and granting roles must be audited (changed in Phase 3a). Neither imports any other module, so there is no cycle.
 - `health` (operational readiness for `GET /api/health`, added in Phase 1) imports only `shared`. It is public by design and returns only up/down status.
 - The graph is encoded once, as `MODULE_DEPENDENCIES` in `eslint.config.mjs`. Change that and this diagram together.
 - `src/server/` is the composition root. `src/server/schema.ts` re-exports every module's tables for drizzle-kit.

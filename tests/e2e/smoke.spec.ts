@@ -1,9 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-test('home page renders and does not claim unbuilt features', async ({ page }) => {
-  await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('ProcureFlow');
-  await expect(page.getByText('No procurement features are implemented yet.')).toBeVisible();
+test('the sign-in page renders for anonymous visitors', async ({ page }) => {
+  await page.goto('/sign-in');
+  await expect(page.getByRole('heading', { name: 'Sign in to ProcureFlow' })).toBeVisible();
 });
 
 test('health endpoint reports the database as ok', async ({ request }) => {

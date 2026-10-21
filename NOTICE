@@ -2,3 +2,8 @@ ProcureFlow
 Copyright 2026 ProcureFlow contributors
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party code included in source form:
+
+- src/components/ui/* is derived from shadcn/ui (https://ui.shadcn.com),
+  Copyright (c) 2023 shadcn, licensed under the MIT License.

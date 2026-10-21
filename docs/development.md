@@ -37,6 +37,21 @@ npm run db:local -- stop
 - **Cluster created before Phase 2:** run `npm run db:local -- ensure-app-role` once. It creates `procureflow_app`, backs up `.env` to `.local/env-backup-*.txt`, then points `DATABASE_URL` at the app role and adds `DATABASE_MIGRATION_URL` and `TEST_APP_DATABASE_URL`.
 - **Other environments (CI, staging):** `npm run db:app-role`, with `DATABASE_ADMIN_URL` and `APP_DB_PASSWORD` set.
 
+## First sign-in (Phase 3a)
+
+```
+npm run env:local         # adds BETTER_AUTH_SECRET (random) and BETTER_AUTH_URL to .env if missing
+npm run db:migrate
+npm run seed              # fictional departments + one user per role (@example.com)
+npm run dev               # then open http://localhost:3000/sign-in
+```
+
+`seed` writes random passwords for the users it creates to `.local/seed-credentials.json` (gitignored, never printed). It is idempotent, and `--reset-passwords` gives existing seed users new passwords. It refuses to run with `NODE_ENV=production`.
+
+For a real installation, create only the first administrator: `npm run bootstrap-admin -- --email you@example.com --name "Your Name"`. It prints a one-time link (valid 24 h, single use) to set the password, and refuses to run if an admin already exists.
+
+E2E tests create their own users (`e2e.*@example.com`, credentials in `.local/e2e-credentials.json`) in Playwright's global setup.
+
 ## Everyday commands
 
 | Command | What it does |
@@ -52,6 +67,9 @@ npm run db:local -- stop
 | `npm run db:generate` | Generate a migration from schema changes (review the SQL before committing) |
 | `npm run db:migrate` | Apply migrations to `DATABASE_MIGRATION_URL` (falls back to `DATABASE_URL`) |
 | `npm run db:app-role` | Create or update `procureflow_app` outside the local cluster |
+| `npm run env:local` | Add missing auth settings to `.env` (never overwrites; backs up first) |
+| `npm run seed` | Fictional demo data (see above) |
+| `npm run bootstrap-admin -- --email … --name …` | First administrator plus a one-time password link |
 
 Integration tests clone a migrated template database (`pf_template`) once per test file (ADR 0011). Setup uses `TEST_DATABASE_URL` (needs `CREATEDB`). Application code under test runs through `TEST_APP_DATABASE_URL`, with the runtime role's real privileges.
 

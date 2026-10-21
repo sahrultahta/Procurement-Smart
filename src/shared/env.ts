@@ -8,6 +8,10 @@ import { z } from 'zod';
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+  /** Signs session cookies and tokens. At least 32 characters (threat model section 8). */
+  BETTER_AUTH_SECRET: z.string().min(32),
+  /** Public origin of the app, e.g. https://procureflow.example.com. Also the only trusted origin. */
+  BETTER_AUTH_URL: z.url({ protocol: /^https?$/ }),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 });
 

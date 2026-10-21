@@ -1,14 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import { EnvError, parseEnv } from '@/shared/env';
 
+const VALID = {
+  DATABASE_URL: 'postgres://app:pw@127.0.0.1:5432/procureflow',
+  BETTER_AUTH_SECRET: 'x'.repeat(32),
+  BETTER_AUTH_URL: 'http://localhost:3000',
+};
+
 describe('parseEnv (P1-AC6)', () => {
   it('accepts a valid configuration and applies defaults', () => {
-    const env = parseEnv({ DATABASE_URL: 'postgres://app:pw@127.0.0.1:5432/procureflow' });
-    expect(env).toEqual({
-      NODE_ENV: 'development',
-      DATABASE_URL: 'postgres://app:pw@127.0.0.1:5432/procureflow',
-      LOG_LEVEL: 'info',
-    });
+    expect(parseEnv(VALID)).toEqual({ ...VALID, NODE_ENV: 'development', LOG_LEVEL: 'info' });
+  });
+
+  it('requires an auth secret of at least 32 characters and an http(s) base URL (Phase 3a)', () => {
+    expect(() => parseEnv({ ...VALID, BETTER_AUTH_SECRET: 'too-short-secret-value' })).toThrowError(/BETTER_AUTH_SECRET/);
+    expect(() => parseEnv({ ...VALID, BETTER_AUTH_URL: 'ftp://example.com' })).toThrowError(/BETTER_AUTH_URL/);
+    expect(() => parseEnv({ DATABASE_URL: VALID.DATABASE_URL })).toThrowError(/BETTER_AUTH_SECRET, BETTER_AUTH_URL/);
+  });
+
+  it('never echoes the auth secret in the error', () => {
+    let message = '';
+    try {
+      parseEnv({ ...VALID, BETTER_AUTH_SECRET: 'short-but-secret-789' });
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    expect(message).toContain('BETTER_AUTH_SECRET');
+    expect(message).not.toContain('short-but-secret-789');
   });
 
   it('rejects a missing DATABASE_URL and names it', () => {
