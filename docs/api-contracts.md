@@ -11,7 +11,16 @@ These are the contracts of the application layer (ADR 0010). In v1 they are invo
 - **`idempotencyKey?: string(8..100)`** is accepted on every `*.create` command (ADR 0008 C6).
 - **Never accepted from clients:** ids of new rows, numbers, totals, statuses, `*_by` / `*_at` fields, `department_id` on requisitions (taken from the actor's profile), `currency_code` (taken from org settings). Sending them fails strict validation.
 - **Lists:** cursor pagination `{ cursor?: string, limit?: 1..100 = 25 }`. Sorting only by whitelisted fields. Filters are typed enums or dates, never raw SQL fragments.
-- **Business-rule sub-codes** (`error.code = 'BUSINESS_RULE'`, `error.rule = ...`): `SELF_APPROVAL`, `DUPLICATE_APPROVER`, `NO_APPROVAL_ROUTE`, `NOT_ELIGIBLE_APPROVER`, `SUPPLIER_NOT_ACTIVE`, `SUPPLIER_DUPLICATE`, `MAKER_CHECKER`, `OVER_ORDER`, `RFQ_REQUIRED`, `MIN_QUOTES_JUSTIFICATION_REQUIRED`, `NON_LOWEST_JUSTIFICATION_REQUIRED`, `QUOTATION_EXPIRED`, `ORDER_RECEIVE_CONFLICT` (SOD-04), `OVER_RECEIPT`, `RECEIPTS_EXIST`, `ALREADY_REVERSED`, `PO_CLOSED`, `SELF_ADMINISTRATION`, `LAST_ADMIN`, `CURRENCY_MISMATCH`, `AMOUNT_TOO_LARGE`.
+- **Business-rule sub-codes** (`error.code = 'BUSINESS_RULE'`, `error.rule = ...`): `SELF_APPROVAL`, `DUPLICATE_APPROVER`, `NO_APPROVAL_ROUTE`, `NOT_ELIGIBLE_APPROVER`, `SUPPLIER_NOT_ACTIVE`, `SUPPLIER_DUPLICATE`, `MAKER_CHECKER`, `OVER_ORDER`, `RFQ_REQUIRED`, `MIN_QUOTES_JUSTIFICATION_REQUIRED`, `NON_LOWEST_JUSTIFICATION_REQUIRED`, `QUOTATION_EXPIRED`, `ORDER_RECEIVE_CONFLICT` (SOD-04), `OVER_RECEIPT`, `RECEIPTS_EXIST`, `ALREADY_REVERSED`, `PO_CLOSED`, `SELF_ADMINISTRATION`, `LAST_ADMIN`, `CURRENCY_MISMATCH`, `AMOUNT_TOO_LARGE`, `INTEGRITY_CONSTRAINT` (a database constraint caught what an application check should have; logged at warn).
+- **Database conditions are mapped by the runner** (`src/shared/application/runner.ts`, Phase 2):
+
+  | SQLSTATE | Result |
+  | --- | --- |
+  | `55P03` lock timeout | `CONFLICT` "being changed by someone else" |
+  | `40001` / `40P01` | `CONFLICT`, after up to 3 whole-transaction retries for retry-safe commands |
+  | `23505` | `CONFLICT` |
+  | `23502` / `23503` / `23514` / `23P01` | `BUSINESS_RULE` / `INTEGRITY_CONSTRAINT` |
+  | anything else (incl. `PFA01`, `25006`, `57014`) | `INTERNAL`, with a generic message; details only in the server log |
 
 Each command writes the audit action `<command name, past tense>` (e.g. `requisition.submit` writes `requisition.submitted`) unless noted.
 

@@ -1,11 +1,16 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import pg from 'pg';
-import { MIGRATIONS_DIR, TEMPLATE_DB, TEST_DB_PREFIX, adminUrl, withAdminClient, withDatabase } from './test-db';
+import { APP_ROLE, MIGRATIONS_DIR, TEMPLATE_DB, TEST_DB_PREFIX, adminUrl, appServerUrl, withAdminClient, withDatabase } from './test-db';
 
 /** Recreates and migrates the template database once per integration run. */
 export default async function setup(): Promise<void> {
+  appServerUrl(); // fail early with a clear message if the runtime-role URL is missing
   await withAdminClient(async (admin) => {
+    const role = await admin.query('SELECT 1 FROM pg_roles WHERE rolname = $1', [APP_ROLE]);
+    if (role.rowCount === 0) {
+      throw new Error(`Role ${APP_ROLE} is missing. Run "npm run db:local -- ensure-app-role" (local) or "npm run db:app-role" (CI).`);
+    }
     const { rows } = await admin.query<{ datname: string }>(
       'SELECT datname FROM pg_database WHERE datname = $1 OR starts_with(datname, $2)',
       [TEMPLATE_DB, TEST_DB_PREFIX],

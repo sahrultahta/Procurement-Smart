@@ -36,7 +36,12 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
-      reporter: ['text-summary', 'html'],
+      reporter: ['text', 'text-summary', 'html'],
+      // P2-AC7 / ADR 0011: business logic must stay at or above 85% line coverage.
+      thresholds: {
+        'src/modules/*/{domain,application}/**': { lines: 85 },
+        'src/shared/{application,decimal}/**': { lines: 85 },
+      },
     },
   },
 });

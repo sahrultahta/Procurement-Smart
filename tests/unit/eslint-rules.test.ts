@@ -56,6 +56,53 @@ describe('module boundaries', () => {
   });
 });
 
+// P2-AC8: module → module rules, exercised against the real audit module.
+describe('module-to-module boundaries', () => {
+  it('lets a module that may use audit import its public API', async () => {
+    const ids = await ruleIds('src/modules/requisitions/application/probe.ts', "export { recordAuditEvent } from '@/modules/audit';\n");
+    expect(ids).not.toContain('import/no-restricted-paths');
+  });
+
+  it("stops a module from importing another module's internals (alias path)", async () => {
+    const ids = await ruleIds(
+      'src/modules/requisitions/application/probe.ts',
+      "export { auditEvents } from '@/modules/audit/infrastructure/schema';\n",
+    );
+    expect(ids).toContain('import/no-restricted-paths');
+  });
+
+  it("stops a module from importing another module's internals (relative path)", async () => {
+    const ids = await ruleIds(
+      'src/modules/requisitions/application/probe.ts',
+      "export { insertAuditEvent } from '../../audit/infrastructure/audit-repository';\n",
+    );
+    expect(ids).toContain('import/no-restricted-paths');
+  });
+
+  it('stops a foundation module from depending on another module at all, even its public API', async () => {
+    const ids = await ruleIds('src/modules/health/application/probe.ts', "export { recordAuditEvent } from '@/modules/audit';\n");
+    expect(ids).toContain('import/no-restricted-paths');
+  });
+
+  it('stops the audit module from depending on a peer module', async () => {
+    const ids = await ruleIds('src/modules/audit/application/probe.ts', "export { checkHealth } from '@/modules/health';\n");
+    expect(ids).toContain('import/no-restricted-paths');
+  });
+
+  it('stops src/shared from importing any module', async () => {
+    const ids = await ruleIds('src/shared/application/probe.ts', "export { recordAuditEvent } from '@/modules/audit';\n");
+    expect(ids).toContain('import/no-restricted-paths');
+  });
+
+  it('lets a module use its own internals through relative imports', async () => {
+    const ids = await ruleIds(
+      'src/modules/audit/application/probe.ts',
+      "export { insertAuditEvent } from '../infrastructure/audit-repository';\n",
+    );
+    expect(ids).not.toContain('import/no-restricted-paths');
+  });
+});
+
 describe('banned APIs', () => {
   it('rejects process.env outside src/shared/env.ts', async () => {
     const ids = await ruleIds('src/modules/health/application/probe.ts', 'export const x = process.env.SECRET;\n');

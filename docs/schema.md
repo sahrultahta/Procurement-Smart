@@ -12,7 +12,7 @@ PostgreSQL 18. This is the **design**. The source of truth after Phase 2 is the 
 - **Money** `numeric(20,4)`, **quantities** `numeric(18,3)`, **percentages** `numeric(7,4)` (ADR 0007).
 - **No hard deletes** of business documents. Drafts are cancelled, not deleted. Only draft lines can be removed (and that is audited).
 - **Text limits** are enforced in Zod and backed by `CHECK (char_length(x) <= n)` on key columns.
-- **Roles:** `procureflow_owner` owns everything. `procureflow_app` gets `SELECT, INSERT, UPDATE` on business tables, **no `DELETE`** except on draft line tables and `idempotency_keys`, and `INSERT, SELECT` only on `audit_events`.
+- **Roles:** `procureflow_owner` owns everything. `procureflow_app` gets `SELECT, INSERT, UPDATE` on business tables, **no `DELETE`** except on draft line tables and `idempotency_keys`, and `INSERT, SELECT` only on `audit_events`. Roles are created by bootstrap, not migrations. Each migration grants per table, explicitly (ADR 0013).
 
 ---
 
@@ -256,8 +256,11 @@ Constraints (over-receipt backstop, ADR 0008 C3):
 | user_agent | text | truncated to 512 |
 
 Indexes: `(entity_type, entity_id, occurred_at)`, `(actor_user_id, occurred_at)`, `(occurred_at)`, `(action, occurred_at)`.
-Triggers: `audit_events_no_update_delete` (BEFORE UPDATE OR DELETE, FOR EACH ROW, RAISE) and `audit_events_no_truncate` (BEFORE TRUNCATE, FOR EACH STATEMENT, RAISE).
-Grants: `procureflow_app` gets `INSERT, SELECT` on the table and `USAGE` on its identity sequence.
+Triggers: `audit_events_no_update_delete` (BEFORE UPDATE OR DELETE, FOR EACH ROW) and `audit_events_no_truncate` (BEFORE TRUNCATE, FOR EACH STATEMENT), both calling `audit_events_reject_modification()`, which raises SQLSTATE **`PFA01`**.
+Grants: `procureflow_app` gets `INSERT, SELECT` on the table and nothing else. Identity inserts need no sequence grant (verified in Phase 2, ADR 0013).
+Additional CHECKs (implemented in Phase 2): `action` format, `entity_type` format, length limits on `entity_id` (1–128), `actor_user_id` (≤128), `reason` (≤2000), `user_agent` (≤512), and `jsonb_typeof(changes) = 'object'`.
+
+**Implemented in Phase 2:** `document_sequences` and `audit_events` (migrations `0001`, `0002`). Every other table in this document is still a design.
 
 ## Entity relationships (summary)
 

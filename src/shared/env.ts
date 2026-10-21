@@ -32,6 +32,17 @@ export function parseEnv(source: Readonly<Record<string, string | undefined>>): 
   return result.data;
 }
 
+export type LogLevel = Env['LOG_LEVEL'];
+
+/**
+ * LOG_LEVEL alone, without requiring the rest of the configuration, so logging
+ * works even while reporting a configuration error.
+ */
+export function readLogLevel(): LogLevel {
+  const parsed = envSchema.shape.LOG_LEVEL.safeParse(process.env.LOG_LEVEL);
+  return parsed.success ? parsed.data : 'info';
+}
+
 let cached: Env | undefined;
 
 export function getEnv(): Env {

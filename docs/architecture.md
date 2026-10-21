@@ -19,7 +19,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-  shared[shared kernel<br/>decimal, errors/result, ids, clock, db/tx, validation]
+  shared[shared kernel<br/>decimal/pricing, result, ids, clock, logger,<br/>db: client, transaction, document numbers,<br/>application: request context, command runner]
   identity[identity<br/>users, profiles, roles, sessions, request context]
   audit[audit<br/>append-only writer + search]
   org[organization<br/>departments, settings, approval policies]

@@ -1,6 +1,6 @@
 # ADR 0003: PostgreSQL 18 as the only datastore
 
-- Status: Accepted
+- Status: Accepted. The "Database roles" bullet is refined by [ADR 0013](0013-database-role-bootstrap.md): roles are bootstrapped outside migrations.
 - Date: 2026-10-18
 
 ## Context

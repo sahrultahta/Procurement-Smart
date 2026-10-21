@@ -101,7 +101,7 @@ flowchart LR
 - [ ] (P3) Response headers: `Content-Security-Policy` (nonce, `frame-ancestors 'none'`), `Strict-Transport-Security` (production), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` minimal.
 - [ ] (P3) Cookies: `HttpOnly`, `Secure` in production, `SameSite=Lax`, host-only.
 - [ ] (P1) Environment validated at startup with Zod. The app refuses to start with missing or weak secrets (length ≥ 32 bytes).
-- [ ] (P2) The app connects as `procureflow_app` (no DDL). Migrations run as `procureflow_owner`.
+- [x] (P2) The app connects as `procureflow_app` (no DDL). Migrations run as `procureflow_owner`. Verified in Phase 2 by `tests/integration/audit.test.ts` (`current_user`, 42501 on DDL/UPDATE/DELETE/TRUNCATE/DISABLE TRIGGER). Deployment wiring is still Phase 10.
 - [ ] (P3) `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` documented for multi-instance deployments.
 - [ ] (P1) No source maps served in production unless explicitly enabled.
 - [ ] (P10) Dependency audit clean at `high` or accepted with a written note.

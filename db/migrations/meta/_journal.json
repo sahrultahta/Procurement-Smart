@@ -8,6 +8,20 @@
       "when": 1792317338647,
       "tag": "0000_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792555406533,
+      "tag": "0001_audit_events_and_document_sequences",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792555416188,
+      "tag": "0002_audit_append_only_and_app_grants",
+      "breakpoints": true
     }
   ]
 }

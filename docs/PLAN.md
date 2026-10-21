@@ -1,6 +1,6 @@
 # ProcureFlow implementation plan
 
-- Status: **Phase 0 approved 2026-10-18. Phase 1 committed 2026-10-19 after maintainer review ([report](reports/phase-1.md)). Phase 2 not started.**
+- Status: **Phase 0 approved 2026-10-18. Phase 1 committed 2026-10-19 after maintainer review ([report](reports/phase-1.md)). Phase 2 committed 2026-10-21 after maintainer review ([report](reports/phase-2.md)). Phase 3 not started.**
 - Plan date: 2026-10-18
 - Inputs: [architecture](architecture.md), [ADRs](adr/README.md), [user stories](user-stories.md), [state machines](state-machines.md), [schema](schema.md), [API contracts](api-contracts.md), [threat model](threat-model.md)
 

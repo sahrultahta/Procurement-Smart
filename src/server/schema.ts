@@ -1,6 +1,7 @@
 /**
  * Composition root for database table definitions. drizzle-kit reads this file
- * to generate migrations. Each module's `infrastructure/schema.ts` is re-exported
- * here once the module defines tables (from Phase 2). There are no tables yet.
+ * to generate migrations. Relative paths, because drizzle-kit does not resolve
+ * the `@/` alias.
  */
-export {};
+export * from '../shared/db/tables';
+export * from '../modules/audit/infrastructure/schema';

@@ -2,6 +2,7 @@ import 'server-only';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import { getEnv } from '@/shared/env';
+import { describeError, logger } from '@/shared/logger';
 
 let pool: pg.Pool | undefined;
 let db: NodePgDatabase | undefined;
@@ -18,7 +19,7 @@ export function getDb(): NodePgDatabase {
     });
     // An idle client losing its connection must not crash the process.
     pool.on('error', (error) => {
-      console.error(JSON.stringify({ level: 'error', msg: 'db.pool_error', error: error.message }));
+      logger.error('db.pool_error', { error: describeError(error) });
     });
     db = drizzle({ client: pool });
   }

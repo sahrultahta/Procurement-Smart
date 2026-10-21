@@ -42,6 +42,10 @@ The server recomputes every stored total on every write. Client-side previews ma
 
 One installation currency (set in org settings, e.g. `USD` scale 2 or `IDR` scale 0). Every monetary document stores `currency_code`, and v1 rejects anything other than the org currency. FX and multi-currency are out of scope (see `PLAN.md`).
 
+## Amendment (2026-10-21, Phase 2)
+
+Rule 5 originally said that oversized totals are rejected as `VALIDATION_FAILED`, while `docs/api-contracts.md` listed `AMOUNT_TOO_LARGE` as a `BUSINESS_RULE` sub-code. The implementation follows the API contract: `priceDocument` raises **`BUSINESS_RULE` / `AMOUNT_TOO_LARGE`**. Every input is individually valid; only the computed total overflows, so it is a rule about the combination, not a malformed field. Document totals (not only line totals) are checked against the same limit.
+
 ## Alternatives considered
 
 - **Integer minor units (`bigint` cents).** Good for totals but awkward for 4-decimal unit prices and fractional quantities. It also needs per-currency exponent handling everywhere.

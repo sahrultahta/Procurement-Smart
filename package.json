@@ -20,7 +20,9 @@
     "test:e2e": "playwright test",
     "db:local": "node scripts/db-local.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node scripts/db-migrate.ts"
+    "db:migrate": "node scripts/db-migrate.ts",
+    "db:app-role": "node scripts/db-app-role.ts",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "decimal.js": "10.6.0",
