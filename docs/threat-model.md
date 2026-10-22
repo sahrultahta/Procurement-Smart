@@ -95,6 +95,14 @@ flowchart LR
 - **S-02** CSP with per-request nonce, **S-03** sign-out and replay, **S-04** closed sign-up, and **T-05** cross-origin Better Auth and Server Action POSTs are all verified (`tests/integration/auth.test.ts`, `tests/e2e/auth.spec.ts`). Better Auth 1.7.7 skips its origin check under `NODE_ENV=test` by default; ProcureFlow forces it on.
 - **I-02**: the account DTO allowlist is verified (`tests/integration/identity.test.ts`). **E-01**: the static role-to-permission matrix is verified. The per-command matrix arrives with the admin commands in Phase 3b.
 
+### Phase 3b status (2026-10-22)
+
+- **E-01** is verified per operation: `tests/integration/permission-matrix.test.ts` calls all 13 registered commands and queries as each of the 7 roles, a user with no role, and anonymously, against a table written from ADR 0006. It fails if an operation is added without a row. The E2E suite replays a captured admin Server Action POST: with a forged cookie it gets `UNAUTHENTICATED`, with a requester's session `FORBIDDEN`, and from another origin Next.js aborts it.
+- **E-02** is verified: SOD-05 for every user and role command (`SELF_ADMINISTRATION`), with database CHECKs as a backstop (self-grant, self-revoke, and now self-deactivation). `LAST_ADMIN` is held by the admin-set lock (ADR 0008 C9) plus a re-check of the caller's own rights under that lock (CC-08, 20 forced overlaps). Role assignments cannot be edited, only revoked once (trigger `PFR01`, for the owner too).
+- **S-03** is complete: deactivation deletes all of the user's sessions and unused setup links in the same transaction, and a deactivated user's correct password now gets the same 401 as a wrong one, with no session (before Phase 3b a session row was created and then ignored).
+- **New residual risk (T5), accepted for v1:** without email delivery the admin sees the one-time setup link and could use it before the user does. Mitigations: links are issued only to accounts that never set a password (`PASSWORD_ALREADY_SET`), so an account in use cannot be taken over this way; every link is audited (`user.setupLinkIssued`); the user notices, because their link no longer works. It goes away when links are emailed to the user.
+- Admin pages still render their queries for non-admins, who get "Access denied" (the queries return `FORBIDDEN`, logged as `query.denied`). No data reaches them.
+
 ## 7. Accepted risks and out of scope
 
 - **DB superuser or schema owner** can alter data and drop triggers. Mitigations are operational: separate credentials, backups, and optional hash-chained audit export in Phase 10.

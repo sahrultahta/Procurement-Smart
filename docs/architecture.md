@@ -7,7 +7,7 @@ This page connects the decision records. The details live in the ADRs (`docs/adr
 ```mermaid
 flowchart LR
   subgraph Org["Organization (one installation)"]
-    U[Employees in a browser<br/>requester, approver, buyer, receiver, finance, auditor, admin]
+    U[Employees in a browser<br/>requester, approver, procurement, receiver, finance, auditor, admin]
   end
   U -->|HTTPS| APP[ProcureFlow<br/>Next.js 16 on Node.js 24]
   APP -->|SQL over TLS / private network| DB[(PostgreSQL 18)]

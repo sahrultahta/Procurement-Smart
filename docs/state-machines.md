@@ -199,3 +199,25 @@ stateDiagram-v2
 | GR-T04 | posted receipt → reversal GR (posted) | `receipt.reverse` | `receipt.create`, SOD-04 | Original `kind=receipt`, `posted`, not already reversed. PO not `closed` / `cancelled`. Reason required. | New GR `kind=reversal` with the same lines. C2: `received_qty −= qty` with `≥ 0`. PO status re-derived. |
 
 Invariants: GR-I1 `po_lines.received_qty` = sum of posted receipt quantities − sum of posted reversal quantities for that line (test helper). GR-I2 `0 ≤ received_qty ≤ max_receivable_qty` (DB CHECK). GR-I3 a receipt is reversed at most once (unique `reverses_goods_receipt_id`).
+
+---
+
+## 7. User account (implemented in Phase 3b)
+
+```mermaid
+stateDiagram-v2
+  [*] --> active: admin.user.create (no password yet)
+  active --> deactivated: admin.user.deactivate
+  deactivated --> active: admin.user.reactivate
+```
+
+The stored status has two values, `active` and `deactivated` (`user_profiles.status`). "Pending setup" is not a status: it is an active user without a password (no credential account), shown as a badge. With two states the transitions are checked directly in the commands (`application/admin-users.ts`) rather than in a domain table. All four (state, command) pairs are tested in `tests/integration/admin.test.ts`.
+
+| ID | Transition | Command | Actor | Guards | Effects |
+| --- | --- | --- | --- | --- | --- |
+| USR-T01 | ∅ → active | `admin.user.create` | `admin.users` (+ `admin.roles` for initial roles) | Email unique. Departments active. Scope rules. | Profile, roles, audit. Then a one-time setup link. |
+| USR-T02 | active → deactivated | `admin.user.deactivate` | `admin.users`, **SOD-05** (not self) | version, reason, `LAST_ADMIN` under the admin-set lock | All sessions and unused setup links deleted in the same transaction. Sign-in refused from then on. |
+| USR-T03 | deactivated → active | `admin.user.reactivate` | `admin.users`, SOD-05 | version | Signs in again with the existing password. Roles are as they were. |
+| USR-T04 | active, no password → same (new link) | `admin.user.issueSetupLink` | `admin.users`, SOD-05 | no password set yet (`PASSWORD_ALREADY_SET`) | Earlier unused links deleted |
+
+`deactivated` + `admin.user.deactivate` and `active` + `admin.user.reactivate` → `INVALID_TRANSITION`. `deactivated` + `admin.user.issueSetupLink` or `admin.role.grant` → `BUSINESS_RULE: USER_DEACTIVATED`.

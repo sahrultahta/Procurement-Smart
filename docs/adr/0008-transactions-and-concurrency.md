@@ -1,6 +1,6 @@
 # ADR 0008: Transactions and concurrency control
 
-- Status: Accepted
+- Status: Accepted. Amended 2026-10-22 (Phase 3b): mechanism C9, the admin-set lock.
 - Date: 2026-10-18
 
 ## Context
@@ -29,6 +29,18 @@ Every command runs inside **one database transaction** at PostgreSQL's default *
 | C8 | **Deadlock avoidance.** Fixed lock order: documents PR → RFQ → PO → GR, then lines by ascending `id`. Retry the whole transaction up to 3 times with jitter on SQLSTATE `40001` / `40P01`, only for commands marked retry-safe. | All multi-row commands |
 
 Domain state transitions are validated **after** acquiring the lock, against the row as it now stands. A stale UI can never push an invalid transition.
+
+## Amendment (2026-10-22, Phase 3b)
+
+Row locks cannot protect an invariant over a **set** of rows that no single row represents. "At least one active admin" (`LAST_ADMIN`, ADR 0006 SOD-05) is such an invariant: admin A revoking B and B revoking A touch different rows, both see two admins under READ COMMITTED, and both commit. `tests/concurrency/admin-set.test.ts` shows exactly this with plain SQL (zero admins left).
+
+| # | Mechanism | Used for |
+| --- | --- | --- |
+| C9 | **Set lock.** `pg_advisory_xact_lock(<fixed key>)` taken first in the transaction, before any row lock, so it cannot join a deadlock cycle with C1 locks. Held until commit or rollback, bounded by `lock_timeout` (C7). It lives in PostgreSQL, so it holds across app instances. Under the lock, the command re-resolves its own actor (the caller may have been removed since the request started) and then checks the invariant. | Every `admin.user.*` and `admin.role.*` command (key `0x50460001`, `src/modules/identity/infrastructure/admin-repository.ts`) |
+
+This narrows the earlier rejection of advisory locks below: they are not used *instead of* row locks and constraints, only for set-level invariants, and only inside the database.
+
+**CC-08:** two admins remove each other (revoke/revoke, deactivate/deactivate, revoke/deactivate). A third connection holds the set lock until both commands are waiting on it, then releases it. Over 20 iterations exactly one succeeds, the other gets `FORBIDDEN` or `LAST_ADMIN`, and exactly one admin remains. With the lock removed, both succeed on the first iteration (mutation check, Phase 3b report).
 
 ## Alternatives considered
 

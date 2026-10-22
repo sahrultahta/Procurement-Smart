@@ -123,8 +123,10 @@ describe('P3a-AC5: a deactivated profile is refused even with a live session', (
     const cookie = sessionCookie(await signIn('agus@example.com', PASSWORD, '198.51.100.40')) ?? '';
     expect((await resolveActor(t.appDb, userId))?.roles).toEqual(['receiver']);
 
+    // Raw SQL on purpose: no session revocation, to prove the profile check alone suffices.
     await t.pool.query(
-      "UPDATE user_profiles SET status = 'deactivated', deactivated_at = now(), deactivated_by_user_id = user_id WHERE user_id = $1",
+      `UPDATE user_profiles SET status = 'deactivated', deactivated_at = now(),
+         deactivated_by_user_id = (SELECT id FROM users WHERE email = 'rina@example.com') WHERE user_id = $1`,
       [userId],
     );
     // The session row still exists...

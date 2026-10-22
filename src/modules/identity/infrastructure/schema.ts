@@ -45,6 +45,11 @@ export const userProfiles = pgTable(
       'user_profiles_deactivation_consistent',
       sql`(${t.status} = 'deactivated') = (${t.deactivatedAt} IS NOT NULL AND ${t.deactivatedByUserId} IS NOT NULL)`,
     ),
+    // SOD-05 backstop: nobody deactivates themselves.
+    check(
+      'user_profiles_not_self_deactivated',
+      sql`${t.deactivatedByUserId} IS NULL OR ${t.deactivatedByUserId} <> ${t.userId}`,
+    ),
   ],
 );
 

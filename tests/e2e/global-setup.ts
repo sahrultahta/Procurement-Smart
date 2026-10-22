@@ -2,9 +2,9 @@ import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
 /**
- * Creates (or re-passwords) dedicated fictional E2E users, e2e.<persona>@example.com,
- * through the real provisioning + password-setup flow. Credentials land in
- * .local/e2e-credentials.json (gitignored); the demo users are left alone.
+ * Creates dedicated fictional E2E users, e2e.<persona>@example.com, through the real
+ * provisioning + password-setup flow, in the E2E database (playwright.config.ts points
+ * DATABASE_URL at it). Credentials land in .local/e2e-credentials.json (gitignored).
  */
 export default function globalSetup(): void {
   const root = resolve(import.meta.dirname, '../..');

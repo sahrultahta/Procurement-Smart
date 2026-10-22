@@ -11,7 +11,7 @@ These are the contracts of the application layer (ADR 0010). In v1 they are invo
 - **`idempotencyKey?: string(8..100)`** is accepted on every `*.create` command (ADR 0008 C6).
 - **Never accepted from clients:** ids of new rows, numbers, totals, statuses, `*_by` / `*_at` fields, `department_id` on requisitions (taken from the actor's profile), `currency_code` (taken from org settings). Sending them fails strict validation.
 - **Lists:** cursor pagination `{ cursor?: string, limit?: 1..100 = 25 }`. Sorting only by whitelisted fields. Filters are typed enums or dates, never raw SQL fragments.
-- **Business-rule sub-codes** (`error.code = 'BUSINESS_RULE'`, `error.rule = ...`): `SELF_APPROVAL`, `DUPLICATE_APPROVER`, `NO_APPROVAL_ROUTE`, `NOT_ELIGIBLE_APPROVER`, `SUPPLIER_NOT_ACTIVE`, `SUPPLIER_DUPLICATE`, `MAKER_CHECKER`, `OVER_ORDER`, `RFQ_REQUIRED`, `MIN_QUOTES_JUSTIFICATION_REQUIRED`, `NON_LOWEST_JUSTIFICATION_REQUIRED`, `QUOTATION_EXPIRED`, `ORDER_RECEIVE_CONFLICT` (SOD-04), `OVER_RECEIPT`, `RECEIPTS_EXIST`, `ALREADY_REVERSED`, `PO_CLOSED`, `SELF_ADMINISTRATION`, `LAST_ADMIN`, `CURRENCY_MISMATCH`, `AMOUNT_TOO_LARGE`, `INTEGRITY_CONSTRAINT` (a database constraint caught what an application check should have; logged at warn).
+- **Business-rule sub-codes** (`error.code = 'BUSINESS_RULE'`, `error.rule = ...`): `SELF_APPROVAL`, `DUPLICATE_APPROVER`, `NO_APPROVAL_ROUTE`, `NOT_ELIGIBLE_APPROVER`, `SUPPLIER_NOT_ACTIVE`, `SUPPLIER_DUPLICATE`, `MAKER_CHECKER`, `OVER_ORDER`, `RFQ_REQUIRED`, `MIN_QUOTES_JUSTIFICATION_REQUIRED`, `NON_LOWEST_JUSTIFICATION_REQUIRED`, `QUOTATION_EXPIRED`, `ORDER_RECEIVE_CONFLICT` (SOD-04), `OVER_RECEIPT`, `RECEIPTS_EXIST`, `ALREADY_REVERSED`, `PO_CLOSED`, `SELF_ADMINISTRATION`, `LAST_ADMIN`, `EMAIL_TAKEN`, `UNKNOWN_DEPARTMENT`, `ROLE_NOT_SCOPABLE`, `ROLE_ALREADY_ASSIGNED`, `USER_DEACTIVATED`, `PASSWORD_ALREADY_SET`, `DEPARTMENT_CODE_TAKEN`, `CURRENCY_MISMATCH`, `AMOUNT_TOO_LARGE`, `INTEGRITY_CONSTRAINT` (a database constraint caught what an application check should have; logged at warn).
 - **Database conditions are mapped by the runner** (`src/shared/application/runner.ts`, Phase 2):
 
   | SQLSTATE | Result |
@@ -20,7 +20,7 @@ These are the contracts of the application layer (ADR 0010). In v1 they are invo
   | `40001` / `40P01` | `CONFLICT`, after up to 3 whole-transaction retries for retry-safe commands |
   | `23505` | `CONFLICT` |
   | `23502` / `23503` / `23514` / `23P01` | `BUSINESS_RULE` / `INTEGRITY_CONSTRAINT` |
-  | anything else (incl. `PFA01`, `25006`, `57014`) | `INTERNAL`, with a generic message; details only in the server log |
+  | anything else (incl. `PFA01`, `PFR01`, `25006`, `57014`) | `INTERNAL`, with a generic message; details only in the server log |
 
 Each command writes the audit action `<command name, past tense>` (e.g. `requisition.submit` writes `requisition.submitted`) unless noted.
 
@@ -30,17 +30,32 @@ Each command writes the audit action `<command name, past tense>` (e.g. `requisi
 
 | Command | Permission | Input (key fields) | Guards / rules | Output | REST (later) |
 | --- | --- | --- | --- | --- | --- |
-| `auth.signIn` / `auth.signOut` | public / session | email, password | Better Auth. Rate-limited. Sign-up disabled. | session cookie | Better Auth routes |
-| `admin.user.create` | `admin.users` | email, displayName, departmentId?, initialRoles[] | Email unique. Roles valid. Actor ≠ target (trivially true). | userId, one-time password-setup link (shown once) | `POST /users` |
-| `admin.user.deactivate` | `admin.users` | userId, reason, expectedVersion | SOD-05 (not self), `LAST_ADMIN` | ok | `POST /users/{id}/deactivate` |
-| `admin.user.reactivate` | `admin.users` | userId, expectedVersion | | ok | `POST /users/{id}/reactivate` |
-| `admin.role.grant` | `admin.roles` | userId, role, departmentId? | SOD-05. No duplicate active assignment. | assignmentId | `POST /users/{id}/roles` |
-| `admin.role.revoke` | `admin.roles` | assignmentId, reason | SOD-05, `LAST_ADMIN` | ok | `DELETE /role-assignments/{id}` |
-| `admin.department.create` / `.update` | `admin.settings` | code, name, isActive | code format, unique | department | `POST/PATCH /departments` |
+**Implemented in Phase 3b** (`src/modules/identity/application/admin-*.ts`), except `admin.settings.update` and `admin.approvalPolicy.publish`, which arrive with the phases that use them.
+
+Every `admin.user.*` and `admin.role.*` command first takes the admin-set lock (ADR 0008 C9) and re-checks that the caller still holds the permission (`FORBIDDEN` otherwise). Departments are referred to by `departmentCode` (`^[A-Z0-9-]{2,16}$`), not by id, except in `admin.department.update`. `departmentCode: null` means "no department" for a profile, and "whole organization" for a role scope.
+
+| Command | Permission | Input (key fields) | Guards / rules | Output | REST (later) |
+| --- | --- | --- | --- | --- | --- |
+| `auth.signIn` / `auth.signOut` | public / session | email, password | Better Auth. Rate-limited. Sign-up disabled. A deactivated user (or one without a profile) gets the same 401 as a wrong password, no session, and an `auth.signInRejected` audit event. | session cookie | Better Auth routes |
+| `admin.user.create` | `admin.users` (+ `admin.roles` when roles are given) | email, name, departmentCode, roles[{role, departmentCode}] | `EMAIL_TAKEN` (case-insensitive). `UNKNOWN_DEPARTMENT` (unknown or inactive). `ROLE_NOT_SCOPABLE` (only requester/approver take a department). The same role and scope twice → `VALIDATION_FAILED`. | userId. The Server Action then issues the one-time link (`admin.user.issueSetupLink`), shown once. | `POST /users` |
+| `admin.user.update` *(added 3b)* | `admin.users` | userId, name, departmentCode, expectedVersion | `SELF_ADMINISTRATION`. `UNKNOWN_DEPARTMENT` for a *new* inactive department (an unchanged one is kept). Email cannot change. A no-op writes nothing. | version | `PATCH /users/{id}` |
+| `admin.user.deactivate` | `admin.users` | userId, reason (1–500), expectedVersion | `SELF_ADMINISTRATION`, `LAST_ADMIN`. Already deactivated → `INVALID_TRANSITION`. In the same transaction, deletes all the user's sessions and unused setup links. | version, revokedSessions | `POST /users/{id}/deactivate` |
+| `admin.user.reactivate` | `admin.users` | userId, expectedVersion | `SELF_ADMINISTRATION`. Already active → `INVALID_TRANSITION`. The user signs in again with their existing password. | version | `POST /users/{id}/reactivate` |
+| `admin.user.issueSetupLink` *(added 3b)* | `admin.users` | userId | `SELF_ADMINISTRATION`. `USER_DEACTIVATED`. `PASSWORD_ALREADY_SET`: links are only for accounts that never set a password, so an admin cannot take over an account in use. Deletes earlier unused links. The token is created by Better Auth **after** this commits (`src/server/admin-links.ts`). | email (to the Server Action, which returns only the link) | `POST /users/{id}/setup-link` |
+| `admin.role.grant` | `admin.roles` | userId, role, departmentCode | `SELF_ADMINISTRATION`. `USER_DEACTIVATED`. `ROLE_NOT_SCOPABLE`. `UNKNOWN_DEPARTMENT`. `ROLE_ALREADY_ASSIGNED` (same role and scope active; unique index as backstop). | assignmentId | `POST /users/{id}/roles` |
+| `admin.role.revoke` | `admin.roles` | assignmentId, reason (1–500) | `SELF_ADMINISTRATION`, `LAST_ADMIN` (admin role). Already revoked → `INVALID_TRANSITION`. The row is kept; a trigger forbids any other change (`PFR01`). | assignmentId | `DELETE /role-assignments/{id}` |
+| `admin.department.create` | `admin.settings` | code, name | Code format. `DEPARTMENT_CODE_TAKEN`. | departmentId | `POST /departments` |
+| `admin.department.update` | `admin.settings` | departmentId, name, isActive, expectedVersion | The code cannot change (sending it fails validation). Inactive: existing members and scopes stay, nobody new gets it. A no-op writes nothing. | version | `PATCH /departments/{id}` |
 | `admin.settings.update` | `admin.settings` | any `org_settings` field, expectedVersion | `currency_code` / `currency_scale` cannot change once any monetary document exists | settings | `PATCH /settings` |
 | `admin.approvalPolicy.publish` | `admin.approvalPolicies` | documentType, name, rules[{departmentId?, minAmount, maxAmount?, steps[{role, scopeMode}]}] | No overlapping bands. Full coverage from 0. ≥1 step per rule. | policyId (new active version) | `POST /approval-policies` |
 
-Queries: `admin.user.list`, `admin.user.get`, `admin.department.list`, `admin.approvalPolicy.getActive`, `identity.me` (own profile, roles, and effective permissions, used by the UI to hide actions).
+Audit actions: `user.provisioned`, `role.granted` (create), `user.updated`, `user.deactivated` (with reason, `revokedSessions`, `invalidatedSetupLinks`), `user.reactivated`, `user.setupLinkIssued`, `role.granted`, `role.revoked` (with reason), `department.created`, `department.updated`. Setup-link tokens are never written to audit events (tested), and the application logger never receives them (the runner logs no inputs or outputs).
+
+Queries:
+- **Implemented:** `account.me` (Phase 3a; own profile, roles, and effective permissions); `admin.user.list` (`status?`, cursor by email, `limit` 1–100); `admin.user.get`; `admin.department.list`. Admin DTOs are field allowlists (`ADMIN_USER_*_KEYS`, `DEPARTMENT_DTO_KEYS`).
+- **Later:** `admin.approvalPolicy.getActive` (Phase 5).
+
+`idempotencyKey` is not accepted by the Phase 3b create commands yet: a repeated `admin.user.create` or `admin.department.create` fails on the unique email or code, so it never creates a duplicate. The `idempotency_keys` table arrives with the first document-creating command.
 
 ## Suppliers
 

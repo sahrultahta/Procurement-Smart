@@ -1,4 +1,13 @@
+import { existsSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
+import { E2E_DATABASE, withDatabase } from './scripts/lib/e2e-database';
+
+if (existsSync('.env')) process.loadEnvFile('.env');
+// Point the server and global setup at the E2E database, never the development one.
+for (const key of ['DATABASE_URL', 'DATABASE_MIGRATION_URL'] as const) {
+  const value = process.env[key];
+  if (value) process.env[key] = withDatabase(value, E2E_DATABASE);
+}
 
 const port = 3100;
 const baseURL = `http://127.0.0.1:${port}`;
@@ -30,8 +39,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // Requires a prior `npm run build` and `npm run db:migrate`.
-    command: `npm run start -- --hostname 127.0.0.1 --port ${port}`,
+    // Requires a prior `npm run build`. Recreates the E2E database first (scripts/e2e-db.ts).
+    // A server already running on this port is reused as is, without a fresh database.
+    command: `node scripts/e2e-db.ts && npm run start -- --hostname 127.0.0.1 --port ${port}`,
     url: `${baseURL}/api/health`,
     env: serverEnv,
     reuseExistingServer: !isCI,

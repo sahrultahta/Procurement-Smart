@@ -2,8 +2,9 @@ import 'server-only';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { createAuthMiddleware, isAPIError } from 'better-auth/api';
+import { APIError, createAuthMiddleware, isAPIError } from 'better-auth/api';
 import { nextCookies } from 'better-auth/next-js';
+import { resolveActor } from '@/modules/identity';
 import { accounts, rateLimits, sessions, users, verifications } from '@/modules/identity/infrastructure/auth-schema';
 import { getDb } from '@/shared/db/client';
 import type { Database } from '@/shared/db/transaction';
@@ -95,6 +96,12 @@ export function createAuth(options: AuthOptions) {
         create: {
           // Before: if the audit write fails, no session is created (no unaudited sign-in).
           before: async (session, context) => {
+            // A deactivated user (or one without a profile) gets no session at all, and the
+            // same answer as a wrong password, so the response reveals nothing about the account.
+            if (!(await resolveActor(db, session.userId))) {
+              await auditAuthEvent(db, context, { action: 'auth.signInRejected', userId: session.userId });
+              throw new APIError('UNAUTHORIZED', { code: 'INVALID_EMAIL_OR_PASSWORD', message: 'Invalid email or password' });
+            }
             await auditAuthEvent(db, context, { action: 'auth.signedIn', userId: session.userId });
           },
         },

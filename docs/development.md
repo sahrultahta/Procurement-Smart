@@ -50,7 +50,9 @@ npm run dev               # then open http://localhost:3000/sign-in
 
 For a real installation, create only the first administrator: `npm run bootstrap-admin -- --email you@example.com --name "Your Name"`. It prints a one-time link (valid 24 h, single use) to set the password, and refuses to run if an admin already exists.
 
-E2E tests create their own users (`e2e.*@example.com`, credentials in `.local/e2e-credentials.json`) in Playwright's global setup.
+**Administration (Phase 3b).** Sign in as an admin (for example `ada.admin@example.com` from the seed) and open **Admin**. There you can create users (you get a one-time setup link to pass on), edit their name and department, grant and revoke roles, deactivate and reactivate users, and manage departments. An admin cannot change their own account; another admin must do it.
+
+**E2E database.** `npm run test:e2e` never touches `procureflow_dev`. Before starting the server, Playwright runs `scripts/e2e-db.ts`, which drops and recreates `pf_e2e` (with `TEST_DATABASE_URL`) and migrates it. Global setup then creates the E2E users (`e2e.*@example.com`, credentials in `.local/e2e-credentials.json`). Users cannot be deleted, so a throwaway database is the only way to keep test users out of the demo data. If a server is already listening on port 3100, Playwright reuses it, and no fresh database is made: stop that server first.
 
 ## Everyday commands
 
@@ -63,7 +65,7 @@ E2E tests create their own users (`e2e.*@example.com`, credentials in `.local/e2
 | `npm test` | Unit + integration + concurrency tests (needs PostgreSQL running) |
 | `npm run test:coverage` | The same, plus the 85% line-coverage gate on `domain/` and `application/` code |
 | `npm run build` | Production build |
-| `npm run test:e2e` | Playwright against `next start` on port 3100 (run `npm run build` and `npm run db:migrate` first) |
+| `npm run test:e2e` | Playwright against `next start` on port 3100, on its own database `pf_e2e` (run `npm run build` first) |
 | `npm run db:generate` | Generate a migration from schema changes (review the SQL before committing) |
 | `npm run db:migrate` | Apply migrations to `DATABASE_MIGRATION_URL` (falls back to `DATABASE_URL`) |
 | `npm run db:app-role` | Create or update `procureflow_app` outside the local cluster |

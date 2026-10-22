@@ -25,6 +25,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <Link href="/account" className="text-muted-foreground hover:text-foreground">
               My account
             </Link>
+            {actor.permissions.has('admin.users') || actor.permissions.has('admin.settings') ? (
+              <Link href="/admin" className="text-muted-foreground hover:text-foreground">
+                Admin
+              </Link>
+            ) : null}
           </nav>
           <div className="flex items-center gap-3 text-sm">
             <span className="text-muted-foreground" data-testid="signed-in-as">

@@ -1,6 +1,6 @@
 import 'server-only';
 import { z } from 'zod';
-import { auditChanges, defineAuditPolicy, recordAuditEvent } from '@/modules/audit';
+import { auditChanges, recordAuditEvent } from '@/modules/audit';
 import type { RequestContext } from '@/shared/application/context';
 import type { Tx } from '@/shared/db/transaction';
 import { failBusinessRule } from '@/shared/result';
@@ -11,27 +11,24 @@ import {
   insertRoleAssignment,
   insertUserWithProfile,
 } from '../infrastructure/identity-repository';
+import { roleAudit, userAudit } from './audit-policies';
 
-const departmentCode = z.string().regex(/^[A-Z0-9-]{2,16}$/, 'Use 2-16 uppercase letters, digits, or dashes');
+export const departmentCode = z.string().regex(/^[A-Z0-9-]{2,16}$/, 'Use 2-16 uppercase letters, digits, or dashes');
+export const userName = z.string().trim().min(1, 'Enter a name').max(120);
 
 export const provisionUserInput = z.strictObject({
   email: z.email().max(254).transform((value) => value.trim().toLowerCase()),
-  name: z.string().trim().min(1).max(120),
+  name: userName,
   departmentCode: departmentCode.nullable(),
   roles: z
     .array(z.strictObject({ role: z.enum(ROLES), departmentCode: departmentCode.nullable() }))
-    .max(ROLES.length * 4),
+    .max(ROLES.length * 4)
+    .refine(
+      (roles) => new Set(roles.map((r) => `${r.role}:${r.departmentCode ?? ''}`)).size === roles.length,
+      'The same role is listed twice',
+    ),
 });
 export type ProvisionUserInput = z.output<typeof provisionUserInput>;
-
-const userAudit = defineAuditPolicy<{ email: string; name: string; departmentCode: string | null }>({
-  entityType: 'user',
-  fields: ['email', 'name', 'departmentCode'],
-});
-const roleAudit = defineAuditPolicy<{ userId: string; role: string; departmentCode: string | null }>({
-  entityType: 'role_assignment',
-  fields: ['userId', 'role', 'departmentCode'],
-});
 
 /**
  * Creates a user with no password (they set one through a one-time link), their

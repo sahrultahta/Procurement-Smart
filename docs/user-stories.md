@@ -17,6 +17,8 @@ Personas (fictional): **Rina** (requester, Operations), **Bayu** (approver, Oper
 **US-ID-03 Deactivation takes effect immediately.** When Tomas deactivates Agus, Agus's next request is rejected (redirect to sign-in or `UNAUTHENTICATED`) and all his sessions are revoked.
 
 **US-AD-01 Create users.** Tomas creates a user with display name, department, and roles, and gets a one-time password-setup link to pass on out of band. The link expires after 24 h and works once.
+- If the link is lost or expires before the user sets a password, Tomas issues a new one, and older links stop working. Once the user has set a password, no new link can be issued (`PASSWORD_ALREADY_SET`), so an admin cannot take over an account in use. (Implemented in Phase 3b.)
+- Tomas can correct the display name and home department later (`admin.user.update`). The email cannot change.
 
 **US-AD-02 Grant and revoke roles.** Tomas grants or revokes roles (with department scope for approvers and requesters). Every change is audited.
 - Tomas cannot change his **own** roles or deactivate himself (`SELF_ADMINISTRATION`).
@@ -26,7 +28,7 @@ Personas (fictional): **Rina** (requester, Operations), **Bayu** (approver, Oper
 - Overlapping bands or gaps from 0 upward are rejected.
 - In-flight approvals keep the steps they were created with.
 
-**US-AD-04 Org settings.** Tomas sets org name, timezone, currency (locked once any monetary document exists), RFQ threshold, minimum quotes, PO approval threshold, price tolerance, and over-receipt tolerance.
+**US-AD-04 Org settings.** *(Deferred: each setting ships with the phase that uses it, Phases 5–8; see PLAN.md.)* Tomas sets org name, timezone, currency (locked once any monetary document exists), RFQ threshold, minimum quotes, PO approval threshold, price tolerance, and over-receipt tolerance.
 
 ## Suppliers
 

@@ -4,10 +4,11 @@ An open-source procurement workflow system: suppliers, purchase requisitions wit
 
 ## Status
 
-**Phases 0–2 are done, and Phase 3a (sign-in and identity) is implemented.** What works today:
+**Phases 0–3a are done, and Phase 3b (administration) is implemented.** What works today:
 - signing in and out;
 - one-time password-setup links;
 - seven roles with code-defined permissions;
+- administration screens: create, edit, deactivate, and reactivate users; grant and revoke roles; manage departments (with separation of duties: no admin can change their own account, and the last admin cannot be removed);
 - an append-only audit trail;
 - decimal-safe money calculations.
 
@@ -19,7 +20,7 @@ An open-source procurement workflow system: suppliers, purchase requisitions wit
 | --- | --- |
 | [docs/PLAN.md](docs/PLAN.md) | Phases, acceptance criteria, definition of done, report template, open decisions |
 | [docs/architecture.md](docs/architecture.md) | Modules, dependency rules, request lifecycle, cross-cutting concerns, deployment target |
-| [docs/adr/](docs/adr/README.md) | Architecture decision records 0001–0011 |
+| [docs/adr/](docs/adr/README.md) | Architecture decision records 0001–0014 |
 | [docs/user-stories.md](docs/user-stories.md) | Personas and stories with acceptance criteria |
 | [docs/state-machines.md](docs/state-machines.md) | Requisition, approval, supplier, RFQ, quotation, PO, goods-receipt lifecycles |
 | [docs/schema.md](docs/schema.md) | PostgreSQL schema design and constraints |

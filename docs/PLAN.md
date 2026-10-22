@@ -1,6 +1,6 @@
 # ProcureFlow implementation plan
 
-- Status: **Phase 0 approved 2026-10-18. Phase 1 committed 2026-10-19 after maintainer review ([report](reports/phase-1.md)). Phase 2 committed 2026-10-21 after maintainer review ([report](reports/phase-2.md)). Phase 3 split into 3a (sign-in and identity) and 3b (administration) on 2026-10-21. Phase 3a committed 2026-10-21 after maintainer review ([report](reports/phase-3a.md)).**
+- Status: **Phase 0 approved 2026-10-18. Phase 1 committed 2026-10-19 after maintainer review ([report](reports/phase-1.md)). Phase 2 committed 2026-10-21 after maintainer review ([report](reports/phase-2.md)). Phase 3 split into 3a (sign-in and identity) and 3b (administration) on 2026-10-21. Phase 3a committed 2026-10-21 after maintainer review ([report](reports/phase-3a.md)). Phase 3b committed 2026-10-22 after maintainer review ([report](reports/phase-3b.md)).**
 - Plan date: 2026-10-18
 - Inputs: [architecture](architecture.md), [ADRs](adr/README.md), [user stories](user-stories.md), [state machines](state-machines.md), [schema](schema.md), [API contracts](api-contracts.md), [threat model](threat-model.md)
 
@@ -111,11 +111,13 @@ Scope:
 
 > **Split on 2026-10-21 (maintainer decision).**
 > - **3a: sign-in and identity.** Acceptance criteria P3a-AC1 to AC12 are in [reports/phase-3a.md](reports/phase-3a.md).
-> - **3b: administration screens.** Users, roles, departments, and settings, covering P3-AC4/AC5/AC7/AC10 below for the admin commands.
+> - **3b: administration screens.** Users, roles, and departments, covering P3-AC4/AC5/AC6/AC7/AC8/AC10/AC11 below for the admin commands. Acceptance criteria P3b-AC1 to AC14 are in [reports/phase-3b.md](reports/phase-3b.md).
+>
+> **Org settings moved out of Phase 3 (maintainer decision, 2026-10-22).** Each `org_settings` field ships with the phase whose behavior it controls, so no setting exists before it has an effect: org name, timezone, and currency (with its lock) in Phase 5; RFQ threshold and minimum quotes in Phase 6; PO approval threshold and price tolerance in Phase 7; over-receipt tolerance in Phase 8.
 >
 > The role `buyer` is now `procurement` (ADR 0014).
 
-Scope: Better Auth (email/password, sign-up disabled, DB sessions, DB rate limiting, `nextCookies`); `user_profiles`; departments; `role_assignments`; code-defined role → permission map; request context; `proxy.ts` optimistic redirect; sign-in and sign-out UI; admin screens for users, roles, departments, and settings; bootstrap-admin CLI; fictional seed script; security headers and CSP; choice of accessible UI component approach.
+Scope: Better Auth (email/password, sign-up disabled, DB sessions, DB rate limiting, `nextCookies`); `user_profiles`; departments; `role_assignments`; code-defined role → permission map; request context; `proxy.ts` optimistic redirect; sign-in and sign-out UI; admin screens for users, roles, and departments (org settings moved to Phases 5–8, see above); bootstrap-admin CLI; fictional seed script; security headers and CSP; choice of accessible UI component approach.
 
 | ID | Acceptance criterion | Verified by |
 | --- | --- | --- |
@@ -150,7 +152,7 @@ Scope: supplier commands and queries, maker-checker review, block/unblock, deact
 
 ## Phase 5: Purchase requisitions and multi-step approvals
 
-Scope: requisitions module; approval policies (publish, resolve); approvals module (requests, steps, eligibility, decide, outcome handler port); approval inbox; PR UI (create, edit, submit, cancel, detail with history); SOD-01 trigger and SOD-02 index.
+Scope: requisitions module; approval policies (publish, resolve); approvals module (requests, steps, eligibility, decide, outcome handler port); approval inbox; PR UI (create, edit, submit, cancel, detail with history); SOD-01 trigger and SOD-02 index; `org_settings` with org name, timezone, and currency, and the currency lock once a monetary document exists (moved from Phase 3, 2026-10-22).
 
 | ID | Acceptance criterion | Verified by |
 | --- | --- | --- |
@@ -170,6 +172,8 @@ Scope: requisitions module; approval policies (publish, resolve); approvals modu
 
 ## Phase 6: Sourcing (RFQ, quotations, award)
 
+Also adds the `org_settings` fields `rfq_required_above` and `min_quotes`, with their admin screen (moved from Phase 3).
+
 | ID | Acceptance criterion | Verified by |
 | --- | --- | --- |
 | P6-AC1 | RFQ-T01 to T06 and QUO-T01 to T05 implemented, with exhaustive invalid-transition tests | unit |
@@ -181,6 +185,8 @@ Scope: requisitions module; approval policies (publish, resolve); approvals modu
 ---
 
 ## Phase 7: Purchase orders
+
+Also adds the `org_settings` fields `po_approval_threshold` and `po_price_tolerance_pct`, with their admin screen (moved from Phase 3).
 
 | ID | Acceptance criterion | Verified by |
 | --- | --- | --- |
@@ -197,6 +203,8 @@ Scope: requisitions module; approval policies (publish, resolve); approvals modu
 ---
 
 ## Phase 8: Goods receipts
+
+Also adds the `org_settings` field `over_receipt_tolerance_pct`, with its admin screen (moved from Phase 3).
 
 | ID | Acceptance criterion | Verified by |
 | --- | --- | --- |

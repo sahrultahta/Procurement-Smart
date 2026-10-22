@@ -12,7 +12,10 @@ import type { Database } from '@/shared/db/transaction';
  * fingerprint of the attempted email, not the email itself.
  */
 type AuthEvent =
-  | { action: 'auth.signedIn' | 'auth.signedOut' | 'auth.passwordSet' | 'auth.passwordChanged'; userId: string }
+  | {
+      action: 'auth.signedIn' | 'auth.signInRejected' | 'auth.signedOut' | 'auth.passwordSet' | 'auth.passwordChanged';
+      userId: string;
+    }
   | { action: 'auth.signInFailed'; emailFingerprint: string };
 
 type HookContext = { headers?: Headers | undefined; request?: Request | undefined } | null | undefined;

@@ -36,6 +36,13 @@
       "when": 1792559734502,
       "tag": "0004_auth_and_identity_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792635812183,
+      "tag": "0005_identity_admin_guards",
+      "breakpoints": true
     }
   ]
 }
