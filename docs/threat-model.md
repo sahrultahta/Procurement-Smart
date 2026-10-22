@@ -103,6 +103,14 @@ flowchart LR
 - **New residual risk (T5), accepted for v1:** without email delivery the admin sees the one-time setup link and could use it before the user does. Mitigations: links are issued only to accounts that never set a password (`PASSWORD_ALREADY_SET`), so an account in use cannot be taken over this way; every link is audited (`user.setupLinkIssued`); the user notices, because their link no longer works. It goes away when links are emailed to the user.
 - Admin pages still render their queries for non-admins, who get "Access denied" (the queries return `FORBIDDEN`, logged as `query.denied`). No data reaches them.
 
+### Phase 4 status (2026-10-22)
+
+- **AB-03 (fake supplier) is controlled:** SOD-03 maker-checker in `supplier.review` (`MAKER_CHECKER`, even for a user holding procurement and finance), backed by the CHECK `suppliers_maker_checker` and a trigger that keeps the creator fixed (`PFS01`). Only active suppliers are selectable for purchasing (SUP-R1). Duplicates are caught after normalization (maintainer decision): punctuation, spacing, and case in names, and separators in tax IDs no longer create a "new" supplier. Concurrent creates: CC-09.
+- **AB-04 (identity swapped after review) is controlled:** any edit of the legal name or tax ID as typed sends an active supplier back to review and clears the old review; the editor becomes a maker. The CHECK `suppliers_active_is_reviewed` makes "active without a review" impossible, and CC-10 shows that an approval racing an identity change cannot leave one.
+- **T-03 (SQL injection) for search:** parameterized queries, LIKE wildcards escaped, and search terms normalized; `'; drop table`, `%`, `_`, and `\` are matched literally (tested, plus a mutation check that removing the escaping makes `%` match every supplier).
+- **E-01:** all 10 supplier operations are in the operation matrix; the new permission `supplier.block` is in the role matrix (ADR 0006 amendment).
+- **Residual:** normalization does not catch look-alike names that differ in letters (for example "Maju Jaya" and "Maju Jaja") or a dropped legal suffix ("PT Maju Jaya" and "Maju Jaya"). Those remain a review task for finance, not a rule.
+
 ## 7. Accepted risks and out of scope
 
 - **DB superuser or schema owner** can alter data and drop triggers. Mitigations are operational: separate credentials, backups, and optional hash-chained audit export in Phase 10.

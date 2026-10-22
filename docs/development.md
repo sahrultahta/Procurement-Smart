@@ -46,11 +46,13 @@ npm run seed              # fictional departments + one user per role (@example.
 npm run dev               # then open http://localhost:3000/sign-in
 ```
 
-`seed` writes random passwords for the users it creates to `.local/seed-credentials.json` (gitignored, never printed). It is idempotent, and `--reset-passwords` gives existing seed users new passwords. It refuses to run with `NODE_ENV=production`.
+`seed` also registers three fictional suppliers as Dewi (procurement), two of them approved by Sari (finance), through the real commands. It writes random passwords for the users it creates to `.local/seed-credentials.json` (gitignored, never printed). It is idempotent, and `--reset-passwords` gives existing seed users new passwords. It refuses to run with `NODE_ENV=production`.
 
 For a real installation, create only the first administrator: `npm run bootstrap-admin -- --email you@example.com --name "Your Name"`. It prints a one-time link (valid 24 h, single use) to set the password, and refuses to run if an admin already exists.
 
 **Administration (Phase 3b).** Sign in as an admin (for example `ada.admin@example.com` from the seed) and open **Admin**. There you can create users (you get a one-time setup link to pass on), edit their name and department, grant and revoke roles, deactivate and reactivate users, and manage departments. An admin cannot change their own account; another admin must do it.
+
+**Suppliers (Phase 4).** Sign in as `dewi.procurement@example.com` to register and edit suppliers, and as `sari.finance@example.com` to approve, reject, or unblock them. A supplier you registered, or whose legal name or tax ID you last changed, has to be approved by someone else. `lena.auditor@example.com` can look but not change anything.
 
 **E2E database.** `npm run test:e2e` never touches `procureflow_dev`. Before starting the server, Playwright runs `scripts/e2e-db.ts`, which drops and recreates `pf_e2e` (with `TEST_DATABASE_URL`) and migrates it. Global setup then creates the E2E users (`e2e.*@example.com`, credentials in `.local/e2e-credentials.json`). Users cannot be deleted, so a throwaway database is the only way to keep test users out of the demo data. If a server is already listening on port 3100, Playwright reuses it, and no fresh database is made: stop that server first.
 

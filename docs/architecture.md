@@ -44,6 +44,7 @@ Rules:
 - Every module may also import `shared`, `identity` (actor and request-context types, permission checks), and `audit` (the writer). Those edges are left out of the diagram to keep it readable. `audit` imports only `shared`. `identity` imports `shared` and `audit`, because provisioning users and granting roles must be audited (changed in Phase 3a). Neither imports any other module, so there is no cycle.
 - `health` (operational readiness for `GET /api/health`, added in Phase 1) imports only `shared`. It is public by design and returns only up/down status.
 - The graph is encoded once, as `MODULE_DEPENDENCIES` in `eslint.config.mjs`. Change that and this diagram together.
+- A module may also expose `tables.ts`: its table declarations, so that other modules' schema files can declare foreign keys to them (for example `suppliers.created_by_user_id` → `users.id`). Only schema files use it; queries on those tables stay in the owning module.
 - `src/server/` is the composition root. `src/server/schema.ts` re-exports every module's tables for drizzle-kit.
 - **Approvals never imports requisitions or purchasing.** When a request completes, approvals calls an `ApprovalOutcomeHandler` port registered by each document module in the composition root (`src/server/`). The callback runs inside the same transaction.
 - **Reporting** reads through SQL views defined in migrations (one per report). It never writes and never imports other modules' internals. This is the one documented exception to "each module owns its tables": the views are its contract.

@@ -32,6 +32,18 @@ const EXPECTED: Record<string, readonly Caller[]> = {
   'admin.department.create': ['admin'],
   'admin.department.update': ['admin'],
   'admin.department.list': ['admin'],
+  // Phase 4 (ADR 0006: supplier.manage = procurement, supplier.review = finance,
+  // supplier.read = procurement/finance/auditor; supplier.block = procurement or finance).
+  'supplier.create': ['procurement'],
+  'supplier.update': ['procurement'],
+  'supplier.review': ['finance'],
+  'supplier.block': ['procurement', 'finance'],
+  'supplier.unblock': ['finance'],
+  'supplier.deactivate': ['procurement'],
+  'supplier.reactivate': ['procurement'],
+  'supplier.list': ['procurement', 'finance', 'auditor'],
+  'supplier.get': ['procurement', 'finance', 'auditor'],
+  'supplier.selectableForPurchasing': ['procurement', 'finance', 'auditor'],
 };
 
 let t: TestDatabase;

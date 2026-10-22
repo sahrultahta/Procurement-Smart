@@ -9,7 +9,7 @@ Each ADR records one decision: its context, the options considered, the choice m
 | [0003](0003-postgresql.md) | PostgreSQL 18 as the only datastore | Accepted |
 | [0004](0004-drizzle-orm.md) | Drizzle ORM with node-postgres | Accepted |
 | [0005](0005-better-auth.md) | Better Auth for authentication only | Accepted |
-| [0006](0006-authorization-model.md) | Code-defined RBAC, scoped assignments, separation-of-duties policies | Accepted |
+| [0006](0006-authorization-model.md) | Code-defined RBAC, scoped assignments, separation-of-duties policies | Accepted (amended by 0014; Phase 4 adds `supplier.block`) |
 | [0007](0007-money-and-quantities.md) | Money and quantities: `numeric` + decimal.js, computed server-side | Accepted |
 | [0008](0008-transactions-and-concurrency.md) | Transactions and concurrency control | Accepted (amended in Phase 3b: C9 set lock) |
 | [0009](0009-append-only-audit.md) | Append-only audit trail enforced by the database | Accepted |

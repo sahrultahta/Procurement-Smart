@@ -33,13 +33,13 @@ Personas (fictional): **Rina** (requester, Operations), **Bayu** (approver, Oper
 ## Suppliers
 
 **US-SUP-01 Register a supplier.** Dewi registers a supplier (legal name, tax ID, contacts, address). It starts as `pending_review`.
-- A duplicate normalized name (among non-inactive suppliers) or a duplicate tax ID is rejected.
+- A duplicate normalized name (among non-inactive suppliers) or a duplicate tax ID is rejected. Names compare ignoring case, spacing, and punctuation ("PT. Maju-Jaya" = "pt maju jaya"); tax IDs ignore separators. (Implemented in Phase 4.)
 
 **US-SUP-02 Review a supplier (maker-checker).** Sari activates or rejects a pending supplier.
 - Dewi, who created it, cannot activate it, even if she also holds `finance` (`MAKER_CHECKER`).
 - Changing the legal name or tax ID of an active supplier sends it back to `pending_review`.
 
-**US-SUP-03 Block a supplier.** Dewi or Sari blocks a supplier with a reason. Blocked suppliers can't be invited, quoted, or ordered from, and an approved PO to them can't be issued. Receipts on already-issued POs still work.
+**US-SUP-03 Block a supplier.** Dewi or Sari blocks a supplier with a reason (permission `supplier.block`). Only Sari (finance) unblocks it, and then it needs a fresh review. Blocked suppliers can't be invited, quoted, or ordered from, and an approved PO to them can't be issued. Receipts on already-issued POs still work.
 
 ## Purchase requisitions
 

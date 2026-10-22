@@ -43,6 +43,20 @@
       "when": 1792635812183,
       "tag": "0005_identity_admin_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792638985675,
+      "tag": "0006_suppliers",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792638998924,
+      "tag": "0007_suppliers_guards_and_grants",
+      "breakpoints": true
     }
   ]
 }

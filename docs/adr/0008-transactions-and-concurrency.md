@@ -42,6 +42,13 @@ This narrows the earlier rejection of advisory locks below: they are not used *i
 
 **CC-08:** two admins remove each other (revoke/revoke, deactivate/deactivate, revoke/deactivate). A third connection holds the set lock until both commands are waiting on it, then releases it. Over 20 iterations exactly one succeeds, the other gets `FORBIDDEN` or `LAST_ADMIN`, and exactly one admin remains. With the lock removed, both succeed on the first iteration (mutation check, Phase 3b report).
 
+## Verification added in Phase 4 (2026-10-22)
+
+| Test | Assertion |
+| --- | --- |
+| CC-09 | 5 parallel `supplier.create` with one tax ID (or one name, punctuated differently), 20 times each: exactly one succeeds, the others get `SUPPLIER_DUPLICATE`, and `SUP-` codes stay gapless. The `SUP` sequence row lock (C5) serializes the creates; the partial unique indexes (C4) are the backstop. |
+| CC-10 | Approval and identity change on the same supplier version, forced to overlap (a third connection holds the row until both wait), 20 times: exactly one succeeds, the other gets `CONFLICT` (C1), and no supplier is ever active with an unreviewed identity (CHECK `suppliers_active_is_reviewed`). |
+
 ## Alternatives considered
 
 - **SERIALIZABLE everywhere.** Simpler to reason about, but every command needs retry logic and contention produces user-visible failures under load.

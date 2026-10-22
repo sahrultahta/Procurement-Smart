@@ -1,6 +1,6 @@
 # ProcureFlow implementation plan
 
-- Status: **Phase 0 approved 2026-10-18. Phase 1 committed 2026-10-19 after maintainer review ([report](reports/phase-1.md)). Phase 2 committed 2026-10-21 after maintainer review ([report](reports/phase-2.md)). Phase 3 split into 3a (sign-in and identity) and 3b (administration) on 2026-10-21. Phase 3a committed 2026-10-21 after maintainer review ([report](reports/phase-3a.md)). Phase 3b committed 2026-10-22 after maintainer review ([report](reports/phase-3b.md)).**
+- Status: **Phase 0 approved 2026-10-18. Phase 1 committed 2026-10-19 after maintainer review ([report](reports/phase-1.md)). Phase 2 committed 2026-10-21 after maintainer review ([report](reports/phase-2.md)). Phase 3 split into 3a (sign-in and identity) and 3b (administration) on 2026-10-21. Phase 3a committed 2026-10-21 after maintainer review ([report](reports/phase-3a.md)). Phase 3b committed 2026-10-22 after maintainer review ([report](reports/phase-3b.md)). Phase 4 committed 2026-10-22 after maintainer review ([report](reports/phase-4.md)).**
 - Plan date: 2026-10-18
 - Inputs: [architecture](architecture.md), [ADRs](adr/README.md), [user stories](user-stories.md), [state machines](state-machines.md), [schema](schema.md), [API contracts](api-contracts.md), [threat model](threat-model.md)
 
@@ -138,6 +138,8 @@ Scope: Better Auth (email/password, sign-up disabled, DB sessions, DB rate limit
 ## Phase 4: Suppliers
 
 Scope: supplier commands and queries, maker-checker review, block/unblock, deactivate/reactivate, list and search UI.
+
+> The six criteria below were expanded into P4-AC1 to AC13 when the phase was planned (2026-10-22); they are listed with evidence in [reports/phase-4.md](reports/phase-4.md). Decision: duplicate detection ignores punctuation in names and separators in tax IDs.
 
 | ID | Acceptance criterion | Verified by |
 | --- | --- | --- |

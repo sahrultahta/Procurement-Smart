@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { useActionState, useState } from 'react';
+import { FieldError, FormMessage } from '@/components/form-message';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
-import { IDLE } from '../action-state';
+import { IDLE } from '@/lib/action-state';
 import { createUserAction } from '../actions';
-import { FieldError, FormMessage, SetupLink } from './form-message';
+import { SetupLink } from './setup-link';
 
 export type DepartmentOption = { code: string; name: string };
 export type RoleOption = { value: string; label: string; scopable: boolean };

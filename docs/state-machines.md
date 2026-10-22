@@ -75,7 +75,7 @@ Invariants: AP-I1 at most one `pending` request per document (partial unique ind
 
 ---
 
-## 3. Supplier
+## 3. Supplier (implemented in Phase 4)
 
 ```mermaid
 stateDiagram-v2
@@ -96,10 +96,18 @@ stateDiagram-v2
 | SUP-T03 | active → pending_review | `supplier.update` that changes `legal_name` or `tax_id` | `supplier.manage` | version | `identity_changed_by` = actor. Re-review required. |
 | SUP-T04 | pending_review → active | `supplier.review` `{decision:'approve'}` | `supplier.review` | **SOD-03**: actor ≠ `created_by` and ≠ `identity_changed_by` | `reviewed_by`, `reviewed_at` |
 | SUP-T05 | pending_review → inactive | `supplier.review` `{decision:'reject', note}` | `supplier.review` | SOD-03 | |
-| SUP-T06 | active → blocked | `supplier.block` | `supplier.manage` or `supplier.review` | reason | |
+| SUP-T06 | active → blocked | `supplier.block` | `supplier.block` (procurement or finance; ADR 0006 amendment) | reason | |
 | SUP-T07 | blocked → pending_review | `supplier.unblock` | `supplier.review` | reason | Needs a fresh review (SUP-T04) |
-| SUP-T08 | active → inactive | `supplier.deactivate` | `supplier.manage` | | |
+| SUP-T08 | active → inactive | `supplier.deactivate` | `supplier.manage` | reason | |
 | SUP-T09 | inactive → pending_review | `supplier.reactivate` | `supplier.manage` | uniqueness re-checked | |
+
+Implementation notes (Phase 4), recorded where the table above left room:
+- The pure table is `modules/suppliers/domain/supplier.ts`; all 32 (status, command) pairs are tested in `tests/unit/supplier-domain.test.ts`.
+- "Non-terminal" in SUP-T02 means `pending_review`, `active`, and `blocked`. An inactive supplier cannot be edited; reactivate it first.
+- An identity change (any edit of `legal_name` or `tax_id` **as typed**, even case only) on `pending_review` or `blocked` keeps the status, but sets `identity_changed_by` and clears the review, so the next approval needs someone else (SOD-03).
+- Reject (SUP-T05) needs a note, which becomes `status_reason`. Block, unblock, and deactivate need a reason.
+- Unblock (SUP-T07) and reactivate (SUP-T09) clear the old review. A CHECK guarantees that an active supplier always has a reviewer, and that the reviewer is neither the creator nor the last identity changer.
+- Duplicate keys (maintainer decision 2026-10-22): names compare after Unicode normalization, lowercasing, and turning every run of punctuation or whitespace into one space (`PT. Maju-Jaya` = `pt maju jaya`); legal suffixes still count. Tax IDs compare as letters and digits only. Names must be unique among non-inactive suppliers, tax IDs among all suppliers.
 
 Rule SUP-R1: only `active` suppliers can be invited to RFQs, quoted, put on new POs, or have a PO **issued** to them. Receipts against already-issued POs are still allowed whatever the supplier's status, because the goods physically arrived.
 

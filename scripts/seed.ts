@@ -1,6 +1,7 @@
 /**
- * Fictional demo data (ADR 0001): three departments and one user per role, all @example.com.
- * Idempotent: existing departments and users are left as they are.
+ * Fictional demo data (ADR 0001): three departments, one user per role, all @example.com, and three
+ * suppliers registered by Dewi (procurement), two of them approved by Sari (finance) through the real
+ * commands. Idempotent: existing departments, users, and suppliers are left as they are.
  *
  *   npm run seed                                   create missing demo users
  *   npm run seed -- --reset-passwords              also give existing seed users new passwords
@@ -43,6 +44,9 @@ const { recordAuditEvent } = await import('@/modules/audit');
 const { createRequestContext } = await import('@/shared/application/context');
 const { closeDb, getDb } = await import('@/shared/db/client');
 const { getAuth, issuePasswordSetupToken } = await import('@/server/auth');
+const { resolveActor } = await import('@/modules/identity');
+const { createSupplier, reviewSupplier } = await import('@/modules/suppliers');
+const { runCommand } = await import('@/shared/application/runner');
 
 type SeedUser = { email: string; name: string; departmentCode: string | null; roles: { role: string; departmentCode: string | null }[] };
 
@@ -63,8 +67,15 @@ const USERS: SeedUser[] = [
   { email: 'lena.auditor', name: 'Lena Auditor', departmentCode: null, roles: [{ role: 'auditor', departmentCode: null }] },
 ];
 
+// Fictional suppliers: example.com contacts, 555-01xx phone numbers, made-up tax IDs.
+const SUPPLIERS = [
+  { legalName: 'Example Office Supplies Ltd', taxId: 'EX-1000-0001', email: 'orders.office@example.com', phone: '+1 555 0101', addressLine1: '100 Example Avenue', city: 'Springfield', postalCode: '00001', approve: true },
+  { legalName: 'Sample Industrial Parts Co.', taxId: 'EX-1000-0002', email: 'sales.parts@example.com', phone: '+1 555 0102', addressLine1: '200 Sample Road', city: 'Riverton', postalCode: '00002', approve: true },
+  { legalName: 'Demo Facility Services LLC', taxId: 'EX-1000-0003', email: 'hello.facilities@example.com', phone: '+1 555 0103', addressLine1: '300 Demo Street', city: 'Lakeside', postalCode: '00003', approve: false },
+];
+
 const credentials: Record<string, { name: string; password: string; roles: string[] }> = {};
-const summary = { departmentsCreated: 0, usersCreated: 0, usersSkipped: 0, passwordsSet: 0 };
+const summary = { departmentsCreated: 0, usersCreated: 0, usersSkipped: 0, passwordsSet: 0, suppliersCreated: 0, suppliersSkipped: 0 };
 
 try {
   const db = getDb();
@@ -106,13 +117,42 @@ try {
     }
   }
 
+  // Suppliers go through the commands, so maker-checker and the audit trail apply as usual.
+  const actorOf = async (persona: string) => {
+    const userId = await findUserIdByEmail(db, `${prefix}${persona}@example.com`);
+    const actor = userId ? await resolveActor(db, userId) : null;
+    if (!actor) throw new Error(`Seed user ${persona} is missing or inactive`);
+    return createRequestContext({ actor });
+  };
+  const maker = await actorOf('dewi.procurement');
+  const checker = await actorOf('sari.finance');
+  for (const { approve, ...supplier } of SUPPLIERS) {
+    const created = await runCommand(maker, createSupplier, { addressLine2: null, region: null, countryCode: 'US', ...supplier });
+    if (!created.ok) {
+      if (created.error.rule !== 'SUPPLIER_DUPLICATE') throw new Error(`Seeding ${supplier.legalName} failed: ${created.error.message}`);
+      summary.suppliersSkipped++;
+      continue;
+    }
+    summary.suppliersCreated++;
+    if (approve) {
+      const reviewed = await runCommand(checker, reviewSupplier, {
+        supplierId: created.data.supplierId,
+        expectedVersion: 1,
+        decision: 'approve',
+        note: 'Seed data: fictional supplier',
+      });
+      if (!reviewed.ok) throw new Error(`Approving ${supplier.legalName} failed: ${reviewed.error.message}`);
+    }
+  }
+
   if (Object.keys(credentials).length > 0) {
     mkdirSync(dirname(outFile), { recursive: true });
     writeFileSync(outFile, `${JSON.stringify(credentials, null, 2)}\n`, { mode: 0o600 });
   }
   console.log(
     `Seed done: ${summary.departmentsCreated} departments created, ${summary.usersCreated} users created, ` +
-      `${summary.usersSkipped} existing users skipped, ${summary.passwordsSet} passwords set.`,
+      `${summary.usersSkipped} existing users skipped, ${summary.passwordsSet} passwords set, ` +
+      `${summary.suppliersCreated} suppliers created, ${summary.suppliersSkipped} existing suppliers skipped.`,
   );
   if (summary.passwordsSet > 0) console.log(`Sign-in credentials for the users above: ${outFile}`);
 } finally {

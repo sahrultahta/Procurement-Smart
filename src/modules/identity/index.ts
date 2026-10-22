@@ -23,6 +23,7 @@ export {
 } from './application/admin-user-queries';
 export { createUser, deactivateUser, prepareSetupLink, reactivateUser, updateUser } from './application/admin-users';
 export { provisionUser, provisionUserInput, type ProvisionUserInput } from './application/provision-user';
+export { findUserDisplayNames } from './application/user-names';
 export {
   BASE_PERMISSIONS,
   DEPARTMENT_SCOPED_ROLES,

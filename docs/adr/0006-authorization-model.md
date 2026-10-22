@@ -1,6 +1,6 @@
 # ADR 0006: Code-defined RBAC, scoped assignments, separation-of-duties policies
 
-- Status: Accepted. Amended by [ADR 0014](0014-identity-and-sign-in.md): `buyer` is renamed `procurement` (same permissions), and every active user gets the base permission `account.read`.
+- Status: Accepted. Amended by [ADR 0014](0014-identity-and-sign-in.md): `buyer` is renamed `procurement` (same permissions), and every active user gets the base permission `account.read`. Amended 2026-10-22 (Phase 4): new permission `supplier.block`, see below.
 - Date: 2026-10-18
 
 ## Context
@@ -61,6 +61,18 @@ These rules apply **in addition to** permissions, at the resource level, in appl
 5. **Defense in depth in the database:** a trigger rejects an approval decision whose `decided_by` equals the request's `submitted_by` (SOD-01). Unique indexes enforce SOD-02.
 
 Pages hide buttons the actor can't use, but hidden buttons are a usability feature, not a security control. Every Server Action re-checks access on its own.
+
+## Amendment (2026-10-22, Phase 4): `supplier.block`
+
+SUP-T06 lets **procurement or finance** block a supplier ("Dewi or Sari", US-SUP-03), but the command runner checks exactly one permission per operation. Instead of giving the runner "any of" permissions, blocking gets its own permission:
+
+| Permission | requester | approver | procurement | receiver | finance | auditor | admin |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| `supplier.block` | | | ✓ | | ✓ | | |
+
+Unblocking stays with `supplier.review` (finance), because an unblocked supplier goes back to review. Verified by `tests/unit/roles.test.ts` (168 cells) and the operation matrix in `tests/integration/permission-matrix.test.ts`.
+
+SOD-03 is enforced in `supplier.review` (`MAKER_CHECKER`) and backed by the CHECK `suppliers_maker_checker` (reviewer ≠ creator and ≠ last identity changer). A trigger keeps `created_by_user_id` fixed (`PFS01`), so the maker cannot be rewritten.
 
 ## Alternatives considered
 

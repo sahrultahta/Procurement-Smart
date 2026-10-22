@@ -49,8 +49,9 @@ function boundaryZones() {
           ? {
               target: `./src/modules/${target}`,
               from: `./src/modules/${m}`,
-              except: ['./index.ts'],
-              message: `Module "${target}" may import only the public API of "${m}".`,
+              // tables.ts: table declarations, for foreign keys in schema files only.
+              except: ['./index.ts', './tables.ts'],
+              message: `Module "${target}" may import only the public API of "${m}" (index.ts, or tables.ts for foreign keys).`,
             }
           : {
               target: `./src/modules/${target}`,

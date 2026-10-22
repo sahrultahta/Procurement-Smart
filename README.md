@@ -4,15 +4,16 @@ An open-source procurement workflow system: suppliers, purchase requisitions wit
 
 ## Status
 
-**Phases 0–3a are done, and Phase 3b (administration) is implemented.** What works today:
+**Phases 0–3 are done, and Phase 4 (suppliers) is implemented.** What works today:
 - signing in and out;
 - one-time password-setup links;
 - seven roles with code-defined permissions;
 - administration screens: create, edit, deactivate, and reactivate users; grant and revoke roles; manage departments (with separation of duties: no admin can change their own account, and the last admin cannot be removed);
+- suppliers: register, search, maker-checker review (the person who registers or renames a supplier cannot approve it), block and unblock, deactivate and reactivate, with duplicate detection that ignores punctuation;
 - an append-only audit trail;
 - decimal-safe money calculations.
 
-**No procurement workflow (requisitions, approvals, orders) is implemented yet.** Work happens in gated phases, and each phase ends with a report of exactly what was run and what passed (`docs/reports/`). Local setup is described in [docs/development.md](docs/development.md).
+**No requisitions, approvals, quotations, or orders are implemented yet.** Work happens in gated phases, and each phase ends with a report of exactly what was run and what passed (`docs/reports/`). Local setup is described in [docs/development.md](docs/development.md).
 
 ## Design documents
 

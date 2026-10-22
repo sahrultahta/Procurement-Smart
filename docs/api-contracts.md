@@ -20,7 +20,7 @@ These are the contracts of the application layer (ADR 0010). In v1 they are invo
   | `40001` / `40P01` | `CONFLICT`, after up to 3 whole-transaction retries for retry-safe commands |
   | `23505` | `CONFLICT` |
   | `23502` / `23503` / `23514` / `23P01` | `BUSINESS_RULE` / `INTEGRITY_CONSTRAINT` |
-  | anything else (incl. `PFA01`, `PFR01`, `25006`, `57014`) | `INTERNAL`, with a generic message; details only in the server log |
+  | anything else (incl. `PFA01`, `PFR01`, `PFS01`, `25006`, `57014`) | `INTERNAL`, with a generic message; details only in the server log |
 
 Each command writes the audit action `<command name, past tense>` (e.g. `requisition.submit` writes `requisition.submitted`) unless noted.
 
@@ -61,13 +61,22 @@ Queries:
 
 | Command | Permission | Input | Guards | REST (later) |
 | --- | --- | --- | --- | --- |
-| `supplier.create` | `supplier.manage` | legalName, taxId?, email?, phone?, address{…}, countryCode | SUP-T01, `SUPPLIER_DUPLICATE` | `POST /suppliers` |
-| `supplier.update` | `supplier.manage` | id, expectedVersion, fields… | SUP-T02 / SUP-T03 | `PATCH /suppliers/{id}` |
-| `supplier.review` | `supplier.review` | id, expectedVersion, decision `approve\|reject`, note? | SUP-T04/T05, `MAKER_CHECKER` | `POST /suppliers/{id}/review` |
-| `supplier.block` / `.unblock` | see SUP-T06/T07 | id, expectedVersion, reason | | `POST /suppliers/{id}/block` … |
-| `supplier.deactivate` / `.reactivate` | `supplier.manage` | id, expectedVersion | | |
+| `supplier.create` | `supplier.manage` | supplier fields | SUP-T01, `SUPPLIER_DUPLICATE` (message names the existing code) | `POST /suppliers` |
+| `supplier.update` | `supplier.manage` | supplierId, expectedVersion, supplier fields (all of them) | SUP-T02 / SUP-T03; a no-op writes nothing; `SUPPLIER_DUPLICATE` on an identity change | `PATCH /suppliers/{id}` |
+| `supplier.review` | `supplier.review` | supplierId, expectedVersion, decision `approve\|reject`, note (required to reject) | SUP-T04/T05, `MAKER_CHECKER` | `POST /suppliers/{id}/review` |
+| `supplier.block` | `supplier.block` (procurement, finance) | supplierId, expectedVersion, reason | SUP-T06 | `POST /suppliers/{id}/block` |
+| `supplier.unblock` | `supplier.review` | supplierId, expectedVersion, reason | SUP-T07 | `POST /suppliers/{id}/unblock` |
+| `supplier.deactivate` | `supplier.manage` | supplierId, expectedVersion, reason | SUP-T08 | `POST /suppliers/{id}/deactivate` |
+| `supplier.reactivate` | `supplier.manage` | supplierId, expectedVersion | SUP-T09, `SUPPLIER_DUPLICATE` (name taken meanwhile) | `POST /suppliers/{id}/reactivate` |
 
-Queries: `supplier.list` (filters: status, search by name/code/tax id), `supplier.get`, `supplier.selectableForPurchasing` (active only).
+**Implemented in Phase 4** (`src/modules/suppliers/application/`). Supplier fields: `legalName` (1–200, at least one letter or digit), `taxId` (letters, digits, spaces, `. - /`; 5–30 letters or digits), `email`, `phone`, `addressLine1`, `addressLine2`, `city`, `region`, `postalCode`, `countryCode` (ISO 3166-1 alpha-2). Blank optional fields become null. Code, status, normalized keys, and reviewers are never accepted.
+
+Audit actions: `supplier.created`, `supplier.updated`, `supplier.reviewed` (note as reason), `supplier.blocked`, `supplier.unblocked`, `supplier.deactivated` (reason), `supplier.reactivated`, each with before/after of the supplier fields and status.
+
+Queries (`supplier.read`: procurement, finance, auditor; every holder sees every supplier):
+- `supplier.list`: `q?` (≤ 100; matches the name key, the code, or the tax ID key, all literally), `status?`, cursor by code, `limit` 1–100. Keys `SUPPLIER_SUMMARY_KEYS`.
+- `supplier.get`: details with user **names** (not ids) for creator, identity changer, and reviewer, plus `callerIsMaker`. Keys `SUPPLIER_DETAIL_KEYS`.
+- `supplier.selectableForPurchasing`: active suppliers only, `{ id, code, legalName }` (SUP-R1).
 
 ## Requisitions
 

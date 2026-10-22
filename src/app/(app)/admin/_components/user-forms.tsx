@@ -1,12 +1,13 @@
 'use client';
 
 import { useActionState } from 'react';
+import { FieldError, FormMessage } from '@/components/form-message';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
-import { IDLE } from '../action-state';
+import { IDLE } from '@/lib/action-state';
 import {
   deactivateUserAction,
   grantRoleAction,
@@ -16,7 +17,7 @@ import {
   updateUserAction,
 } from '../actions';
 import type { DepartmentOption, RoleOption } from './create-user-form';
-import { FieldError, FormMessage, SetupLink } from './form-message';
+import { SetupLink } from './setup-link';
 
 /*
  * Forms on the user detail page. Hidden fields carry ids and the version the admin

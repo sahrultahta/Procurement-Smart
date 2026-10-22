@@ -21,6 +21,8 @@ const EXPECTED: Record<Permission, readonly Role[]> = {
   'supplier.read': [P, F, U],
   'supplier.manage': [P],
   'supplier.review': [F],
+  // ADR 0006 amendment (Phase 4): SUP-T06 lets procurement or finance block a supplier.
+  'supplier.block': [P, F],
   'rfq.manage': [P],
   'quotation.record': [P],
   'quotation.award': [P],

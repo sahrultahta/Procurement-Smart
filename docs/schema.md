@@ -162,24 +162,31 @@ Trigger `approval_steps_no_self_approval` (`BEFORE UPDATE`): raises if `NEW.deci
 
 ## Suppliers
 
-### `suppliers`
+### `suppliers` (implemented in Phase 4, migrations 0006 and 0007)
 
 | Column | Type | Constraints |
 | --- | --- | --- |
-| id | uuid | PK |
-| code | text | UNIQUE, `SUP-NNNNNN` |
+| id | uuid | PK, `uuidv7()` |
+| code | text | UNIQUE, `CHECK ~ '^SUP-[0-9]{6}$'`, from the gapless `SUP` sequence (`document_sequences`, year 0) |
 | legal_name | text | 1 to 200 chars |
-| normalized_name | text | lowercased, trimmed, inner whitespace collapsed. `UNIQUE WHERE status <> 'inactive'`. |
-| tax_id | text | `UNIQUE WHERE tax_id IS NOT NULL` |
-| email, phone | text | validated formats |
-| address_line1, address_line2, city, region, postal_code | text | |
-| country_code | char(2) | ISO 3166-1 alpha-2 |
+| normalized_name | text | duplicate key: NFKC, lowercase, punctuation and whitespace runs → one space. `UNIQUE WHERE status <> 'inactive'`. |
+| tax_id | text | as typed, ≤ 40 chars, NULL allowed |
+| tax_id_normalized | text | duplicate key: `^[A-Z0-9]{5,30}$`. NULL exactly when `tax_id` is. `UNIQUE WHERE tax_id_normalized IS NOT NULL` (also against inactive suppliers). |
+| email, phone | text | validated formats (email lowercased), ≤ 254 / ≤ 30 chars |
+| address_line1, address_line2, city, region, postal_code | text | ≤ 200 / 200 / 100 / 100 / 20 chars |
+| country_code | text | `^[A-Z]{2}$`; the app accepts only the 249 ISO 3166-1 alpha-2 codes |
 | status | text | `CHECK IN ('pending_review','active','blocked','inactive')` |
-| created_by_user_id | text | NOT NULL (SOD-03) |
-| identity_changed_by_user_id | text | last user who changed `legal_name` / `tax_id` (SOD-03) |
-| reviewed_by_user_id, reviewed_at, review_note | | |
-| status_reason | text | reason for block / reject / deactivate |
-| created_at, updated_at, version | | |
+| created_by_user_id | uuid | NOT NULL, FK → users (SOD-03). Fixed for life (trigger `PFS01`). |
+| identity_changed_by_user_id | uuid | FK → users; last user who changed `legal_name` / `tax_id` (SOD-03) |
+| reviewed_by_user_id, reviewed_at, review_note | uuid, timestamptz, text | set together (CHECK); cleared when the identity changes, on unblock, and on reactivation; note ≤ 2000 |
+| status_reason | text | reason for reject / block / deactivate, ≤ 2000 |
+| created_at, updated_at, version | | `version` per ADR 0008 C1 |
+
+CHECKs beyond the column rules:
+- `suppliers_maker_checker`: `reviewed_by_user_id` is NULL, or differs from `created_by_user_id` and from `identity_changed_by_user_id` (SOD-03 backstop).
+- `suppliers_active_is_reviewed`: an `active` supplier always has a reviewer (AB-04 backstop).
+
+Trigger `suppliers_fixed_identity_columns` (`BEFORE UPDATE`) rejects changes to `id`, `code`, `created_by_user_id`, and `created_at` with SQLSTATE `PFS01`. Index `suppliers_status_code_idx (status, code)` serves the list. Grants: `procureflow_app` gets SELECT, INSERT, UPDATE; no DELETE.
 
 **Bank and payment details are intentionally not stored in v1.** Payments are out of scope, and keeping them out removes the classic bank-detail-change fraud vector from this system.
 

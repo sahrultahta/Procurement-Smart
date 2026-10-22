@@ -1,12 +1,12 @@
 'use client';
 
 import { useActionState } from 'react';
+import { FieldError, FormMessage } from '@/components/form-message';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { IDLE } from '../action-state';
+import { IDLE } from '@/lib/action-state';
 import { createDepartmentAction, updateDepartmentAction } from '../actions';
-import { FieldError, FormMessage } from './form-message';
 
 export function CreateDepartmentForm() {
   const [state, formAction, pending] = useActionState(createDepartmentAction, IDLE);

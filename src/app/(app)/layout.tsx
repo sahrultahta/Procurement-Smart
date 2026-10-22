@@ -25,6 +25,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <Link href="/account" className="text-muted-foreground hover:text-foreground">
               My account
             </Link>
+            {actor.permissions.has('supplier.read') ? (
+              <Link href="/suppliers" className="text-muted-foreground hover:text-foreground">
+                Suppliers
+              </Link>
+            ) : null}
             {actor.permissions.has('admin.users') || actor.permissions.has('admin.settings') ? (
               <Link href="/admin" className="text-muted-foreground hover:text-foreground">
                 Admin
