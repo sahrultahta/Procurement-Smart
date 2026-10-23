@@ -109,6 +109,15 @@ flowchart LR
 - **AB-04 (identity swapped after review) is controlled:** any edit of the legal name or tax ID as typed sends an active supplier back to review and clears the old review; the editor becomes a maker. The CHECK `suppliers_active_is_reviewed` makes "active without a review" impossible, and CC-10 shows that an approval racing an identity change cannot leave one.
 - **T-03 (SQL injection) for search:** parameterized queries, LIKE wildcards escaped, and search terms normalized; `'; drop table`, `%`, `_`, and `\` are matched literally (tested, plus a mutation check that removing the escaping makes `%` match every supplier).
 - **E-01:** all 10 supplier operations are in the operation matrix; the new permission `supplier.block` is in the role matrix (ADR 0006 amendment).
+### Phase 5a status (2026-10-23)
+
+- **T-01 (tampered fields)** for requisitions: totals, line totals, status, department, currency, number, requester, and ordered quantity sent by the client are `VALIDATION_FAILED` (strict schemas); totals are computed with the shared pricing function at the org currency scale. JSON numbers for decimals are refused.
+- **T-02 (editing after submit):** besides the state machine, a trigger refuses any line change outside `draft` and `returned`, and another keeps a requisition's number, requester, department, and currency fixed (`PFQ01`, for every role).
+- **I-01 (IDOR):** requisition lists are filtered in SQL by own / department / all; a requisition the caller may not see is `NOT_FOUND` by id, including for edits. Tested per role, including a requester who is also a department approver.
+- **E-03 (threshold manipulation):** approval policies are versioned and immutable (triggers, `PFP01`); every publish is audited with rule summaries; the active rules and the version history are visible to admins. In-flight protection (steps frozen at submit) is Phase 5b.
+- **Currency:** locked by the first requisition, in the app (`CURRENCY_LOCKED`) and by a trigger (`PFO01`); tested against a concurrent change.
+- **Double submission:** `requisition.create` is idempotent per user and key (C6), and a reused key with different input is refused.
+
 - **Residual:** normalization does not catch look-alike names that differ in letters (for example "Maju Jaya" and "Maju Jaja") or a dropped legal suffix ("PT Maju Jaya" and "Maju Jaya"). Those remain a review task for finance, not a rule.
 
 ## 7. Accepted risks and out of scope

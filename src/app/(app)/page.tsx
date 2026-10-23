@@ -21,7 +21,10 @@ export default async function HomePage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          <p>No procurement features are implemented yet. Requisitions and approvals arrive in the next phases.</p>
+          <p>
+            Available so far: suppliers (with maker-checker review) and requisition drafts. Submitting requisitions for approval
+            arrives in the next phase; quotations, purchase orders, and receipts after that.
+          </p>
         </CardContent>
       </Card>
     </div>

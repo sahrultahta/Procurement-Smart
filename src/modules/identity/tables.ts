@@ -4,3 +4,4 @@
  * drizzle-kit can load them. Queries on these tables stay inside the identity module.
  */
 export { users } from './infrastructure/auth-schema';
+export { departments } from './infrastructure/schema';

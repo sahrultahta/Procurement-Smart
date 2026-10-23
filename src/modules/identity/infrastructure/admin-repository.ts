@@ -341,3 +341,20 @@ export async function findUserNames(db: Queryable, userIds: readonly string[]): 
   const rows = await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, [...userIds]));
   return new Map(rows.map((r) => [r.id, r.name]));
 }
+
+/** Department ids (null = org-wide) of the user's active `approver` assignments, if the profile is active. */
+export async function findApproverAssignmentDepartments(db: Queryable, userId: string): Promise<(string | null)[]> {
+  const rows = await db
+    .select({ departmentId: roleAssignments.departmentId })
+    .from(roleAssignments)
+    .innerJoin(userProfiles, eq(userProfiles.userId, roleAssignments.userId))
+    .where(
+      and(
+        eq(roleAssignments.userId, userId),
+        eq(roleAssignments.role, 'approver'),
+        isNull(roleAssignments.revokedAt),
+        eq(userProfiles.status, 'active'),
+      ),
+    );
+  return rows.map((r) => r.departmentId);
+}

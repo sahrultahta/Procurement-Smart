@@ -11,6 +11,7 @@ import {
   updateDepartment,
   updateUser,
 } from '@/modules/identity';
+import { publishApprovalPolicy, updateOrganizationSettings } from '@/modules/organization';
 import { issueSetupLink } from '@/server/admin-links';
 import { getRequestContext } from '@/server/request-context';
 import { runCommand } from '@/shared/application/runner';
@@ -131,4 +132,37 @@ export async function updateDepartmentAction(_previous: ActionState, form: FormD
   });
   if (result.ok) revalidatePath('/admin/departments');
   return outcome(result, 'Department saved.');
+}
+
+export async function updateSettingsAction(_previous: ActionState, form: FormData): Promise<ActionState> {
+  const result = await runCommand(await getRequestContext(), updateOrganizationSettings, {
+    orgName: text(form, 'orgName'),
+    timezone: text(form, 'timezone'),
+    currencyCode: text(form, 'currencyCode'),
+    currencyScale: integer(form, 'currencyScale'),
+    expectedVersion: integer(form, 'expectedVersion'),
+  });
+  if (result.ok) revalidatePath('/', 'layout');
+  return outcome(result, 'Settings saved.');
+}
+
+/**
+ * The editor sends the whole rule table as one JSON field. Whatever arrives is only
+ * parsed here; the command validates every rule strictly (unknown keys included).
+ */
+export async function publishPolicyAction(_previous: ActionState, form: FormData): Promise<ActionState> {
+  let rules: unknown;
+  try {
+    rules = JSON.parse(text(form, 'rules'));
+  } catch {
+    return { status: 'error', code: 'VALIDATION_FAILED', message: 'The rule table could not be read. Reload the page and try again.' };
+  }
+  const result = await runCommand(await getRequestContext(), publishApprovalPolicy, {
+    documentType: 'requisition',
+    name: text(form, 'name'),
+    rules,
+  });
+  if (!result.ok) return failed(result.error);
+  revalidatePath('/admin/approval-policy');
+  return { status: 'ok', message: `Version ${result.data.versionNo} published. New submissions use it; requisitions already submitted keep their steps.` };
 }

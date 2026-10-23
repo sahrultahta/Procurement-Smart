@@ -1,6 +1,6 @@
 # ADR 0010: Transport-agnostic command layer; Server Actions first, REST later
 
-- Status: Accepted
+- Status: Accepted. Amended 2026-10-23 (Phase 5a): an operation may require any one of several permissions.
 - Date: 2026-10-18
 
 ## Context
@@ -43,6 +43,12 @@ type ErrorCode =
 ```
 
 Error messages never include stack traces, SQL, or other users' data.
+
+## Amendment (2026-10-23, Phase 5a): "any of" permissions
+
+An operation's `permission` is either one permission or a non-empty list, of which the caller needs **any one** (`PermissionRequirement` in `src/shared/application/runner.ts`). It exists for reads whose *scope* depends on which permission the caller holds: `requisition.list` and `requisition.get` accept `requisition.read.own`, `requisition.read.department`, or `requisition.read.all`, and the handler then filters rows in SQL accordingly (ADR 0006 §4).
+
+The alternative, an umbrella permission such as `requisition.read` granted to five roles, would add a permission that means nothing by itself. The list is frozen at definition time (the caller cannot widen it afterwards), an empty list is refused, and the operation matrix test treats a list exactly like a single permission. Verified in `tests/unit/runner.test.ts` and `tests/integration/permission-matrix.test.ts`.
 
 ## Alternatives considered
 

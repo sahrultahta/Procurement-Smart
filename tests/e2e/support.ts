@@ -6,6 +6,8 @@ import { expect, type Page } from '@playwright/test';
 // uses its own random client addresses: 10.<a>.<b>.<n>.
 const RUN_OCTETS = [1 + Math.floor(Math.random() * 254), 1 + Math.floor(Math.random() * 254)];
 export function clientIp(n: number): string {
+  // An invalid address would make every client look the same to the rate limiter.
+  if (!Number.isInteger(n) || n < 1 || n > 254) throw new Error(`clientIp(${n}): use 1 to 254`);
   return `10.${RUN_OCTETS[0]}.${RUN_OCTETS[1]}.${n}`;
 }
 

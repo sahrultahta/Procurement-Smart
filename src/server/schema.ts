@@ -8,3 +8,5 @@ export * from '../modules/audit/infrastructure/schema';
 export * from '../modules/identity/infrastructure/auth-schema';
 export * from '../modules/identity/infrastructure/schema';
 export * from '../modules/suppliers/infrastructure/schema';
+export * from '../modules/organization/infrastructure/schema';
+export * from '../modules/requisitions/infrastructure/schema';

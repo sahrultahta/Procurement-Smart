@@ -44,6 +44,20 @@ const EXPECTED: Record<string, readonly Caller[]> = {
   'supplier.list': ['procurement', 'finance', 'auditor'],
   'supplier.get': ['procurement', 'finance', 'auditor'],
   'supplier.selectableForPurchasing': ['procurement', 'finance', 'auditor'],
+  // Phase 5a. Requisitions: create/edit/cancel need requisition.create (requester); reading
+  // needs any one of read.own (requester), read.department (approver), read.all
+  // (procurement, finance, auditor). Settings and policies are admin-only.
+  'organization.profile': [...ROLES_UNDER_TEST, 'no role'],
+  'admin.settings.get': ['admin'],
+  'admin.settings.update': ['admin'],
+  'admin.approvalPolicy.publish': ['admin'],
+  'admin.approvalPolicy.getActive': ['admin'],
+  'admin.approvalPolicy.list': ['admin'],
+  'requisition.create': ['requester'],
+  'requisition.update': ['requester'],
+  'requisition.cancel': ['requester'],
+  'requisition.list': ['requester', 'approver', 'procurement', 'finance', 'auditor'],
+  'requisition.get': ['requester', 'approver', 'procurement', 'finance', 'auditor'],
 };
 
 let t: TestDatabase;

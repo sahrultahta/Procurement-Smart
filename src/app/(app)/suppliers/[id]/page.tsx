@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { formatTimestamp } from '@/lib/format';
 import { getSupplier } from '@/modules/suppliers';
+import { getOrganization } from '@/server/organization-profile';
 import { getRequestContext } from '@/server/request-context';
 import { runQuery } from '@/shared/application/runner';
 import { BlockForm, DeactivateForm, ReactivateForm, ReviewForm, UnblockForm } from '../_components/supplier-actions';
@@ -32,6 +33,7 @@ export default async function SupplierPage(props: {
     );
   }
   const s = result.data;
+  const { timezone } = await getOrganization();
   const can = (permission: string) => request.actor?.permissions.has(permission) ?? false;
   const target = { supplierId: s.id, version: s.version };
   const editable = can('supplier.manage') && s.status !== 'inactive';
@@ -44,7 +46,7 @@ export default async function SupplierPage(props: {
           <SupplierStatusBadge status={s.status} />
         </div>
         <p className="text-sm text-muted-foreground">
-          <span className="font-mono">{s.code}</span> · registered by {s.createdBy} on {formatTimestamp(s.createdAt)}
+          <span className="font-mono">{s.code}</span> · registered by {s.createdBy} on {formatTimestamp(s.createdAt, timezone)}
         </p>
       </div>
 
@@ -61,7 +63,7 @@ export default async function SupplierPage(props: {
         <CardContent className="grid gap-3 text-sm">
           <dl className="grid grid-cols-[12rem_1fr] gap-y-2">
             <dt className="text-muted-foreground">Reviewed</dt>
-            <dd>{s.reviewedBy && s.reviewedAt ? `by ${s.reviewedBy} on ${formatTimestamp(s.reviewedAt)}` : 'Not reviewed'}</dd>
+            <dd>{s.reviewedBy && s.reviewedAt ? `by ${s.reviewedBy} on ${formatTimestamp(s.reviewedAt, timezone)}` : 'Not reviewed'}</dd>
             {s.reviewNote ? (
               <>
                 <dt className="text-muted-foreground">Review note</dt>

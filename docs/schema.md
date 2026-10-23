@@ -60,7 +60,7 @@ Trigger `role_assignments_revocation_only` (migration 0005, `BEFORE UPDATE`): th
 
 ### `org_settings` (single row)
 
-*Not built yet (maintainer decision, 2026-10-22).* Each column arrives with the phase whose behavior it controls, so no setting exists before it has an effect: org name, timezone, and currency in Phase 5; `rfq_required_above` and `min_quotes` in Phase 6; `po_approval_threshold` and `po_price_tolerance_pct` in Phase 7; `over_receipt_tolerance_pct` in Phase 8.
+*Phase 5a implements `id`, `org_name`, `timezone` (IANA, checked against ICU), `currency_code` (ISO 4217, checked against ICU), `currency_scale`, `updated_at`, `updated_by_user_id`, `version`, plus `currency_locked_at`.* The migration (0009) inserts the row with neutral defaults (`My organization`, `UTC`, `USD`, 2). The first requisition sets `currency_locked_at`; from then on a trigger (`org_settings_currency_lock`, SQLSTATE `PFO01`) refuses any change to the currency, its scale, or the lock itself, for every role. The app role has SELECT and UPDATE only. The other columns below arrive with the phases whose behavior they control (maintainer decision, 2026-10-22): `rfq_required_above` and `min_quotes` in Phase 6; `po_approval_threshold` and `po_price_tolerance_pct` in Phase 7; `over_receipt_tolerance_pct` in Phase 8.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -86,6 +86,8 @@ Policies are **immutable once created**. "Editing" means creating a new policy a
 
 Rule resolution: a department-specific rule beats an "any department" rule, then the amount band `[min, max)` is matched against the document total.
 
+**Implemented in Phase 5a** (migrations 0008, 0009) with these additions: `approval_policies.version_no` (unique per document type, 1, 2, …), `CHECK (is_active = (superseded_at IS NULL))`; `approval_policy_rules.rule_no` (display order, 1–50); `approval_policy_steps.step_no` 1–5 and `CHECK (required_role <> 'finance' OR scope_mode = 'organization')`. Immutability is enforced by triggers (SQLSTATE `PFP01`, for every role): a policy can only be superseded, once; rules and steps can be inserted only in the transaction that created their policy (its `created_at` equals `now()`), and never updated or deleted. The app role has SELECT and INSERT on rules and steps, and UPDATE only on `approval_policies` (for superseding).
+
 ## Requisitions
 
 ### `purchase_requisitions`
@@ -110,6 +112,8 @@ Rule resolution: a department-specific rule beats an "any department" rule, then
 
 Indexes: `(requester_user_id, status)`, `(department_id, status)`, `(status, submitted_at)`.
 
+**Implemented in Phase 5a** (migrations 0008, 0009), without the approval columns (`current_approval_request_id`, `submitted_at`, `approved_at`) and the close columns, which arrive with Phase 5b; the `(status, submitted_at)` index comes with them. User and department references are `uuid` foreign keys. `currency_scale smallint` is stored next to `currency_code` (the scale used for its totals). CHECKs: number `^PR-[0-9]{4}-[0-9]{6}$`, text lengths, total ≥ 0, cancel fields set exactly when `cancelled`, reason ≤ 500. Trigger `purchase_requisitions_fixed_columns` (`PFQ01`): number, requester, department, currency, and creation time never change. The app role has SELECT, INSERT, UPDATE; no DELETE.
+
 ### `requisition_lines`
 
 | Column | Type | Constraints |
@@ -123,6 +127,8 @@ Indexes: `(requester_user_id, status)`, `(department_id, status)`, `(status, sub
 | estimated_unit_price | numeric(20,4) | `CHECK >= 0` |
 | line_total | numeric(20,4) | server-computed |
 | ordered_qty | numeric(18,3) | `DEFAULT 0`, `CHECK (ordered_qty >= 0 AND ordered_qty <= quantity)` (backstop for no over-ordering) |
+
+Implemented in Phase 5a. Trigger `requisition_lines_editable_only_in_draft` (`PFQ01`, threat T-02): lines can be inserted, changed, or deleted only while the requisition is `draft` or `returned`; afterwards the only allowed update changes nothing but `ordered_qty` (purchase orders, Phase 7). The app role has DELETE on this table only because draft lines are replaced on edit.
 
 ## Approvals
 
@@ -253,8 +259,8 @@ Constraints (over-receipt backstop, ADR 0008 C3):
 ### `document_sequences`
 `doc_type text`, `year smallint` (0 for non-yearly, e.g. suppliers), `last_value integer NOT NULL DEFAULT 0`, `PK (doc_type, year)`. Allocated with `UPDATE ... RETURNING` in the caller's transaction (ADR 0008 C5). Rows are created with `INSERT ... ON CONFLICT DO NOTHING` on first use.
 
-### `idempotency_keys`
-`user_id text`, `key text CHECK (char_length(key) BETWEEN 8 AND 100)`, `command text`, `result jsonb`, `created_at`, `PK (user_id, key)`. Keys older than 24 h are ignored and purged by a maintenance script.
+### `idempotency_keys` (implemented in Phase 5a)
+`user_id uuid` (not a foreign key: `src/shared` must not depend on the identity module), `key text CHECK (key ~ '^[A-Za-z0-9_-]{8,100}$')`, `operation text`, `request_hash text` (sha256 of the canonical input, `^[0-9a-f]{64}$`), `response jsonb`, `created_at`, `PK (user_id, key)`. **Keys do not expire yet**; a purge job is a Phase 10 item. The app role has SELECT, INSERT, UPDATE, DELETE.
 
 ### `audit_events` (ADR 0009)
 

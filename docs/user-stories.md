@@ -24,11 +24,11 @@ Personas (fictional): **Rina** (requester, Operations), **Bayu** (approver, Oper
 - Tomas cannot change his **own** roles or deactivate himself (`SELF_ADMINISTRATION`).
 - The last active admin cannot be removed (`LAST_ADMIN`).
 
-**US-AD-03 Configure approvals.** Tomas publishes an approval policy: amount bands per department, each band an ordered list of steps (`approver` in the document's department, or `finance` org-wide).
+**US-AD-03 Configure approvals.** *(Implemented in Phase 5a, with an editor screen; "in-flight approvals keep their steps" is verified in 5b.)* Tomas publishes an approval policy: amount bands per department, each band an ordered list of steps (`approver` in the document's department, or `finance` org-wide).
 - Overlapping bands or gaps from 0 upward are rejected.
 - In-flight approvals keep the steps they were created with.
 
-**US-AD-04 Org settings.** *(Deferred: each setting ships with the phase that uses it, Phases 5–8; see PLAN.md.)* Tomas sets org name, timezone, currency (locked once any monetary document exists), RFQ threshold, minimum quotes, PO approval threshold, price tolerance, and over-receipt tolerance.
+**US-AD-04 Org settings.** *(Org name, time zone, and currency with its lock: Phase 5a. Each other setting ships with the phase that uses it, Phases 6–8; see PLAN.md.)* Tomas sets org name, timezone, currency (locked once any monetary document exists), RFQ threshold, minimum quotes, PO approval threshold, price tolerance, and over-receipt tolerance.
 
 ## Suppliers
 
@@ -43,19 +43,19 @@ Personas (fictional): **Rina** (requester, Operations), **Bayu** (approver, Oper
 
 ## Purchase requisitions
 
-**US-PR-01 Draft a requisition.** Rina creates a PR with lines (description, quantity, unit, estimated unit price) and a needed-by date.
+**US-PR-01 Draft a requisition.** *(Phase 5a.)* Rina creates a PR with lines (description, quantity, unit, estimated unit price) and a needed-by date.
 - The server computes line totals and the PR total. A total sent by the browser is rejected.
 - The PR belongs to Rina's department, taken from her profile, not from the form.
 
-**US-PR-02 Edit my draft.** Rina edits her PR while it is `draft` or `returned`. If someone else changed it since she loaded it, she gets "this requisition changed, reload" (`CONFLICT`).
+**US-PR-02 Edit my draft.** *(Phase 5a for drafts; returned requisitions in 5b.)* Rina edits her PR while it is `draft` or `returned`. If someone else changed it since she loaded it, she gets "this requisition changed, reload" (`CONFLICT`).
 
 **US-PR-03 Submit for approval.** Rina submits. The approval route is resolved from the active policy (department + total) and frozen.
 - If no rule matches, submission fails with `NO_APPROVAL_ROUTE`. The PR is never auto-approved.
 - After submission, the lines are read-only.
 
-**US-PR-04 Withdraw or cancel.** Rina can cancel her PR while draft, returned, or pending (with a reason when pending), or when approved but nothing has been ordered yet.
+**US-PR-04 Withdraw or cancel.** *(Drafts: Phase 5a. Pending and approved: 5b.)* Rina can cancel her PR while draft, returned, or pending (with a reason when pending), or when approved but nothing has been ordered yet.
 
-**US-PR-05 See only what I'm allowed to.** Rina sees only her own PRs. Bayu sees PRs of the departments he approves for. Dewi, Sari, and Lena see all. Opening another person's PR by URL returns "not found" for Rina.
+**US-PR-05 See only what I'm allowed to.** *(Phase 5a.)* Rina sees only her own PRs. Bayu sees PRs of the departments he approves for. Dewi, Sari, and Lena see all. Opening another person's PR by URL returns "not found" for Rina.
 
 ## Approvals
 

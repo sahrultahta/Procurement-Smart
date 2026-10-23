@@ -24,6 +24,7 @@ export {
 export { createUser, deactivateUser, prepareSetupLink, reactivateUser, updateUser } from './application/admin-users';
 export { provisionUser, provisionUserInput, type ProvisionUserInput } from './application/provision-user';
 export { findUserDisplayNames } from './application/user-names';
+export { findApproverScope, findDepartmentDirectory, type ApproverScope, type DepartmentRecord } from './application/directory';
 export {
   BASE_PERMISSIONS,
   DEPARTMENT_SCOPED_ROLES,

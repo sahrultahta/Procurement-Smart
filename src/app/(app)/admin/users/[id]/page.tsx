@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatTimestamp } from '@/lib/format';
 import { getUser, listDepartments } from '@/modules/identity';
+import { getOrganization } from '@/server/organization-profile';
 import { getRequestContext } from '@/server/request-context';
 import { runQuery } from '@/shared/application/runner';
 import { ErrorPanel, UserStatusBadge } from '../../_components/status-badge';
@@ -28,6 +29,7 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
     return <ErrorPanel message={result.error.message} />;
   }
   const user = result.data;
+  const { timezone } = await getOrganization();
   const departments = await runQuery(request, listDepartments, {});
   const allDepartments = departments.ok ? departments.data : [];
   const activeDepartments = allDepartments.filter((d) => d.isActive).map((d) => ({ code: d.code, name: d.name }));
@@ -47,7 +49,7 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
           <UserStatusBadge status={user.status} passwordSet={user.passwordSet} />
         </div>
         <p className="text-sm text-muted-foreground">
-          {user.email} · created {formatTimestamp(user.createdAt)}
+          {user.email} · created {formatTimestamp(user.createdAt, timezone)}
         </p>
       </div>
 
@@ -99,7 +101,7 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
             ) : (
               <>
                 <p className="text-sm">
-                  Deactivated{user.deactivatedAt ? ` on ${formatTimestamp(user.deactivatedAt)}` : ''}. The user cannot sign in.
+                  Deactivated{user.deactivatedAt ? ` on ${formatTimestamp(user.deactivatedAt, timezone)}` : ''}. The user cannot sign in.
                 </p>
                 <ReactivateForm userId={user.id} version={user.version} />
               </>
@@ -135,7 +137,7 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
                     <TableCell>{a.label}</TableCell>
                     <TableCell>{a.departmentCode ?? 'Whole organization'}</TableCell>
                     <TableCell className="whitespace-normal">
-                      {formatTimestamp(a.grantedAt)} by {a.grantedBy}
+                      {formatTimestamp(a.grantedAt, timezone)} by {a.grantedBy}
                     </TableCell>
                     {isSelf ? null : (
                       <TableCell>
@@ -166,10 +168,10 @@ export default async function UserPage({ params }: { params: Promise<{ id: strin
                       <TableCell>{a.label}</TableCell>
                       <TableCell>{a.departmentCode ?? 'Whole organization'}</TableCell>
                       <TableCell className="whitespace-normal">
-                        {formatTimestamp(a.grantedAt)} by {a.grantedBy}
+                        {formatTimestamp(a.grantedAt, timezone)} by {a.grantedBy}
                       </TableCell>
                       <TableCell className="whitespace-normal">
-                        {a.revokedAt ? formatTimestamp(a.revokedAt) : ''} by {a.revokedBy}: {a.revokeReason}
+                        {a.revokedAt ? formatTimestamp(a.revokedAt, timezone) : ''} by {a.revokedBy}: {a.revokeReason}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -6,7 +6,7 @@ Notation: **Actor** is the permission plus any resource rule. **Guards** must al
 
 ---
 
-## 1. Purchase requisition (PR)
+## 1. Purchase requisition (PR) (table implemented in Phase 5a; PR-T01, T02, T07 wired; the rest in 5b)
 
 ```mermaid
 stateDiagram-v2
@@ -40,6 +40,8 @@ stateDiagram-v2
 | PR-T10 | approved → closed | `requisition.close` | `po.create` holder | reason required | Remaining unordered quantity can no longer be ordered. Terminal. There is no automatic close in v1; the UI shows ordering progress instead. |
 
 Invariant PR-I1: `0 ≤ ordered_qty ≤ quantity` per line (DB CHECK). Ordered quantity changes only through PO commands.
+
+Implementation (Phase 5a): the pure table is `modules/requisitions/domain/requisition.ts`, all 49 (status, command) pairs tested in `tests/unit/requisition-domain.test.ts`. `requisition.create`, `.update`, and `.cancel` (draft and returned) are commands now; `.submit`, the approval-driven transitions, PR-T08, PR-T09, and PR-T10 arrive with Phase 5b. The year in `PR-YYYY-NNNNNN` is the current year in the org time zone. A trigger keeps lines read-only outside `draft` and `returned` (T-02).
 
 ---
 

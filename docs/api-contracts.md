@@ -11,7 +11,7 @@ These are the contracts of the application layer (ADR 0010). In v1 they are invo
 - **`idempotencyKey?: string(8..100)`** is accepted on every `*.create` command (ADR 0008 C6).
 - **Never accepted from clients:** ids of new rows, numbers, totals, statuses, `*_by` / `*_at` fields, `department_id` on requisitions (taken from the actor's profile), `currency_code` (taken from org settings). Sending them fails strict validation.
 - **Lists:** cursor pagination `{ cursor?: string, limit?: 1..100 = 25 }`. Sorting only by whitelisted fields. Filters are typed enums or dates, never raw SQL fragments.
-- **Business-rule sub-codes** (`error.code = 'BUSINESS_RULE'`, `error.rule = ...`): `SELF_APPROVAL`, `DUPLICATE_APPROVER`, `NO_APPROVAL_ROUTE`, `NOT_ELIGIBLE_APPROVER`, `SUPPLIER_NOT_ACTIVE`, `SUPPLIER_DUPLICATE`, `MAKER_CHECKER`, `OVER_ORDER`, `RFQ_REQUIRED`, `MIN_QUOTES_JUSTIFICATION_REQUIRED`, `NON_LOWEST_JUSTIFICATION_REQUIRED`, `QUOTATION_EXPIRED`, `ORDER_RECEIVE_CONFLICT` (SOD-04), `OVER_RECEIPT`, `RECEIPTS_EXIST`, `ALREADY_REVERSED`, `PO_CLOSED`, `SELF_ADMINISTRATION`, `LAST_ADMIN`, `EMAIL_TAKEN`, `UNKNOWN_DEPARTMENT`, `ROLE_NOT_SCOPABLE`, `ROLE_ALREADY_ASSIGNED`, `USER_DEACTIVATED`, `PASSWORD_ALREADY_SET`, `DEPARTMENT_CODE_TAKEN`, `CURRENCY_MISMATCH`, `AMOUNT_TOO_LARGE`, `INTEGRITY_CONSTRAINT` (a database constraint caught what an application check should have; logged at warn).
+- **Business-rule sub-codes** (`error.code = 'BUSINESS_RULE'`, `error.rule = ...`): `SELF_APPROVAL`, `DUPLICATE_APPROVER`, `NO_APPROVAL_ROUTE`, `NOT_ELIGIBLE_APPROVER`, `SUPPLIER_NOT_ACTIVE`, `SUPPLIER_DUPLICATE`, `MAKER_CHECKER`, `OVER_ORDER`, `RFQ_REQUIRED`, `MIN_QUOTES_JUSTIFICATION_REQUIRED`, `NON_LOWEST_JUSTIFICATION_REQUIRED`, `QUOTATION_EXPIRED`, `ORDER_RECEIVE_CONFLICT` (SOD-04), `OVER_RECEIPT`, `RECEIPTS_EXIST`, `ALREADY_REVERSED`, `PO_CLOSED`, `SELF_ADMINISTRATION`, `LAST_ADMIN`, `EMAIL_TAKEN`, `UNKNOWN_DEPARTMENT`, `ROLE_NOT_SCOPABLE`, `ROLE_ALREADY_ASSIGNED`, `USER_DEACTIVATED`, `PASSWORD_ALREADY_SET`, `DEPARTMENT_CODE_TAKEN`, `NO_DEPARTMENT`, `CURRENCY_LOCKED`, `IDEMPOTENCY_KEY_REUSED`, `CURRENCY_MISMATCH`, `AMOUNT_TOO_LARGE`, `INTEGRITY_CONSTRAINT` (a database constraint caught what an application check should have; logged at warn).
 - **Database conditions are mapped by the runner** (`src/shared/application/runner.ts`, Phase 2):
 
   | SQLSTATE | Result |
@@ -20,7 +20,7 @@ These are the contracts of the application layer (ADR 0010). In v1 they are invo
   | `40001` / `40P01` | `CONFLICT`, after up to 3 whole-transaction retries for retry-safe commands |
   | `23505` | `CONFLICT` |
   | `23502` / `23503` / `23514` / `23P01` | `BUSINESS_RULE` / `INTEGRITY_CONSTRAINT` |
-  | anything else (incl. `PFA01`, `PFR01`, `PFS01`, `25006`, `57014`) | `INTERNAL`, with a generic message; details only in the server log |
+  | anything else (incl. `PFA01`, `PFR01`, `PFS01`, `PFO01`, `PFP01`, `PFQ01`, `25006`, `57014`) | `INTERNAL`, with a generic message; details only in the server log |
 
 Each command writes the audit action `<command name, past tense>` (e.g. `requisition.submit` writes `requisition.submitted`) unless noted.
 
@@ -30,7 +30,7 @@ Each command writes the audit action `<command name, past tense>` (e.g. `requisi
 
 | Command | Permission | Input (key fields) | Guards / rules | Output | REST (later) |
 | --- | --- | --- | --- | --- | --- |
-**Implemented in Phase 3b** (`src/modules/identity/application/admin-*.ts`), except `admin.settings.update` and `admin.approvalPolicy.publish`, which arrive with the phases that use them.
+**Implemented in Phase 3b** (`src/modules/identity/application/admin-*.ts`). `admin.settings.update` and `admin.approvalPolicy.publish` are implemented in Phase 5a, in the organization module (details below the table).
 
 Every `admin.user.*` and `admin.role.*` command first takes the admin-set lock (ADR 0008 C9) and re-checks that the caller still holds the permission (`FORBIDDEN` otherwise). Departments are referred to by `departmentCode` (`^[A-Z0-9-]{2,16}$`), not by id, except in `admin.department.update`. `departmentCode: null` means "no department" for a profile, and "whole organization" for a role scope.
 
@@ -48,6 +48,10 @@ Every `admin.user.*` and `admin.role.*` command first takes the admin-set lock (
 | `admin.department.update` | `admin.settings` | departmentId, name, isActive, expectedVersion | The code cannot change (sending it fails validation). Inactive: existing members and scopes stay, nobody new gets it. A no-op writes nothing. | version | `PATCH /departments/{id}` |
 | `admin.settings.update` | `admin.settings` | any `org_settings` field, expectedVersion | `currency_code` / `currency_scale` cannot change once any monetary document exists | settings | `PATCH /settings` |
 | `admin.approvalPolicy.publish` | `admin.approvalPolicies` | documentType, name, rules[{departmentId?, minAmount, maxAmount?, steps[{role, scopeMode}]}] | No overlapping bands. Full coverage from 0. ≥1 step per rule. | policyId (new active version) | `POST /approval-policies` |
+
+**Phase 5a (organization module):**
+- `admin.settings.update` (`admin.settings`): `orgName` (1–120), `timezone` (IANA), `currencyCode` (ISO 4217), `currencyScale` (0–4), `expectedVersion`. Changing the currency or its scale after the first requisition is `CURRENCY_LOCKED`. Audit `settings.updated`. Queries: `admin.settings.get` (`admin.settings`, with `currencyLocked`), and `organization.profile` (`account.read`: every signed-in user; name, time zone, currency, for display).
+- `admin.approvalPolicy.publish` (`admin.approvalPolicies`): `documentType` (`requisition` only until Phase 7), `name`, `rules[{ departmentCode | null, minAmount, maxAmount | null, steps[{ role: approver | finance, scopeMode: document_department | organization }] }]`. Overlaps, gaps, missing coverage from 0, an upper limit on the top any-department rule, empty or more than 5 steps, and department-scoped finance steps are `VALIDATION_FAILED` with paths like `rules.1.minAmount`; unknown or inactive departments are `UNKNOWN_DEPARTMENT`. Output `{ policyId, versionNo }`. Audit `approvalPolicy.published` (version, name, rule summaries). Queries `admin.approvalPolicy.getActive` and `admin.approvalPolicy.list` (versions).
 
 Audit actions: `user.provisioned`, `role.granted` (create), `user.updated`, `user.deactivated` (with reason, `revokedSessions`, `invalidatedSetupLinks`), `user.reactivated`, `user.setupLinkIssued`, `role.granted`, `role.revoked` (with reason), `department.created`, `department.updated`. Setup-link tokens are never written to audit events (tested), and the application logger never receives them (the runner logs no inputs or outputs).
 
@@ -89,6 +93,12 @@ Queries (`supplier.read`: procurement, finance, auditor; every holder sees every
 | `requisition.close` | `po.create` | id, expectedVersion, reason | PR-T10 | {status} | `POST /requisitions/{id}/close` |
 
 Queries (visibility scoped in SQL per ADR 0006): `requisition.list` (own / department / all, depending on role; filters: status, department, date range), `requisition.get` (header, lines with `orderedQty` and remaining, approval history), `requisition.orderable` (approved, remaining qty > 0, for buyers).
+
+**Implemented in Phase 5a:** `requisition.create`, `requisition.update`, `requisition.cancel` (draft and returned only; withdrawing a submitted or approved requisition comes with Phase 5b), `requisition.list`, `requisition.get`. Details:
+- `requisition.create` / `.update` take `title` (1–200), `justification` (≤ 2000, blank = null), `neededBy` (`YYYY-MM-DD`, a real date), and `lines` (1–200 of `{ description 1–500, quantity, uom 1–16, estimatedUnitPrice }`, decimals as strings per ADR 0007). The department comes from the requester's profile (`NO_DEPARTMENT` if there is none); the currency and its scale come from the org settings (and lock them); the year in the number is the current year in the org time zone. `create` accepts `idempotencyKey` (`^[A-Za-z0-9_-]{8,100}$`); the same key with different input is `IDEMPOTENCY_KEY_REUSED`.
+- `update` and `cancel` are for the requester only: someone who can see the requisition gets `FORBIDDEN`, anyone else `NOT_FOUND`. A no-op update writes nothing.
+- Permissions: the three commands need `requisition.create`; the two queries need any one of `requisition.read.own`, `requisition.read.department`, `requisition.read.all` (ADR 0010 amendment). `requisition.list` filters by `status`, `departmentCode`, and `q` (number or title, literal match), pages by number (newest first); a date-range filter is not implemented yet. `requisition.get` returns lines with `orderedQty` and `remainingQty`, user **names** instead of ids, and `callerCanEdit`. Approval history comes with Phase 5b.
+- Audit actions: `requisition.created`, `requisition.updated` (changed fields, lines as summaries), `requisition.cancelled` (reason).
 
 ## Approvals
 

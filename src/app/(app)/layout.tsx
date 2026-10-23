@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { REQUISITION_READ_PERMISSIONS } from '@/modules/requisitions';
 import { getRequestContext } from '@/server/request-context';
 import { signOutAction } from './actions';
 
@@ -25,6 +26,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <Link href="/account" className="text-muted-foreground hover:text-foreground">
               My account
             </Link>
+            {REQUISITION_READ_PERMISSIONS.some((p) => actor.permissions.has(p)) ? (
+              <Link href="/requisitions" className="text-muted-foreground hover:text-foreground">
+                Requisitions
+              </Link>
+            ) : null}
             {actor.permissions.has('supplier.read') ? (
               <Link href="/suppliers" className="text-muted-foreground hover:text-foreground">
                 Suppliers

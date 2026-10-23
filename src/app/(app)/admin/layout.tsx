@@ -10,8 +10,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const { actor } = await getRequestContext();
   const canManageUsers = actor?.permissions.has('admin.users') ?? false;
   const canManageSettings = actor?.permissions.has('admin.settings') ?? false;
+  const canManagePolicies = actor?.permissions.has('admin.approvalPolicies') ?? false;
 
-  if (!canManageUsers && !canManageSettings) {
+  if (!canManageUsers && !canManageSettings && !canManagePolicies) {
     return (
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold">Access denied</h1>
@@ -31,6 +32,16 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         {canManageSettings ? (
           <Link href="/admin/departments" className="text-muted-foreground hover:text-foreground">
             Departments
+          </Link>
+        ) : null}
+        {canManageSettings ? (
+          <Link href="/admin/settings" className="text-muted-foreground hover:text-foreground">
+            Settings
+          </Link>
+        ) : null}
+        {canManagePolicies ? (
+          <Link href="/admin/approval-policy" className="text-muted-foreground hover:text-foreground">
+            Approval policy
           </Link>
         ) : null}
       </nav>

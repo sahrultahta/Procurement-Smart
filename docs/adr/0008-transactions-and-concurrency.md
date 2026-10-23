@@ -42,6 +42,17 @@ This narrows the earlier rejection of advisory locks below: they are not used *i
 
 **CC-08:** two admins remove each other (revoke/revoke, deactivate/deactivate, revoke/deactivate). A third connection holds the set lock until both commands are waiting on it, then releases it. Over 20 iterations exactly one succeeds, the other gets `FORBIDDEN` or `LAST_ADMIN`, and exactly one admin remains. With the lock removed, both succeed on the first iteration (mutation check, Phase 3b report).
 
+## Implemented in Phase 5a (2026-10-23)
+
+- **C6 idempotency keys** (`src/shared/db/idempotency.ts`, table `idempotency_keys`): the key row is claimed first in the command's transaction; a concurrent request with the same key waits on the unique index, then returns the stored response, or claims the key if the first transaction rolled back. A sha256 of the canonical input is stored with the key, and the same key with a different input is refused (`IDEMPOTENCY_KEY_REUSED`). Used by `requisition.create`. Keys do not expire yet.
+- **C9 set lock, second use:** publishing an approval policy takes an advisory lock per document type, so parallel publishes run one after another (each supersedes the previous version) instead of failing on the "one active" unique index.
+
+| Test | Assertion |
+| --- | --- |
+| CC-06 (requisitions) | 5 parallel `requisition.create` with one key, 20 times: one requisition each time, the same response for all five, and `PR-` numbers stay gapless. |
+| Parallel publish | 5 parallel publishes: all succeed with versions 1 to 5, exactly one active. A mutation check that removes the lock makes this test fail. |
+| Currency race | The first requisition racing a currency change, on 10 fresh databases: the requisition's currency always equals the org currency, which is locked afterwards. |
+
 ## Verification added in Phase 4 (2026-10-22)
 
 | Test | Assertion |

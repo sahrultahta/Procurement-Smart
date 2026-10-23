@@ -1,6 +1,6 @@
 # ProcureFlow implementation plan
 
-- Status: **Phase 0 approved 2026-10-18. Phase 1 committed 2026-10-19 after maintainer review ([report](reports/phase-1.md)). Phase 2 committed 2026-10-21 after maintainer review ([report](reports/phase-2.md)). Phase 3 split into 3a (sign-in and identity) and 3b (administration) on 2026-10-21. Phase 3a committed 2026-10-21 after maintainer review ([report](reports/phase-3a.md)). Phase 3b committed 2026-10-22 after maintainer review ([report](reports/phase-3b.md)). Phase 4 committed 2026-10-22 after maintainer review ([report](reports/phase-4.md)).**
+- Status: **Phase 0 approved 2026-10-18. Phase 1 committed 2026-10-19 after maintainer review ([report](reports/phase-1.md)). Phase 2 committed 2026-10-21 after maintainer review ([report](reports/phase-2.md)). Phase 3 split into 3a (sign-in and identity) and 3b (administration) on 2026-10-21. Phase 3a committed 2026-10-21 after maintainer review ([report](reports/phase-3a.md)). Phase 3b committed 2026-10-22 after maintainer review ([report](reports/phase-3b.md)). Phase 4 committed 2026-10-22 after maintainer review ([report](reports/phase-4.md)). Phase 5 split into 5a and 5b on 2026-10-23. Phase 5a committed 2026-10-23 after maintainer review ([report](reports/phase-5a.md)).**
 - Plan date: 2026-10-18
 - Inputs: [architecture](architecture.md), [ADRs](adr/README.md), [user stories](user-stories.md), [state machines](state-machines.md), [schema](schema.md), [API contracts](api-contracts.md), [threat model](threat-model.md)
 
@@ -153,6 +153,10 @@ Scope: supplier commands and queries, maker-checker review, block/unblock, deact
 ---
 
 ## Phase 5: Purchase requisitions and multi-step approvals
+
+> **Split on 2026-10-23 (maintainer decision).**
+> - **5a: organization settings, approval policies (with an editor screen), requisition drafting.** P5-AC2, P5-AC3, P5-AC10, and the table half of P5-AC1; criteria P5a-AC1 to AC12 in [reports/phase-5a.md](reports/phase-5a.md).
+> - **5b: submission and approvals.** P5-AC1 (commands), P5-AC4 to AC9, P5-AC11: submit and frozen routes, approval requests and steps, inbox, decide, history, SOD-01 trigger, SOD-02 index, CC-01, CC-02, the E2E golden path.
 
 Scope: requisitions module; approval policies (publish, resolve); approvals module (requests, steps, eligibility, decide, outcome handler port); approval inbox; PR UI (create, edit, submit, cancel, detail with history); SOD-01 trigger and SOD-02 index; `org_settings` with org name, timezone, and currency, and the currency lock once a monetary document exists (moved from Phase 3, 2026-10-22).
 

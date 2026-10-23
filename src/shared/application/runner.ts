@@ -22,10 +22,17 @@ export type HandlerContext = {
 
 type Kind = 'command' | 'query';
 
+/**
+ * One permission, or a non-empty list of which the caller needs **any one** (for reads whose
+ * scope depends on the permission held, e.g. own / department / all requisitions; ADR 0010
+ * amendment). Which rows the caller then sees is decided by the handler, in SQL.
+ */
+export type PermissionRequirement = Permission | readonly [Permission, ...Permission[]];
+
 export type Operation<I, O> = {
   readonly kind: Kind;
   readonly name: string;
-  readonly permission: Permission;
+  readonly permission: PermissionRequirement;
   readonly input: z.ZodType<I>;
   readonly retrySafe: boolean;
   readonly isolationLevel: IsolationLevel;
@@ -37,13 +44,13 @@ type AnyHandler = (context: HandlerContext, input: unknown) => Promise<unknown>;
 
 // Handlers are reachable only through this module, never as a property of the definition.
 const handlers = new WeakMap<object, AnyHandler>();
-const registry = new Map<string, { kind: Kind; permission: Permission }>();
+const registry = new Map<string, { kind: Kind; permission: PermissionRequirement }>();
 
 const NAME_PATTERN = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*)+$/;
 
 type Definition<S extends z.ZodType, O> = {
   name: string;
-  permission: Permission;
+  permission: PermissionRequirement;
   /** Must be z.strictObject(...): unknown fields are rejected (ADR 0007, threat T-01). */
   input: S;
   /** Whole-transaction retry on serialization failure or deadlock (ADR 0008 C8). */
@@ -55,6 +62,7 @@ type Definition<S extends z.ZodType, O> = {
 function define<S extends z.ZodType, O>(kind: Kind, def: Definition<S, O>): Operation<z.output<S>, O> {
   if (!NAME_PATTERN.test(def.name)) throw new Error(`Invalid ${kind} name: ${def.name}`);
   if (registry.has(def.name)) throw new Error(`Duplicate operation name: ${def.name}`);
+  if (typeof def.permission !== 'string' && def.permission.length === 0) throw new Error(`${def.name}: empty permission list`);
   const schemaDef = (def.input as unknown as { def?: { type?: string; catchall?: { def?: { type?: string } } } }).def;
   if (schemaDef?.type !== 'object' || schemaDef.catchall?.def?.type !== 'never') {
     throw new Error(`${def.name}: input must be a z.strictObject(...) schema`);
@@ -62,7 +70,8 @@ function define<S extends z.ZodType, O>(kind: Kind, def: Definition<S, O>): Oper
   const operation: Operation<z.output<S>, O> = Object.freeze({
     kind,
     name: def.name,
-    permission: def.permission,
+    // A private frozen copy: the caller cannot widen an operation's permissions afterwards.
+    permission: typeof def.permission === 'string' ? def.permission : (Object.freeze([...def.permission]) as unknown as PermissionRequirement),
     input: def.input as z.ZodType<z.output<S>>,
     retrySafe: def.retrySafe ?? false,
     isolationLevel: def.isolationLevel ?? 'read committed',
@@ -81,7 +90,7 @@ export function defineQuery<S extends z.ZodType, O>(def: Omit<Definition<S, O>, 
   return define('query', { ...def, retrySafe: true });
 }
 
-export function registeredOperations(): readonly { name: string; kind: Kind; permission: Permission }[] {
+export function registeredOperations(): readonly { name: string; kind: Kind; permission: PermissionRequirement }[] {
   return [...registry].map(([name, info]) => ({ name, ...info }));
 }
 
@@ -126,7 +135,7 @@ async function execute<I, O>(request: RequestContext, operation: Operation<I, O>
 
   const actor = request.actor;
   if (!actor) return reject({ code: 'UNAUTHENTICATED', message: 'Sign in to continue.' });
-  if (!actor.permissions.has(operation.permission)) {
+  if (!holds(actor, operation.permission)) {
     return reject({ code: 'FORBIDDEN', message: 'You do not have permission to perform this action.' });
   }
 
@@ -182,6 +191,10 @@ async function execute<I, O>(request: RequestContext, operation: Operation<I, O>
       return err({ code: 'INTERNAL', message: 'Something went wrong. The action was not completed.' });
     }
   }
+}
+
+function holds(actor: Actor, requirement: PermissionRequirement): boolean {
+  return typeof requirement === 'string' ? actor.permissions.has(requirement) : requirement.some((p) => actor.permissions.has(p));
 }
 
 /** Expected database conditions → caller-visible errors. Everything else is INTERNAL. */

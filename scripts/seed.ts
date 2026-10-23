@@ -1,7 +1,8 @@
 /**
- * Fictional demo data (ADR 0001): three departments, one user per role, all @example.com, and three
- * suppliers registered by Dewi (procurement), two of them approved by Sari (finance) through the real
- * commands. Idempotent: existing departments, users, and suppliers are left as they are.
+ * Fictional demo data (ADR 0001): three departments, one user per role, all @example.com; three
+ * suppliers registered by Dewi (procurement), two of them approved by Sari (finance); the organization
+ * name, a default approval policy published by Ada (admin), and one draft requisition by Rina. All of
+ * it goes through the real commands. Idempotent: existing data is left as it is.
  *
  *   npm run seed                                   create missing demo users
  *   npm run seed -- --reset-passwords              also give existing seed users new passwords
@@ -46,7 +47,9 @@ const { closeDb, getDb } = await import('@/shared/db/client');
 const { getAuth, issuePasswordSetupToken } = await import('@/server/auth');
 const { resolveActor } = await import('@/modules/identity');
 const { createSupplier, reviewSupplier } = await import('@/modules/suppliers');
-const { runCommand } = await import('@/shared/application/runner');
+const { runCommand, runQuery } = await import('@/shared/application/runner');
+const { getActiveApprovalPolicy, getSettings, publishApprovalPolicy, updateOrganizationSettings } = await import('@/modules/organization');
+const { createRequisition, listRequisitions } = await import('@/modules/requisitions');
 
 type SeedUser = { email: string; name: string; departmentCode: string | null; roles: { role: string; departmentCode: string | null }[] };
 
@@ -75,7 +78,7 @@ const SUPPLIERS = [
 ];
 
 const credentials: Record<string, { name: string; password: string; roles: string[] }> = {};
-const summary = { departmentsCreated: 0, usersCreated: 0, usersSkipped: 0, passwordsSet: 0, suppliersCreated: 0, suppliersSkipped: 0 };
+const summary = { departmentsCreated: 0, usersCreated: 0, usersSkipped: 0, passwordsSet: 0, suppliersCreated: 0, suppliersSkipped: 0, settingsUpdated: 0, policiesPublished: 0, requisitionsCreated: 0 };
 
 try {
   const db = getDb();
@@ -145,6 +148,62 @@ try {
     }
   }
 
+  // Organization name (USD scale 2 stays, decision D3) and the default approval policy, as Ada.
+  const admin = await actorOf('ada.admin');
+  const settings = await runQuery(admin, getSettings, {});
+  if (!settings.ok) throw new Error(`Reading settings failed: ${settings.error.message}`);
+  if (settings.data.orgName === 'My organization') {
+    const updated = await runCommand(admin, updateOrganizationSettings, {
+      orgName: 'Example Organization',
+      timezone: settings.data.timezone,
+      currencyCode: settings.data.currencyCode,
+      currencyScale: settings.data.currencyScale,
+      expectedVersion: settings.data.version,
+    });
+    if (!updated.ok) throw new Error(`Updating settings failed: ${updated.error.message}`);
+    summary.settingsUpdated++;
+  }
+  const active = await runQuery(admin, getActiveApprovalPolicy, { documentType: 'requisition' });
+  if (!active.ok) throw new Error(`Reading the approval policy failed: ${active.error.message}`);
+  if (active.data === null) {
+    const published = await runCommand(admin, publishApprovalPolicy, {
+      documentType: 'requisition',
+      name: 'Standard approvals',
+      rules: [
+        { departmentCode: null, minAmount: '0', maxAmount: '1000', steps: [{ role: 'approver', scopeMode: 'document_department' }] },
+        {
+          departmentCode: null,
+          minAmount: '1000',
+          maxAmount: null,
+          steps: [
+            { role: 'approver', scopeMode: 'document_department' },
+            { role: 'finance', scopeMode: 'organization' },
+          ],
+        },
+      ],
+    });
+    if (!published.ok) throw new Error(`Publishing the approval policy failed: ${published.error.message}`);
+    summary.policiesPublished++;
+  }
+
+  // One draft requisition for Rina, unless she already has it.
+  const requester = await actorOf('rina.requester');
+  const existing = await runQuery(requester, listRequisitions, { q: 'Printer paper and toner for Operations' });
+  if (!existing.ok) throw new Error(`Listing requisitions failed: ${existing.error.message}`);
+  if (existing.data.items.length === 0) {
+    const draft = await runCommand(requester, createRequisition, {
+      title: 'Printer paper and toner for Operations',
+      justification: 'Fictional demo requisition (seed data).',
+      neededBy: '2030-01-31',
+      lines: [
+        { description: 'A4 printer paper, 80 g/m²', quantity: '20', uom: 'ream', estimatedUnitPrice: '4.25' },
+        { description: 'Black toner cartridge', quantity: '2', uom: 'pcs', estimatedUnitPrice: '89.90' },
+      ],
+    });
+    if (!draft.ok) throw new Error(`Creating the demo requisition failed: ${draft.error.message}`);
+    summary.requisitionsCreated++;
+  }
+
   if (Object.keys(credentials).length > 0) {
     mkdirSync(dirname(outFile), { recursive: true });
     writeFileSync(outFile, `${JSON.stringify(credentials, null, 2)}\n`, { mode: 0o600 });
@@ -152,7 +211,8 @@ try {
   console.log(
     `Seed done: ${summary.departmentsCreated} departments created, ${summary.usersCreated} users created, ` +
       `${summary.usersSkipped} existing users skipped, ${summary.passwordsSet} passwords set, ` +
-      `${summary.suppliersCreated} suppliers created, ${summary.suppliersSkipped} existing suppliers skipped.`,
+      `${summary.suppliersCreated} suppliers created, ${summary.suppliersSkipped} existing suppliers skipped, ` +
+      `${summary.settingsUpdated} settings updated, ${summary.policiesPublished} policies published, ${summary.requisitionsCreated} requisitions created.`,
   );
   if (summary.passwordsSet > 0) console.log(`Sign-in credentials for the users above: ${outFile}`);
 } finally {

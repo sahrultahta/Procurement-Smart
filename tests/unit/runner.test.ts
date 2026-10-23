@@ -241,6 +241,27 @@ describe('operation definitions', () => {
     expect(registeredOperations()).toContainEqual({ name: 'test.echo', kind: 'command', permission: 'test.write' });
   });
 
+  it('P5a-AC9: accepts any one of a list of permissions, and nothing else', async () => {
+    const scopes: [string, ...string[]] = ['test.read.own', 'test.read.all'];
+    const op = defineQuery({ name: 'test.readScoped', permission: scopes, input: z.strictObject({}), handler: async () => 'ok' });
+    for (const held of [['test.read.own'], ['test.read.all'], ['test.read.own', 'test.read.all']]) {
+      const { request, options } = setup(held);
+      expect(await runQuery(request, op, {}, options)).toEqual({ ok: true, data: 'ok' });
+    }
+    for (const held of [[], ['test.read'], ['test.read.ownx']]) {
+      const { request, options, configs } = setup(held);
+      expect(await runQuery(request, op, {}, options)).toMatchObject({ ok: false, error: { code: 'FORBIDDEN' } });
+      expect(configs).toHaveLength(0);
+    }
+    // The operation keeps its own frozen copy of the list.
+    scopes.push('test.widened');
+    expect(op.permission).toEqual(['test.read.own', 'test.read.all']);
+    expect(Object.isFrozen(op.permission)).toBe(true);
+    expect(() =>
+      defineQuery({ name: 'test.noPermissions', permission: [] as unknown as ['x'], input: z.strictObject({}), handler: async () => 1 }),
+    ).toThrow(/empty permission list/);
+  });
+
   it('exposes AppFailure for expected handler errors', () => {
     expect(new AppFailure({ code: 'CONFLICT', message: 'x' }).error.code).toBe('CONFLICT');
   });
