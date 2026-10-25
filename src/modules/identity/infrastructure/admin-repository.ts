@@ -1,6 +1,7 @@
 import 'server-only';
 import { and, asc, desc, eq, gt, inArray, isNull, like, sql } from 'drizzle-orm';
 import type { Database, Tx } from '@/shared/db/transaction';
+import type { Role } from '../domain/roles';
 import { accounts, sessions, users, verifications } from './auth-schema';
 import { departments, roleAssignments, userProfiles } from './schema';
 
@@ -342,8 +343,8 @@ export async function findUserNames(db: Queryable, userIds: readonly string[]): 
   return new Map(rows.map((r) => [r.id, r.name]));
 }
 
-/** Department ids (null = org-wide) of the user's active `approver` assignments, if the profile is active. */
-export async function findApproverAssignmentDepartments(db: Queryable, userId: string): Promise<(string | null)[]> {
+/** Department ids (null = org-wide) of the user's active assignments of `role`, if the profile is active. */
+export async function findRoleAssignmentDepartments(db: Queryable, userId: string, role: Role): Promise<(string | null)[]> {
   const rows = await db
     .select({ departmentId: roleAssignments.departmentId })
     .from(roleAssignments)
@@ -351,7 +352,7 @@ export async function findApproverAssignmentDepartments(db: Queryable, userId: s
     .where(
       and(
         eq(roleAssignments.userId, userId),
-        eq(roleAssignments.role, 'approver'),
+        eq(roleAssignments.role, role),
         isNull(roleAssignments.revokedAt),
         eq(userProfiles.status, 'active'),
       ),

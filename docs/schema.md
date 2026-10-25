@@ -112,7 +112,7 @@ Rule resolution: a department-specific rule beats an "any department" rule, then
 
 Indexes: `(requester_user_id, status)`, `(department_id, status)`, `(status, submitted_at)`.
 
-**Implemented in Phase 5a** (migrations 0008, 0009), without the approval columns (`current_approval_request_id`, `submitted_at`, `approved_at`) and the close columns, which arrive with Phase 5b; the `(status, submitted_at)` index comes with them. User and department references are `uuid` foreign keys. `currency_scale smallint` is stored next to `currency_code` (the scale used for its totals). CHECKs: number `^PR-[0-9]{4}-[0-9]{6}$`, text lengths, total ≥ 0, cancel fields set exactly when `cancelled`, reason ≤ 500. Trigger `purchase_requisitions_fixed_columns` (`PFQ01`): number, requester, department, currency, and creation time never change. The app role has SELECT, INSERT, UPDATE; no DELETE.
+**Implemented in Phase 5a** (migrations 0008, 0009); the approval columns (`current_approval_request_id`, `submitted_at`, `approved_at`), the close columns, and the `(status, submitted_at)` index were added in Phase 5b (migration 0010), with CHECKs that tie them to the status: an approval round and a submission time exist together, and on every status except `draft` and `cancelled`; `approved` and `closed` have `approved_at`; `closed` has all three close fields; `close_reason` 1 to 500 characters. User and department references are `uuid` foreign keys. `currency_scale smallint` is stored next to `currency_code` (the scale used for its totals). CHECKs: number `^PR-[0-9]{4}-[0-9]{6}$`, text lengths, total ≥ 0, cancel fields set exactly when `cancelled`, reason ≤ 500. Trigger `purchase_requisitions_fixed_columns` (`PFQ01`): number, requester, department, currency, and creation time never change. The app role has SELECT, INSERT, UPDATE; no DELETE.
 
 ### `requisition_lines`
 
@@ -165,6 +165,12 @@ Index: `UNIQUE (document_type, document_id) WHERE status = 'pending'` (AP-I1).
 
 Index: `UNIQUE (approval_request_id, decided_by_user_id)` (SOD-02; NULLs are distinct, so undecided steps don't collide).
 Trigger `approval_steps_no_self_approval` (`BEFORE UPDATE`): raises if `NEW.decided_by_user_id` equals the parent request's `submitted_by_user_id` or `awarded_by_user_id` (SOD-01, SOD-06, defense in depth).
+
+**Implemented in Phase 5b** (migrations 0010 generated, 0011 hand-written), with these additions:
+- `approval_requests` also freezes what was submitted: `document_number`, `document_title`, `currency_code`, `currency_scale`, and `policy_version_no`. User and department references are `uuid` foreign keys; `document_id` is not a foreign key (it points at a requisition or, later, a purchase order). CHECKs: `amount_snapshot > 0`, `completed_at` set exactly when the status is not `pending`, text lengths.
+- `approval_steps.activated_at`: when the step became pending (set for every step that was ever pending). `step_no` 1 to 5; `required_role` `finance` only with a NULL scope. Partial index on pending steps by role and scope, for the inbox.
+- Triggers (SQLSTATE `PFD01`, for every role including the owner): `approval_requests_guard`: the snapshot columns never change, a completed request never changes, nothing is deleted. `approval_steps_guard`: steps can be inserted only in the transaction that created their request, as `waiting` or `pending`; afterwards the route columns never change and the status only moves `waiting → pending | cancelled` or `pending → approved | rejected | returned | cancelled`; `activated_at` is set once; nothing is deleted. `approval_steps_no_self_approval` runs on INSERT and UPDATE.
+- The app role has SELECT, INSERT, UPDATE on both tables, no DELETE.
 
 ## Suppliers
 

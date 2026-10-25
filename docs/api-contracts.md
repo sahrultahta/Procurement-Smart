@@ -11,7 +11,7 @@ These are the contracts of the application layer (ADR 0010). In v1 they are invo
 - **`idempotencyKey?: string(8..100)`** is accepted on every `*.create` command (ADR 0008 C6).
 - **Never accepted from clients:** ids of new rows, numbers, totals, statuses, `*_by` / `*_at` fields, `department_id` on requisitions (taken from the actor's profile), `currency_code` (taken from org settings). Sending them fails strict validation.
 - **Lists:** cursor pagination `{ cursor?: string, limit?: 1..100 = 25 }`. Sorting only by whitelisted fields. Filters are typed enums or dates, never raw SQL fragments.
-- **Business-rule sub-codes** (`error.code = 'BUSINESS_RULE'`, `error.rule = ...`): `SELF_APPROVAL`, `DUPLICATE_APPROVER`, `NO_APPROVAL_ROUTE`, `NOT_ELIGIBLE_APPROVER`, `SUPPLIER_NOT_ACTIVE`, `SUPPLIER_DUPLICATE`, `MAKER_CHECKER`, `OVER_ORDER`, `RFQ_REQUIRED`, `MIN_QUOTES_JUSTIFICATION_REQUIRED`, `NON_LOWEST_JUSTIFICATION_REQUIRED`, `QUOTATION_EXPIRED`, `ORDER_RECEIVE_CONFLICT` (SOD-04), `OVER_RECEIPT`, `RECEIPTS_EXIST`, `ALREADY_REVERSED`, `PO_CLOSED`, `SELF_ADMINISTRATION`, `LAST_ADMIN`, `EMAIL_TAKEN`, `UNKNOWN_DEPARTMENT`, `ROLE_NOT_SCOPABLE`, `ROLE_ALREADY_ASSIGNED`, `USER_DEACTIVATED`, `PASSWORD_ALREADY_SET`, `DEPARTMENT_CODE_TAKEN`, `NO_DEPARTMENT`, `CURRENCY_LOCKED`, `IDEMPOTENCY_KEY_REUSED`, `CURRENCY_MISMATCH`, `AMOUNT_TOO_LARGE`, `INTEGRITY_CONSTRAINT` (a database constraint caught what an application check should have; logged at warn).
+- **Business-rule sub-codes** (`error.code = 'BUSINESS_RULE'`, `error.rule = ...`): `SELF_APPROVAL`, `DUPLICATE_APPROVER`, `NO_APPROVAL_ROUTE`, `NOT_ELIGIBLE_APPROVER`, `SUPPLIER_NOT_ACTIVE`, `SUPPLIER_DUPLICATE`, `MAKER_CHECKER`, `OVER_ORDER`, `RFQ_REQUIRED`, `MIN_QUOTES_JUSTIFICATION_REQUIRED`, `NON_LOWEST_JUSTIFICATION_REQUIRED`, `QUOTATION_EXPIRED`, `ORDER_RECEIVE_CONFLICT` (SOD-04), `OVER_RECEIPT`, `RECEIPTS_EXIST`, `ALREADY_REVERSED`, `PO_CLOSED`, `SELF_ADMINISTRATION`, `LAST_ADMIN`, `EMAIL_TAKEN`, `UNKNOWN_DEPARTMENT`, `ROLE_NOT_SCOPABLE`, `ROLE_ALREADY_ASSIGNED`, `USER_DEACTIVATED`, `PASSWORD_ALREADY_SET`, `DEPARTMENT_CODE_TAKEN`, `NO_DEPARTMENT`, `CURRENCY_LOCKED`, `IDEMPOTENCY_KEY_REUSED`, `CURRENCY_MISMATCH`, `AMOUNT_TOO_LARGE`, `ZERO_TOTAL`, `NEEDED_BY_IN_PAST`, `ALREADY_ORDERED`, `INTEGRITY_CONSTRAINT` (a database constraint caught what an application check should have; logged at warn).
 - **Database conditions are mapped by the runner** (`src/shared/application/runner.ts`, Phase 2):
 
   | SQLSTATE | Result |
@@ -20,7 +20,7 @@ These are the contracts of the application layer (ADR 0010). In v1 they are invo
   | `40001` / `40P01` | `CONFLICT`, after up to 3 whole-transaction retries for retry-safe commands |
   | `23505` | `CONFLICT` |
   | `23502` / `23503` / `23514` / `23P01` | `BUSINESS_RULE` / `INTEGRITY_CONSTRAINT` |
-  | anything else (incl. `PFA01`, `PFR01`, `PFS01`, `PFO01`, `PFP01`, `PFQ01`, `25006`, `57014`) | `INTERNAL`, with a generic message; details only in the server log |
+  | anything else (incl. `PFA01`, `PFR01`, `PFS01`, `PFO01`, `PFP01`, `PFQ01`, `PFD01`, `25006`, `57014`) | `INTERNAL`, with a generic message; details only in the server log |
 
 Each command writes the audit action `<command name, past tense>` (e.g. `requisition.submit` writes `requisition.submitted`) unless noted.
 
@@ -88,25 +88,36 @@ Queries (`supplier.read`: procurement, finance, auditor; every holder sees every
 | --- | --- | --- | --- | --- | --- |
 | `requisition.create` | `requisition.create` | title, justification?, neededBy, lines[1..200]{description, quantity, uom, estimatedUnitPrice}, idempotencyKey? | PR-T01, `AMOUNT_TOO_LARGE` | {id, number, version, estimatedTotal} | `POST /requisitions` |
 | `requisition.update` | owner | id, expectedVersion, same fields | PR-T02 (draft/returned only) | {version, estimatedTotal} | `PUT /requisitions/{id}` |
-| `requisition.submit` | owner | id, expectedVersion | PR-T03, `NO_APPROVAL_ROUTE` | {status, approvalRequestId} | `POST /requisitions/{id}/submit` |
-| `requisition.cancel` | owner, or `po.create` when approved | id, expectedVersion, reason? | PR-T07/T08/T09 | {status} | `POST /requisitions/{id}/cancel` |
-| `requisition.close` | `po.create` | id, expectedVersion, reason | PR-T10 | {status} | `POST /requisitions/{id}/close` |
+| `requisition.submit` | owner | id, expectedVersion | PR-T03, `ZERO_TOTAL`, `NEEDED_BY_IN_PAST`, `NO_APPROVAL_ROUTE` | {version, status, approvalRequestId, round} | `POST /requisitions/{id}/submit` |
+| `requisition.cancel` | owner, or `po.create` when approved | id, expectedVersion, reason? | PR-T07/T08/T09, `ALREADY_ORDERED` | {version, status} | `POST /requisitions/{id}/cancel` |
+| `requisition.close` | `po.create` | id, expectedVersion, reason | PR-T10 | {version, status} | `POST /requisitions/{id}/close` |
 
 Queries (visibility scoped in SQL per ADR 0006): `requisition.list` (own / department / all, depending on role; filters: status, department, date range), `requisition.get` (header, lines with `orderedQty` and remaining, approval history), `requisition.orderable` (approved, remaining qty > 0, for buyers).
 
 **Implemented in Phase 5a:** `requisition.create`, `requisition.update`, `requisition.cancel` (draft and returned only; withdrawing a submitted or approved requisition comes with Phase 5b), `requisition.list`, `requisition.get`. Details:
 - `requisition.create` / `.update` take `title` (1–200), `justification` (≤ 2000, blank = null), `neededBy` (`YYYY-MM-DD`, a real date), and `lines` (1–200 of `{ description 1–500, quantity, uom 1–16, estimatedUnitPrice }`, decimals as strings per ADR 0007). The department comes from the requester's profile (`NO_DEPARTMENT` if there is none); the currency and its scale come from the org settings (and lock them); the year in the number is the current year in the org time zone. `create` accepts `idempotencyKey` (`^[A-Za-z0-9_-]{8,100}$`); the same key with different input is `IDEMPOTENCY_KEY_REUSED`.
 - `update` and `cancel` are for the requester only: someone who can see the requisition gets `FORBIDDEN`, anyone else `NOT_FOUND`. A no-op update writes nothing.
-- Permissions: the three commands need `requisition.create`; the two queries need any one of `requisition.read.own`, `requisition.read.department`, `requisition.read.all` (ADR 0010 amendment). `requisition.list` filters by `status`, `departmentCode`, and `q` (number or title, literal match), pages by number (newest first); a date-range filter is not implemented yet. `requisition.get` returns lines with `orderedQty` and `remainingQty`, user **names** instead of ids, and `callerCanEdit`. Approval history comes with Phase 5b.
+- Permissions: the three commands need `requisition.create`; the two queries need any one of `requisition.read.own`, `requisition.read.department`, `requisition.read.all` (ADR 0010 amendment). `requisition.list` filters by `status`, `departmentCode`, and `q` (number or title, literal match), pages by number (newest first); a date-range filter is not implemented yet. `requisition.get` returns lines with `orderedQty` and `remainingQty`, user **names** instead of ids, and `callerCanEdit`. Approval history was added in Phase 5b (below).
 - Audit actions: `requisition.created`, `requisition.updated` (changed fields, lines as summaries), `requisition.cancelled` (reason).
+
+**Implemented in Phase 5b:** `requisition.submit`, `requisition.cancel` in every state, `requisition.close`. Details:
+- `submit` needs `requisition.create` and is for the requester only (`FORBIDDEN` / `NOT_FOUND` as for `update`). It resolves the route from the active policy by the stored department and total and opens an approval round (see Approvals). Output `{ version, status: 'pending_approval', approvalRequestId, round }`. Audit `requisition.submitted` (status, round, the route as "1. Approver for OPS"), plus `approval.requested` on the request.
+- `cancel` needs `requisition.create` **or** `po.create` (any of, ADR 0010 amendment). `reason` is optional for drafts and returned requisitions and required (1 to 500) when withdrawing a pending one or cancelling an approved one. Withdrawing also cancels the approval round and its open steps (`approval.cancelled`).
+- `close` needs `po.create` and a reason; only approved requisitions. Audit `requisition.closed` (reason).
+- `requisition.get` adds `submittedAt`, `approvedAt`, `closedAt`, `closeReason`, `approvalHistory` (every round, oldest first: status, policy version, amount, submitter name, times, and steps with label, status, decider **name**, time, comment), `openDecision` (the step the caller may decide now: `approvalRequestId`, `requestVersion`, `stepNo`, `stepCount`, `label`; null otherwise), and `callerActions` (`edit`, `submit`, `cancel`, `close`, whichever the caller may use now; the commands check again).
 
 ## Approvals
 
 | Command | Permission | Input | Guards | Output | REST (later) |
 | --- | --- | --- | --- | --- | --- |
-| `approval.decide` | `approval.decide` | approvalRequestId, stepNo, expectedVersion (of the request), decision `approve\|reject\|return`, comment? (required for reject/return, ≤2000) | AP-T02/T03/T04, `SELF_APPROVAL`, `DUPLICATE_APPROVER`, `NOT_ELIGIBLE_APPROVER` | {requestStatus, documentStatus} | `POST /approvals/{id}/steps/{n}/decision` |
+| `approval.decide` | `approval.decide` | approvalRequestId, stepNo, expectedVersion (of the request), decision `approve\|reject\|return`, comment? (required for reject/return, ≤2000) | AP-T02/T03/T04, `SELF_APPROVAL`, `DUPLICATE_APPROVER`, `NOT_ELIGIBLE_APPROVER` | {requestStatus, documentType, documentId, documentStatus, version} | `POST /approvals/{id}/steps/{n}/decision` |
 
 Queries: `approval.inbox` (pending steps the actor is eligible to decide, excluding SoD-blocked ones), `approval.history` (per document).
+
+**Implemented in Phase 5b** (`src/modules/approvals/`):
+- `approval.decide`: the order of checks and the error for each are in docs/state-machines.md §2. A caller who cannot see the document gets `NOT_FOUND`, the same as for a request that does not exist. Server Actions import it from `src/server/approvals.ts`, the composition root that registers the requisition handler. Audit `approval.decided` (steps before and after, the comment as the reason), plus the document's own event when the round ends.
+- `approval.inbox` (`approval.decide`): input `{ limit?: 1..100 = 50 }`, output `{ items, more }`, oldest open step first. Items: request id and version, document type, id, number, title, department code, amount, currency, round, step number and count, step label, submitter **name**, submission time, and when the step opened. Filtered in SQL by role and scope, minus SOD-01 and SOD-02. There is no cursor yet: `more` says that older items exist beyond the limit.
+- **History is part of the document**, not a separate query: `requisition.get` returns `approvalHistory`, after its own visibility check. `approval.history` is not registered; purchase orders will embed history the same way (Phase 7).
 
 ## Sourcing
 

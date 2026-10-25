@@ -1,0 +1,2840 @@
+{
+  "id": "0ddcf220-2b1b-4198-81c9-dd00a4f3d235",
+  "prevId": "9d36114b-2b02-4dee-8bad-05126afcab8e",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.document_sequences": {
+      "name": "document_sequences",
+      "schema": "",
+      "columns": {
+        "doc_type": {
+          "name": "doc_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "year": {
+          "name": "year",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_value": {
+          "name": "last_value",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "document_sequences_pkey": {
+          "name": "document_sequences_pkey",
+          "columns": [
+            "doc_type",
+            "year"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "document_sequences_doc_type_format": {
+          "name": "document_sequences_doc_type_format",
+          "value": "\"document_sequences\".\"doc_type\" ~ '^[A-Z]{2,4}$'"
+        },
+        "document_sequences_year_range": {
+          "name": "document_sequences_year_range",
+          "value": "\"document_sequences\".\"year\" = 0 OR \"document_sequences\".\"year\" BETWEEN 2000 AND 2999"
+        },
+        "document_sequences_last_value_non_negative": {
+          "name": "document_sequences_last_value_non_negative",
+          "value": "\"document_sequences\".\"last_value\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.idempotency_keys": {
+      "name": "idempotency_keys",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operation": {
+          "name": "operation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_hash": {
+          "name": "request_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "response": {
+          "name": "response",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "idempotency_keys_pkey": {
+          "name": "idempotency_keys_pkey",
+          "columns": [
+            "user_id",
+            "key"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "idempotency_keys_key_format": {
+          "name": "idempotency_keys_key_format",
+          "value": "\"idempotency_keys\".\"key\" ~ '^[A-Za-z0-9_-]{8,100}$'"
+        },
+        "idempotency_keys_request_hash_format": {
+          "name": "idempotency_keys_request_hash_format",
+          "value": "\"idempotency_keys\".\"request_hash\" ~ '^[0-9a-f]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.audit_events": {
+      "name": "audit_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "audit_events_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
+          }
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_roles": {
+          "name": "actor_roles",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "changes": {
+          "name": "changes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ip": {
+          "name": "ip",
+          "type": "inet",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "audit_events_entity_idx": {
+          "name": "audit_events_entity_idx",
+          "columns": [
+            {
+              "expression": "entity_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "audit_events_actor_idx": {
+          "name": "audit_events_actor_idx",
+          "columns": [
+            {
+              "expression": "actor_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "audit_events_occurred_at_idx": {
+          "name": "audit_events_occurred_at_idx",
+          "columns": [
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "audit_events_action_idx": {
+          "name": "audit_events_action_idx",
+          "columns": [
+            {
+              "expression": "action",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "audit_events_action_format": {
+          "name": "audit_events_action_format",
+          "value": "\"audit_events\".\"action\" ~ '^[a-z][a-zA-Z0-9]*(\\.[a-z][a-zA-Z0-9]*)+$'"
+        },
+        "audit_events_entity_type_format": {
+          "name": "audit_events_entity_type_format",
+          "value": "\"audit_events\".\"entity_type\" ~ '^[a-z][a-z_]{0,63}$'"
+        },
+        "audit_events_entity_id_length": {
+          "name": "audit_events_entity_id_length",
+          "value": "char_length(\"audit_events\".\"entity_id\") BETWEEN 1 AND 128"
+        },
+        "audit_events_actor_user_id_length": {
+          "name": "audit_events_actor_user_id_length",
+          "value": "\"audit_events\".\"actor_user_id\" IS NULL OR char_length(\"audit_events\".\"actor_user_id\") <= 128"
+        },
+        "audit_events_reason_length": {
+          "name": "audit_events_reason_length",
+          "value": "\"audit_events\".\"reason\" IS NULL OR char_length(\"audit_events\".\"reason\") <= 2000"
+        },
+        "audit_events_user_agent_length": {
+          "name": "audit_events_user_agent_length",
+          "value": "\"audit_events\".\"user_agent\" IS NULL OR char_length(\"audit_events\".\"user_agent\") <= 512"
+        },
+        "audit_events_changes_is_object": {
+          "name": "audit_events_changes_is_object",
+          "value": "jsonb_typeof(\"audit_events\".\"changes\") = 'object'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.accounts": {
+      "name": "accounts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_token": {
+          "name": "id_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "access_token_expires_at": {
+          "name": "access_token_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token_expires_at": {
+          "name": "refresh_token_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "accounts_user_id_idx": {
+          "name": "accounts_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "accounts_user_id_users_id_fk": {
+          "name": "accounts_user_id_users_id_fk",
+          "tableFrom": "accounts",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.rate_limits": {
+      "name": "rate_limits",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_request": {
+          "name": "last_request",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "rate_limits_key_unique": {
+          "name": "rate_limits_key_unique",
+          "columns": [
+            "key"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.sessions": {
+      "name": "sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "sessions_user_id_idx": {
+          "name": "sessions_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "sessions_user_id_users_id_fk": {
+          "name": "sessions_user_id_users_id_fk",
+          "tableFrom": "sessions",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "sessions_token_unique": {
+          "name": "sessions_token_unique",
+          "columns": [
+            "token"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email_verified": {
+          "name": "email_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "image": {
+          "name": "image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "columns": [
+            "email"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "users_email_lowercase": {
+          "name": "users_email_lowercase",
+          "value": "\"users\".\"email\" = lower(\"users\".\"email\")"
+        },
+        "users_name_length": {
+          "name": "users_name_length",
+          "value": "char_length(\"users\".\"name\") BETWEEN 1 AND 120"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.verifications": {
+      "name": "verifications",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "verifications_identifier_idx": {
+          "name": "verifications_identifier_idx",
+          "columns": [
+            {
+              "expression": "identifier",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.departments": {
+      "name": "departments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "departments_code_unique": {
+          "name": "departments_code_unique",
+          "columns": [
+            "code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "departments_code_format": {
+          "name": "departments_code_format",
+          "value": "\"departments\".\"code\" ~ '^[A-Z0-9-]{2,16}$'"
+        },
+        "departments_name_length": {
+          "name": "departments_name_length",
+          "value": "char_length(\"departments\".\"name\") BETWEEN 1 AND 120"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.role_assignments": {
+      "name": "role_assignments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "department_id": {
+          "name": "department_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "granted_by": {
+          "name": "granted_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "granted_at": {
+          "name": "granted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "revoked_by": {
+          "name": "revoked_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoke_reason": {
+          "name": "revoke_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "role_assignments_active_unique": {
+          "name": "role_assignments_active_unique",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "coalesce(\"department_id\", '00000000-0000-0000-0000-000000000000'::uuid)",
+              "isExpression": true,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"role_assignments\".\"revoked_at\" IS NULL",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "role_assignments_user_id_users_id_fk": {
+          "name": "role_assignments_user_id_users_id_fk",
+          "tableFrom": "role_assignments",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "role_assignments_department_id_departments_id_fk": {
+          "name": "role_assignments_department_id_departments_id_fk",
+          "tableFrom": "role_assignments",
+          "columnsFrom": [
+            "department_id"
+          ],
+          "tableTo": "departments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "role_assignments_role": {
+          "name": "role_assignments_role",
+          "value": "\"role_assignments\".\"role\" IN ('admin', 'requester', 'approver', 'procurement', 'receiver', 'finance', 'auditor')"
+        },
+        "role_assignments_scope": {
+          "name": "role_assignments_scope",
+          "value": "\"role_assignments\".\"department_id\" IS NULL OR \"role_assignments\".\"role\" IN ('requester', 'approver')"
+        },
+        "role_assignments_not_self_granted": {
+          "name": "role_assignments_not_self_granted",
+          "value": "\"role_assignments\".\"granted_by\" <> \"role_assignments\".\"user_id\"::text"
+        },
+        "role_assignments_not_self_revoked": {
+          "name": "role_assignments_not_self_revoked",
+          "value": "\"role_assignments\".\"revoked_by\" IS NULL OR \"role_assignments\".\"revoked_by\" <> \"role_assignments\".\"user_id\"::text"
+        },
+        "role_assignments_revocation_consistent": {
+          "name": "role_assignments_revocation_consistent",
+          "value": "(\"role_assignments\".\"revoked_at\" IS NULL) = (\"role_assignments\".\"revoked_by\" IS NULL)"
+        },
+        "role_assignments_revoke_reason_length": {
+          "name": "role_assignments_revoke_reason_length",
+          "value": "\"role_assignments\".\"revoke_reason\" IS NULL OR char_length(\"role_assignments\".\"revoke_reason\") <= 500"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.user_profiles": {
+      "name": "user_profiles",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "department_id": {
+          "name": "department_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "deactivated_at": {
+          "name": "deactivated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deactivated_by_user_id": {
+          "name": "deactivated_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_profiles_user_id_users_id_fk": {
+          "name": "user_profiles_user_id_users_id_fk",
+          "tableFrom": "user_profiles",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "user_profiles_department_id_departments_id_fk": {
+          "name": "user_profiles_department_id_departments_id_fk",
+          "tableFrom": "user_profiles",
+          "columnsFrom": [
+            "department_id"
+          ],
+          "tableTo": "departments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "user_profiles_deactivated_by_user_id_users_id_fk": {
+          "name": "user_profiles_deactivated_by_user_id_users_id_fk",
+          "tableFrom": "user_profiles",
+          "columnsFrom": [
+            "deactivated_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "user_profiles_status": {
+          "name": "user_profiles_status",
+          "value": "\"user_profiles\".\"status\" IN ('active', 'deactivated')"
+        },
+        "user_profiles_deactivation_consistent": {
+          "name": "user_profiles_deactivation_consistent",
+          "value": "(\"user_profiles\".\"status\" = 'deactivated') = (\"user_profiles\".\"deactivated_at\" IS NOT NULL AND \"user_profiles\".\"deactivated_by_user_id\" IS NOT NULL)"
+        },
+        "user_profiles_not_self_deactivated": {
+          "name": "user_profiles_not_self_deactivated",
+          "value": "\"user_profiles\".\"deactivated_by_user_id\" IS NULL OR \"user_profiles\".\"deactivated_by_user_id\" <> \"user_profiles\".\"user_id\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.suppliers": {
+      "name": "suppliers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "legal_name": {
+          "name": "legal_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "normalized_name": {
+          "name": "normalized_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tax_id": {
+          "name": "tax_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tax_id_normalized": {
+          "name": "tax_id_normalized",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address_line1": {
+          "name": "address_line1",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address_line2": {
+          "name": "address_line2",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "region": {
+          "name": "region",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "postal_code": {
+          "name": "postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country_code": {
+          "name": "country_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending_review'"
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identity_changed_by_user_id": {
+          "name": "identity_changed_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_by_user_id": {
+          "name": "reviewed_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "review_note": {
+          "name": "review_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status_reason": {
+          "name": "status_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "suppliers_normalized_name_live_unique": {
+          "name": "suppliers_normalized_name_live_unique",
+          "columns": [
+            {
+              "expression": "normalized_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"suppliers\".\"status\" <> 'inactive'",
+          "concurrently": false
+        },
+        "suppliers_tax_id_normalized_unique": {
+          "name": "suppliers_tax_id_normalized_unique",
+          "columns": [
+            {
+              "expression": "tax_id_normalized",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"suppliers\".\"tax_id_normalized\" IS NOT NULL",
+          "concurrently": false
+        },
+        "suppliers_status_code_idx": {
+          "name": "suppliers_status_code_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "suppliers_created_by_user_id_users_id_fk": {
+          "name": "suppliers_created_by_user_id_users_id_fk",
+          "tableFrom": "suppliers",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "suppliers_identity_changed_by_user_id_users_id_fk": {
+          "name": "suppliers_identity_changed_by_user_id_users_id_fk",
+          "tableFrom": "suppliers",
+          "columnsFrom": [
+            "identity_changed_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "suppliers_reviewed_by_user_id_users_id_fk": {
+          "name": "suppliers_reviewed_by_user_id_users_id_fk",
+          "tableFrom": "suppliers",
+          "columnsFrom": [
+            "reviewed_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "suppliers_code_unique": {
+          "name": "suppliers_code_unique",
+          "columns": [
+            "code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "suppliers_status": {
+          "name": "suppliers_status",
+          "value": "\"suppliers\".\"status\" IN ('pending_review', 'active', 'blocked', 'inactive')"
+        },
+        "suppliers_code_format": {
+          "name": "suppliers_code_format",
+          "value": "\"suppliers\".\"code\" ~ '^SUP-[0-9]{6}$'"
+        },
+        "suppliers_legal_name_length": {
+          "name": "suppliers_legal_name_length",
+          "value": "char_length(\"suppliers\".\"legal_name\") BETWEEN 1 AND 200"
+        },
+        "suppliers_normalized_name_length": {
+          "name": "suppliers_normalized_name_length",
+          "value": "char_length(\"suppliers\".\"normalized_name\") BETWEEN 1 AND 200"
+        },
+        "suppliers_tax_id_pair": {
+          "name": "suppliers_tax_id_pair",
+          "value": "(\"suppliers\".\"tax_id\" IS NULL) = (\"suppliers\".\"tax_id_normalized\" IS NULL) AND (\"suppliers\".\"tax_id\" IS NULL OR char_length(\"suppliers\".\"tax_id\") <= 40)"
+        },
+        "suppliers_tax_id_normalized_format": {
+          "name": "suppliers_tax_id_normalized_format",
+          "value": "\"suppliers\".\"tax_id_normalized\" IS NULL OR \"suppliers\".\"tax_id_normalized\" ~ '^[A-Z0-9]{5,30}$'"
+        },
+        "suppliers_text_lengths": {
+          "name": "suppliers_text_lengths",
+          "value": "coalesce(char_length(\"suppliers\".\"email\"), 0) <= 254 AND coalesce(char_length(\"suppliers\".\"phone\"), 0) <= 30\n        AND coalesce(char_length(\"suppliers\".\"address_line1\"), 0) <= 200 AND coalesce(char_length(\"suppliers\".\"address_line2\"), 0) <= 200\n        AND coalesce(char_length(\"suppliers\".\"city\"), 0) <= 100 AND coalesce(char_length(\"suppliers\".\"region\"), 0) <= 100\n        AND coalesce(char_length(\"suppliers\".\"postal_code\"), 0) <= 20 AND coalesce(char_length(\"suppliers\".\"review_note\"), 0) <= 2000\n        AND coalesce(char_length(\"suppliers\".\"status_reason\"), 0) <= 2000"
+        },
+        "suppliers_country_code_format": {
+          "name": "suppliers_country_code_format",
+          "value": "\"suppliers\".\"country_code\" ~ '^[A-Z]{2}$'"
+        },
+        "suppliers_review_consistent": {
+          "name": "suppliers_review_consistent",
+          "value": "(\"suppliers\".\"reviewed_by_user_id\" IS NULL) = (\"suppliers\".\"reviewed_at\" IS NULL)"
+        },
+        "suppliers_maker_checker": {
+          "name": "suppliers_maker_checker",
+          "value": "\"suppliers\".\"reviewed_by_user_id\" IS NULL OR (\"suppliers\".\"reviewed_by_user_id\" <> \"suppliers\".\"created_by_user_id\" AND \"suppliers\".\"reviewed_by_user_id\" IS DISTINCT FROM \"suppliers\".\"identity_changed_by_user_id\")"
+        },
+        "suppliers_active_is_reviewed": {
+          "name": "suppliers_active_is_reviewed",
+          "value": "\"suppliers\".\"status\" <> 'active' OR \"suppliers\".\"reviewed_by_user_id\" IS NOT NULL"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.approval_policies": {
+      "name": "approval_policies",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "document_type": {
+          "name": "document_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version_no": {
+          "name": "version_no",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "superseded_at": {
+          "name": "superseded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "approval_policies_one_active": {
+          "name": "approval_policies_one_active",
+          "columns": [
+            {
+              "expression": "document_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"approval_policies\".\"is_active\"",
+          "concurrently": false
+        },
+        "approval_policies_version_unique": {
+          "name": "approval_policies_version_unique",
+          "columns": [
+            {
+              "expression": "document_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "version_no",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "approval_policies_created_by_user_id_users_id_fk": {
+          "name": "approval_policies_created_by_user_id_users_id_fk",
+          "tableFrom": "approval_policies",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "approval_policies_document_type": {
+          "name": "approval_policies_document_type",
+          "value": "\"approval_policies\".\"document_type\" IN ('requisition', 'purchase_order')"
+        },
+        "approval_policies_name_length": {
+          "name": "approval_policies_name_length",
+          "value": "char_length(\"approval_policies\".\"name\") BETWEEN 1 AND 120"
+        },
+        "approval_policies_version_positive": {
+          "name": "approval_policies_version_positive",
+          "value": "\"approval_policies\".\"version_no\" >= 1"
+        },
+        "approval_policies_active_xor_superseded": {
+          "name": "approval_policies_active_xor_superseded",
+          "value": "\"approval_policies\".\"is_active\" = (\"approval_policies\".\"superseded_at\" IS NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.approval_policy_rules": {
+      "name": "approval_policy_rules",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "policy_id": {
+          "name": "policy_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rule_no": {
+          "name": "rule_no",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "department_id": {
+          "name": "department_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "min_amount": {
+          "name": "min_amount",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "max_amount": {
+          "name": "max_amount",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "approval_policy_rules_policy_rule_no": {
+          "name": "approval_policy_rules_policy_rule_no",
+          "columns": [
+            {
+              "expression": "policy_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "rule_no",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "approval_policy_rules_policy_idx": {
+          "name": "approval_policy_rules_policy_idx",
+          "columns": [
+            {
+              "expression": "policy_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "approval_policy_rules_policy_id_approval_policies_id_fk": {
+          "name": "approval_policy_rules_policy_id_approval_policies_id_fk",
+          "tableFrom": "approval_policy_rules",
+          "columnsFrom": [
+            "policy_id"
+          ],
+          "tableTo": "approval_policies",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "approval_policy_rules_department_id_departments_id_fk": {
+          "name": "approval_policy_rules_department_id_departments_id_fk",
+          "tableFrom": "approval_policy_rules",
+          "columnsFrom": [
+            "department_id"
+          ],
+          "tableTo": "departments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "approval_policy_rules_rule_no": {
+          "name": "approval_policy_rules_rule_no",
+          "value": "\"approval_policy_rules\".\"rule_no\" BETWEEN 1 AND 50"
+        },
+        "approval_policy_rules_min_non_negative": {
+          "name": "approval_policy_rules_min_non_negative",
+          "value": "\"approval_policy_rules\".\"min_amount\" >= 0"
+        },
+        "approval_policy_rules_band": {
+          "name": "approval_policy_rules_band",
+          "value": "\"approval_policy_rules\".\"max_amount\" IS NULL OR \"approval_policy_rules\".\"max_amount\" > \"approval_policy_rules\".\"min_amount\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.approval_policy_steps": {
+      "name": "approval_policy_steps",
+      "schema": "",
+      "columns": {
+        "rule_id": {
+          "name": "rule_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "step_no": {
+          "name": "step_no",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "required_role": {
+          "name": "required_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_mode": {
+          "name": "scope_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "approval_policy_steps_rule_id_approval_policy_rules_id_fk": {
+          "name": "approval_policy_steps_rule_id_approval_policy_rules_id_fk",
+          "tableFrom": "approval_policy_steps",
+          "columnsFrom": [
+            "rule_id"
+          ],
+          "tableTo": "approval_policy_rules",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {
+        "approval_policy_steps_pkey": {
+          "name": "approval_policy_steps_pkey",
+          "columns": [
+            "rule_id",
+            "step_no"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "approval_policy_steps_step_no": {
+          "name": "approval_policy_steps_step_no",
+          "value": "\"approval_policy_steps\".\"step_no\" BETWEEN 1 AND 5"
+        },
+        "approval_policy_steps_required_role": {
+          "name": "approval_policy_steps_required_role",
+          "value": "\"approval_policy_steps\".\"required_role\" IN ('approver', 'finance')"
+        },
+        "approval_policy_steps_scope_mode": {
+          "name": "approval_policy_steps_scope_mode",
+          "value": "\"approval_policy_steps\".\"scope_mode\" IN ('document_department', 'organization')"
+        },
+        "approval_policy_steps_finance_org_wide": {
+          "name": "approval_policy_steps_finance_org_wide",
+          "value": "\"approval_policy_steps\".\"required_role\" <> 'finance' OR \"approval_policy_steps\".\"scope_mode\" = 'organization'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.org_settings": {
+      "name": "org_settings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "smallint",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "org_name": {
+          "name": "org_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_code": {
+          "name": "currency_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_scale": {
+          "name": "currency_scale",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_locked_at": {
+          "name": "currency_locked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_by_user_id": {
+          "name": "updated_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "org_settings_updated_by_user_id_users_id_fk": {
+          "name": "org_settings_updated_by_user_id_users_id_fk",
+          "tableFrom": "org_settings",
+          "columnsFrom": [
+            "updated_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "org_settings_single_row": {
+          "name": "org_settings_single_row",
+          "value": "\"org_settings\".\"id\" = 1"
+        },
+        "org_settings_org_name_length": {
+          "name": "org_settings_org_name_length",
+          "value": "char_length(\"org_settings\".\"org_name\") BETWEEN 1 AND 120"
+        },
+        "org_settings_timezone_length": {
+          "name": "org_settings_timezone_length",
+          "value": "char_length(\"org_settings\".\"timezone\") BETWEEN 1 AND 64"
+        },
+        "org_settings_currency_code_format": {
+          "name": "org_settings_currency_code_format",
+          "value": "\"org_settings\".\"currency_code\" ~ '^[A-Z]{3}$'"
+        },
+        "org_settings_currency_scale_range": {
+          "name": "org_settings_currency_scale_range",
+          "value": "\"org_settings\".\"currency_scale\" BETWEEN 0 AND 4"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.approval_requests": {
+      "name": "approval_requests",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "document_type": {
+          "name": "document_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "round": {
+          "name": "round",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_number": {
+          "name": "document_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_title": {
+          "name": "document_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_snapshot": {
+          "name": "amount_snapshot",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_code": {
+          "name": "currency_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_scale": {
+          "name": "currency_scale",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "department_id": {
+          "name": "department_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_id": {
+          "name": "policy_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_version_no": {
+          "name": "policy_version_no",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "submitted_by_user_id": {
+          "name": "submitted_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "awarded_by_user_id": {
+          "name": "awarded_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "approval_requests_document_round": {
+          "name": "approval_requests_document_round",
+          "columns": [
+            {
+              "expression": "document_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "round",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "approval_requests_one_pending": {
+          "name": "approval_requests_one_pending",
+          "columns": [
+            {
+              "expression": "document_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"approval_requests\".\"status\" = 'pending'",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "approval_requests_department_id_departments_id_fk": {
+          "name": "approval_requests_department_id_departments_id_fk",
+          "tableFrom": "approval_requests",
+          "columnsFrom": [
+            "department_id"
+          ],
+          "tableTo": "departments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "approval_requests_policy_id_approval_policies_id_fk": {
+          "name": "approval_requests_policy_id_approval_policies_id_fk",
+          "tableFrom": "approval_requests",
+          "columnsFrom": [
+            "policy_id"
+          ],
+          "tableTo": "approval_policies",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "approval_requests_submitted_by_user_id_users_id_fk": {
+          "name": "approval_requests_submitted_by_user_id_users_id_fk",
+          "tableFrom": "approval_requests",
+          "columnsFrom": [
+            "submitted_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "approval_requests_awarded_by_user_id_users_id_fk": {
+          "name": "approval_requests_awarded_by_user_id_users_id_fk",
+          "tableFrom": "approval_requests",
+          "columnsFrom": [
+            "awarded_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "approval_requests_document_type": {
+          "name": "approval_requests_document_type",
+          "value": "\"approval_requests\".\"document_type\" IN ('requisition', 'purchase_order')"
+        },
+        "approval_requests_round_positive": {
+          "name": "approval_requests_round_positive",
+          "value": "\"approval_requests\".\"round\" >= 1"
+        },
+        "approval_requests_document_number_length": {
+          "name": "approval_requests_document_number_length",
+          "value": "char_length(\"approval_requests\".\"document_number\") BETWEEN 1 AND 32"
+        },
+        "approval_requests_document_title_length": {
+          "name": "approval_requests_document_title_length",
+          "value": "char_length(\"approval_requests\".\"document_title\") BETWEEN 1 AND 200"
+        },
+        "approval_requests_amount_positive": {
+          "name": "approval_requests_amount_positive",
+          "value": "\"approval_requests\".\"amount_snapshot\" > 0"
+        },
+        "approval_requests_currency_code_format": {
+          "name": "approval_requests_currency_code_format",
+          "value": "\"approval_requests\".\"currency_code\" ~ '^[A-Z]{3}$'"
+        },
+        "approval_requests_currency_scale_range": {
+          "name": "approval_requests_currency_scale_range",
+          "value": "\"approval_requests\".\"currency_scale\" BETWEEN 0 AND 4"
+        },
+        "approval_requests_policy_version_positive": {
+          "name": "approval_requests_policy_version_positive",
+          "value": "\"approval_requests\".\"policy_version_no\" >= 1"
+        },
+        "approval_requests_status": {
+          "name": "approval_requests_status",
+          "value": "\"approval_requests\".\"status\" IN ('pending', 'approved', 'rejected', 'returned', 'cancelled')"
+        },
+        "approval_requests_completed_consistent": {
+          "name": "approval_requests_completed_consistent",
+          "value": "(\"approval_requests\".\"status\" = 'pending') = (\"approval_requests\".\"completed_at\" IS NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.approval_steps": {
+      "name": "approval_steps",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "approval_request_id": {
+          "name": "approval_request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "step_no": {
+          "name": "step_no",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "required_role": {
+          "name": "required_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_department_id": {
+          "name": "scope_department_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'waiting'"
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decided_by_user_id": {
+          "name": "decided_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "comment": {
+          "name": "comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "approval_steps_request_step_no": {
+          "name": "approval_steps_request_step_no",
+          "columns": [
+            {
+              "expression": "approval_request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "step_no",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "approval_steps_distinct_deciders": {
+          "name": "approval_steps_distinct_deciders",
+          "columns": [
+            {
+              "expression": "approval_request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "decided_by_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "approval_steps_pending_idx": {
+          "name": "approval_steps_pending_idx",
+          "columns": [
+            {
+              "expression": "required_role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "scope_department_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"approval_steps\".\"status\" = 'pending'",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "approval_steps_approval_request_id_approval_requests_id_fk": {
+          "name": "approval_steps_approval_request_id_approval_requests_id_fk",
+          "tableFrom": "approval_steps",
+          "columnsFrom": [
+            "approval_request_id"
+          ],
+          "tableTo": "approval_requests",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "approval_steps_scope_department_id_departments_id_fk": {
+          "name": "approval_steps_scope_department_id_departments_id_fk",
+          "tableFrom": "approval_steps",
+          "columnsFrom": [
+            "scope_department_id"
+          ],
+          "tableTo": "departments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "approval_steps_decided_by_user_id_users_id_fk": {
+          "name": "approval_steps_decided_by_user_id_users_id_fk",
+          "tableFrom": "approval_steps",
+          "columnsFrom": [
+            "decided_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "approval_steps_step_no": {
+          "name": "approval_steps_step_no",
+          "value": "\"approval_steps\".\"step_no\" BETWEEN 1 AND 5"
+        },
+        "approval_steps_required_role": {
+          "name": "approval_steps_required_role",
+          "value": "\"approval_steps\".\"required_role\" IN ('approver', 'finance')"
+        },
+        "approval_steps_finance_org_wide": {
+          "name": "approval_steps_finance_org_wide",
+          "value": "\"approval_steps\".\"required_role\" <> 'finance' OR \"approval_steps\".\"scope_department_id\" IS NULL"
+        },
+        "approval_steps_status": {
+          "name": "approval_steps_status",
+          "value": "\"approval_steps\".\"status\" IN ('waiting', 'pending', 'approved', 'rejected', 'returned', 'cancelled')"
+        },
+        "approval_steps_activated_consistent": {
+          "name": "approval_steps_activated_consistent",
+          "value": "CASE \"approval_steps\".\"status\" WHEN 'waiting' THEN \"approval_steps\".\"activated_at\" IS NULL WHEN 'cancelled' THEN true ELSE \"approval_steps\".\"activated_at\" IS NOT NULL END"
+        },
+        "approval_steps_decided_consistent": {
+          "name": "approval_steps_decided_consistent",
+          "value": "(\"approval_steps\".\"status\" IN ('approved', 'rejected', 'returned')) = (\"approval_steps\".\"decided_by_user_id\" IS NOT NULL AND \"approval_steps\".\"decided_at\" IS NOT NULL)"
+        },
+        "approval_steps_decided_at_with_decider": {
+          "name": "approval_steps_decided_at_with_decider",
+          "value": "(\"approval_steps\".\"decided_by_user_id\" IS NULL) = (\"approval_steps\".\"decided_at\" IS NULL)"
+        },
+        "approval_steps_comment_length": {
+          "name": "approval_steps_comment_length",
+          "value": "\"approval_steps\".\"comment\" IS NULL OR char_length(\"approval_steps\".\"comment\") BETWEEN 1 AND 2000"
+        },
+        "approval_steps_comment_only_on_decision": {
+          "name": "approval_steps_comment_only_on_decision",
+          "value": "\"approval_steps\".\"comment\" IS NULL OR \"approval_steps\".\"decided_by_user_id\" IS NOT NULL"
+        },
+        "approval_steps_comment_required": {
+          "name": "approval_steps_comment_required",
+          "value": "\"approval_steps\".\"status\" NOT IN ('rejected', 'returned') OR \"approval_steps\".\"comment\" IS NOT NULL"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.purchase_requisitions": {
+      "name": "purchase_requisitions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "number": {
+          "name": "number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requester_user_id": {
+          "name": "requester_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "department_id": {
+          "name": "department_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "justification": {
+          "name": "justification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "needed_by": {
+          "name": "needed_by",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_code": {
+          "name": "currency_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_scale": {
+          "name": "currency_scale",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estimated_total": {
+          "name": "estimated_total",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "current_approval_request_id": {
+          "name": "current_approval_request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approved_at": {
+          "name": "approved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_by_user_id": {
+          "name": "cancelled_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancel_reason": {
+          "name": "cancel_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_by_user_id": {
+          "name": "closed_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "close_reason": {
+          "name": "close_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "purchase_requisitions_requester_status_idx": {
+          "name": "purchase_requisitions_requester_status_idx",
+          "columns": [
+            {
+              "expression": "requester_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "purchase_requisitions_department_status_idx": {
+          "name": "purchase_requisitions_department_status_idx",
+          "columns": [
+            {
+              "expression": "department_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "purchase_requisitions_status_submitted_idx": {
+          "name": "purchase_requisitions_status_submitted_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "submitted_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "purchase_requisitions_requester_user_id_users_id_fk": {
+          "name": "purchase_requisitions_requester_user_id_users_id_fk",
+          "tableFrom": "purchase_requisitions",
+          "columnsFrom": [
+            "requester_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_requisitions_department_id_departments_id_fk": {
+          "name": "purchase_requisitions_department_id_departments_id_fk",
+          "tableFrom": "purchase_requisitions",
+          "columnsFrom": [
+            "department_id"
+          ],
+          "tableTo": "departments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_requisitions_current_approval_request_id_approval_requests_id_fk": {
+          "name": "purchase_requisitions_current_approval_request_id_approval_requests_id_fk",
+          "tableFrom": "purchase_requisitions",
+          "columnsFrom": [
+            "current_approval_request_id"
+          ],
+          "tableTo": "approval_requests",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_requisitions_cancelled_by_user_id_users_id_fk": {
+          "name": "purchase_requisitions_cancelled_by_user_id_users_id_fk",
+          "tableFrom": "purchase_requisitions",
+          "columnsFrom": [
+            "cancelled_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_requisitions_closed_by_user_id_users_id_fk": {
+          "name": "purchase_requisitions_closed_by_user_id_users_id_fk",
+          "tableFrom": "purchase_requisitions",
+          "columnsFrom": [
+            "closed_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "purchase_requisitions_number_unique": {
+          "name": "purchase_requisitions_number_unique",
+          "columns": [
+            "number"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "purchase_requisitions_number_format": {
+          "name": "purchase_requisitions_number_format",
+          "value": "\"purchase_requisitions\".\"number\" ~ '^PR-[0-9]{4}-[0-9]{6}$'"
+        },
+        "purchase_requisitions_title_length": {
+          "name": "purchase_requisitions_title_length",
+          "value": "char_length(\"purchase_requisitions\".\"title\") BETWEEN 1 AND 200"
+        },
+        "purchase_requisitions_justification_length": {
+          "name": "purchase_requisitions_justification_length",
+          "value": "\"purchase_requisitions\".\"justification\" IS NULL OR char_length(\"purchase_requisitions\".\"justification\") <= 2000"
+        },
+        "purchase_requisitions_currency_code_format": {
+          "name": "purchase_requisitions_currency_code_format",
+          "value": "\"purchase_requisitions\".\"currency_code\" ~ '^[A-Z]{3}$'"
+        },
+        "purchase_requisitions_currency_scale_range": {
+          "name": "purchase_requisitions_currency_scale_range",
+          "value": "\"purchase_requisitions\".\"currency_scale\" BETWEEN 0 AND 4"
+        },
+        "purchase_requisitions_total_non_negative": {
+          "name": "purchase_requisitions_total_non_negative",
+          "value": "\"purchase_requisitions\".\"estimated_total\" >= 0"
+        },
+        "purchase_requisitions_status": {
+          "name": "purchase_requisitions_status",
+          "value": "\"purchase_requisitions\".\"status\" IN ('draft', 'pending_approval', 'returned', 'approved', 'rejected', 'cancelled', 'closed')"
+        },
+        "purchase_requisitions_cancel_consistent": {
+          "name": "purchase_requisitions_cancel_consistent",
+          "value": "(\"purchase_requisitions\".\"status\" = 'cancelled') = (\"purchase_requisitions\".\"cancelled_at\" IS NOT NULL AND \"purchase_requisitions\".\"cancelled_by_user_id\" IS NOT NULL)"
+        },
+        "purchase_requisitions_cancel_reason_length": {
+          "name": "purchase_requisitions_cancel_reason_length",
+          "value": "\"purchase_requisitions\".\"cancel_reason\" IS NULL OR char_length(\"purchase_requisitions\".\"cancel_reason\") <= 500"
+        },
+        "purchase_requisitions_submitted_consistent": {
+          "name": "purchase_requisitions_submitted_consistent",
+          "value": "(\"purchase_requisitions\".\"current_approval_request_id\" IS NULL) = (\"purchase_requisitions\".\"submitted_at\" IS NULL)"
+        },
+        "purchase_requisitions_submitted_states": {
+          "name": "purchase_requisitions_submitted_states",
+          "value": "\"purchase_requisitions\".\"status\" IN ('draft', 'cancelled') OR \"purchase_requisitions\".\"current_approval_request_id\" IS NOT NULL"
+        },
+        "purchase_requisitions_approved_states": {
+          "name": "purchase_requisitions_approved_states",
+          "value": "\"purchase_requisitions\".\"status\" NOT IN ('approved', 'closed') OR \"purchase_requisitions\".\"approved_at\" IS NOT NULL"
+        },
+        "purchase_requisitions_approved_at_states": {
+          "name": "purchase_requisitions_approved_at_states",
+          "value": "\"purchase_requisitions\".\"approved_at\" IS NULL OR \"purchase_requisitions\".\"status\" IN ('approved', 'closed', 'cancelled')"
+        },
+        "purchase_requisitions_close_consistent": {
+          "name": "purchase_requisitions_close_consistent",
+          "value": "(\"purchase_requisitions\".\"status\" = 'closed') = (\"purchase_requisitions\".\"closed_at\" IS NOT NULL AND \"purchase_requisitions\".\"closed_by_user_id\" IS NOT NULL AND \"purchase_requisitions\".\"close_reason\" IS NOT NULL)"
+        },
+        "purchase_requisitions_close_reason_length": {
+          "name": "purchase_requisitions_close_reason_length",
+          "value": "\"purchase_requisitions\".\"close_reason\" IS NULL OR char_length(\"purchase_requisitions\".\"close_reason\") BETWEEN 1 AND 500"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.requisition_lines": {
+      "name": "requisition_lines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "requisition_id": {
+          "name": "requisition_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "line_no": {
+          "name": "line_no",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "numeric(18, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "uom": {
+          "name": "uom",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estimated_unit_price": {
+          "name": "estimated_unit_price",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "line_total": {
+          "name": "line_total",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordered_qty": {
+          "name": "ordered_qty",
+          "type": "numeric(18, 3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        }
+      },
+      "indexes": {
+        "requisition_lines_requisition_line_no": {
+          "name": "requisition_lines_requisition_line_no",
+          "columns": [
+            {
+              "expression": "requisition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "line_no",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "requisition_lines_requisition_id_purchase_requisitions_id_fk": {
+          "name": "requisition_lines_requisition_id_purchase_requisitions_id_fk",
+          "tableFrom": "requisition_lines",
+          "columnsFrom": [
+            "requisition_id"
+          ],
+          "tableTo": "purchase_requisitions",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "requisition_lines_line_no": {
+          "name": "requisition_lines_line_no",
+          "value": "\"requisition_lines\".\"line_no\" BETWEEN 1 AND 200"
+        },
+        "requisition_lines_description_length": {
+          "name": "requisition_lines_description_length",
+          "value": "char_length(\"requisition_lines\".\"description\") BETWEEN 1 AND 500"
+        },
+        "requisition_lines_quantity_positive": {
+          "name": "requisition_lines_quantity_positive",
+          "value": "\"requisition_lines\".\"quantity\" > 0"
+        },
+        "requisition_lines_uom_length": {
+          "name": "requisition_lines_uom_length",
+          "value": "char_length(\"requisition_lines\".\"uom\") BETWEEN 1 AND 16"
+        },
+        "requisition_lines_price_non_negative": {
+          "name": "requisition_lines_price_non_negative",
+          "value": "\"requisition_lines\".\"estimated_unit_price\" >= 0"
+        },
+        "requisition_lines_total_non_negative": {
+          "name": "requisition_lines_total_non_negative",
+          "value": "\"requisition_lines\".\"line_total\" >= 0"
+        },
+        "requisition_lines_ordered_qty_range": {
+          "name": "requisition_lines_ordered_qty_range",
+          "value": "\"requisition_lines\".\"ordered_qty\" >= 0 AND \"requisition_lines\".\"ordered_qty\" <= \"requisition_lines\".\"quantity\""
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

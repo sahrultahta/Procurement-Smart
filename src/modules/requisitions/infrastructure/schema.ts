@@ -1,10 +1,11 @@
 import { sql } from 'drizzle-orm';
 import { check, date, index, integer, numeric, pgTable, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { approvalRequests } from '../../approvals/tables';
 import { departments, users } from '../../identity/tables';
 
 /*
- * Purchase requisitions (docs/schema.md). Phase 5a: drafting. The approval columns
- * (current request, submitted/approved times, close fields) arrive with Phase 5b.
+ * Purchase requisitions (docs/schema.md). Phase 5a: drafting; Phase 5b: submission,
+ * approval, withdrawal, and closing.
  * Declarations only (no I/O, no `server-only`), so drizzle-kit can load this file.
  */
 const tz = { withTimezone: true, mode: 'date' } as const;
@@ -30,9 +31,17 @@ export const purchaseRequisitions = pgTable(
     /** Server-computed sum of the rounded line totals (ADR 0007). */
     estimatedTotal: numeric('estimated_total', { precision: 20, scale: 4 }).notNull(),
     status: text('status').notNull().default('draft'),
+    /** The latest approval round: pending, or how the last one ended. */
+    currentApprovalRequestId: uuid('current_approval_request_id').references(() => approvalRequests.id, { onDelete: 'restrict' }),
+    /** The latest submission. */
+    submittedAt: timestamp('submitted_at', tz),
+    approvedAt: timestamp('approved_at', tz),
     cancelledAt: timestamp('cancelled_at', tz),
     cancelledByUserId: uuid('cancelled_by_user_id').references(() => users.id, { onDelete: 'restrict' }),
     cancelReason: text('cancel_reason'),
+    closedAt: timestamp('closed_at', tz),
+    closedByUserId: uuid('closed_by_user_id').references(() => users.id, { onDelete: 'restrict' }),
+    closeReason: text('close_reason'),
     createdAt: timestamp('created_at', tz).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', tz).notNull().defaultNow(),
     version: integer('version').notNull().default(1),
@@ -53,8 +62,19 @@ export const purchaseRequisitions = pgTable(
       sql`(${t.status} = 'cancelled') = (${t.cancelledAt} IS NOT NULL AND ${t.cancelledByUserId} IS NOT NULL)`,
     ),
     check('purchase_requisitions_cancel_reason_length', sql`${t.cancelReason} IS NULL OR char_length(${t.cancelReason}) <= 500`),
+    // Submitted at least once: it has an approval round and a submission time.
+    check('purchase_requisitions_submitted_consistent', sql`(${t.currentApprovalRequestId} IS NULL) = (${t.submittedAt} IS NULL)`),
+    check('purchase_requisitions_submitted_states', sql`${t.status} IN ('draft', 'cancelled') OR ${t.currentApprovalRequestId} IS NOT NULL`),
+    check('purchase_requisitions_approved_states', sql`${t.status} NOT IN ('approved', 'closed') OR ${t.approvedAt} IS NOT NULL`),
+    check('purchase_requisitions_approved_at_states', sql`${t.approvedAt} IS NULL OR ${t.status} IN ('approved', 'closed', 'cancelled')`),
+    check(
+      'purchase_requisitions_close_consistent',
+      sql`(${t.status} = 'closed') = (${t.closedAt} IS NOT NULL AND ${t.closedByUserId} IS NOT NULL AND ${t.closeReason} IS NOT NULL)`,
+    ),
+    check('purchase_requisitions_close_reason_length', sql`${t.closeReason} IS NULL OR char_length(${t.closeReason}) BETWEEN 1 AND 500`),
     index('purchase_requisitions_requester_status_idx').on(t.requesterUserId, t.status),
     index('purchase_requisitions_department_status_idx').on(t.departmentId, t.status),
+    index('purchase_requisitions_status_submitted_idx').on(t.status, t.submittedAt),
   ],
 );
 

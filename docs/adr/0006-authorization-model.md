@@ -1,6 +1,6 @@
 # ADR 0006: Code-defined RBAC, scoped assignments, separation-of-duties policies
 
-- Status: Accepted. Amended by [ADR 0014](0014-identity-and-sign-in.md): `buyer` is renamed `procurement` (same permissions), and every active user gets the base permission `account.read`. Amended 2026-10-22 (Phase 4): new permission `supplier.block`, see below.
+- Status: Accepted. Amended by [ADR 0014](0014-identity-and-sign-in.md): `buyer` is renamed `procurement` (same permissions), and every active user gets the base permission `account.read`. Amended 2026-10-22 (Phase 4): new permission `supplier.block`, see below. SOD-01 and SOD-02 implemented in Phase 5b (2026-10-25), see the end.
 - Date: 2026-10-18
 
 ## Context
@@ -89,3 +89,11 @@ SOD-03 is enforced in `supplier.review` (`MAKER_CHECKER`) and backed by the CHEC
 
 - Phase 3: a table-driven permission-matrix test calls every command and query as every role (plus anonymous) and asserts allow or deny exactly as in the table above.
 - SoD tests SOD-01 to SOD-06 land in the phases that introduce the commands (5, 4, 8, 3, 7).
+
+## Implementation of SOD-01 and SOD-02 (Phase 5b, 2026-10-25)
+
+No decision changes; this records where the rules live.
+
+- **Application:** `approval.decide` checks SOD-01 (`SELF_APPROVAL`: the submitter, or the awarding buyer once purchase orders exist) and SOD-02 (`DUPLICATE_APPROVER`: one decision per person per round) after locking the request, then the step's role and scope, read fresh from the database (a revoked assignment stops counting at once, even mid-session). The inbox applies the same rules in SQL, so barred steps are not listed (US-AP-01).
+- **Database:** trigger `approval_steps_no_self_approval` (SQLSTATE `PFD01`) and the unique index `approval_steps_distinct_deciders`. Both are proven by direct SQL as the app role in `tests/integration/approvals.test.ts`, and mutation checks show that removing the application check makes the tests fail rather than fall through to the backstop.
+- **Resource rule on cancel:** `requisition.cancel` requires `requisition.create` or `po.create` (any of, ADR 0010 amendment); a `po.create` holder who is not the requester may cancel only an approved requisition (PR-T09).

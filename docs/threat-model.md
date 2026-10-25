@@ -77,8 +77,8 @@ flowchart LR
 
 | ID | Abuse case | Control | Test |
 | --- | --- | --- | --- |
-| AB-01 | Requester approves own PR | SOD-01 (app + DB trigger) | Phase 5 |
-| AB-02 | One approver clears every step | SOD-02 (app + unique index) | Phase 5 |
+| AB-01 | Requester approves own PR | SOD-01 (app + DB trigger) | Phase 5b (verified) |
+| AB-02 | One approver clears every step | SOD-02 (app + unique index) | Phase 5b (verified) |
 | AB-03 | Buyer creates a fake supplier and orders from it | SOD-03 maker-checker. Only active suppliers can be ordered from. | Phase 4 |
 | AB-04 | Supplier identity swapped after review | Identity change sends supplier back to review | Phase 4 |
 | AB-05 | Buyer inflates PO prices after PR approval | Price-variance tolerance triggers PO approval. SOD-01 and SOD-06 on PO approval. | Phase 7 |
@@ -117,6 +117,18 @@ flowchart LR
 - **E-03 (threshold manipulation):** approval policies are versioned and immutable (triggers, `PFP01`); every publish is audited with rule summaries; the active rules and the version history are visible to admins. In-flight protection (steps frozen at submit) is Phase 5b.
 - **Currency:** locked by the first requisition, in the app (`CURRENCY_LOCKED`) and by a trigger (`PFO01`); tested against a concurrent change.
 - **Double submission:** `requisition.create` is idempotent per user and key (C6), and a reused key with different input is refused.
+
+### Phase 5b status (2026-10-25)
+
+- **AB-01 (self-approval) is controlled:** `SELF_APPROVAL` in `approval.decide`, even for a requester who holds `approver` for their own department; the submitter's own steps are not in their inbox; trigger `approval_steps_no_self_approval` (`PFD01`) refuses a direct write as the app role and as the owner.
+- **AB-02 (one approver clears every step) is controlled:** `DUPLICATE_APPROVER`, even for a user holding both `approver` and `finance`; the unique index refuses a direct write (`23505`). SOD-02 is per round, so after a return the same approver may decide again.
+- **E-03 (threshold manipulation):** the route is frozen at submit; a policy published afterwards does not change in-flight steps (tested). Without an active policy, submission fails (`NO_APPROVAL_ROUTE`); nothing is auto-approved.
+- **T-02 (editing after submit):** lines stay read-only while pending (trigger), and editing is possible again only after a return, which then needs a new round with a new snapshot of the amount.
+- **T-04 (races):** CC-01 (concurrent decisions on one step) and CC-02 (edit vs submit), plus withdrawal vs the last approval, 20 forced overlaps each (ADR 0008).
+- **I-01 (IDOR) for approvals:** deciding on a requisition the caller cannot see is `NOT_FOUND`, the same as a request that does not exist; the inbox lists only steps whose documents the caller can open; history is returned only inside `requisition.get`, after its visibility check, with names instead of user ids.
+- **R-01:** every submission, decision, withdrawal, cancellation, and close is audited in the same transaction, with the comment or reason.
+- **Approval history is tamper-resistant in the database:** snapshot columns and completed requests are frozen, steps only move forward and cannot be added later, nothing can be deleted (`PFD01` for every role; no DELETE grant).
+- **Residual:** if nobody is eligible for a step (for example, the only approver of a department is the requester), the step stays pending; nothing is skipped automatically. The approval-aging report (Phase 9) will show it. There are no notifications yet: approvers have to open their inbox.
 
 - **Residual:** normalization does not catch look-alike names that differ in letters (for example "Maju Jaya" and "Maju Jaja") or a dropped legal suffix ("PT Maju Jaya" and "Maju Jaya"). Those remain a review task for finance, not a rule.
 

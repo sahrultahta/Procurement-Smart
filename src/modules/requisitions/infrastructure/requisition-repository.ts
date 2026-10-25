@@ -51,9 +51,19 @@ export async function updateRequisition(
   id: string,
   expectedVersion: number,
   values: Partial<
-    Pick<RequisitionRow, 'title' | 'justification' | 'neededBy' | 'estimatedTotal' | 'status' | 'cancelledByUserId' | 'cancelReason'> & {
-      cancelledAt: SQL;
-    }
+    Pick<
+      RequisitionRow,
+      | 'title'
+      | 'justification'
+      | 'neededBy'
+      | 'estimatedTotal'
+      | 'status'
+      | 'currentApprovalRequestId'
+      | 'cancelledByUserId'
+      | 'cancelReason'
+      | 'closedByUserId'
+      | 'closeReason'
+    > & { submittedAt: SQL; approvedAt: SQL; cancelledAt: SQL; closedAt: SQL }
   >,
 ): Promise<number> {
   const [row] = await tx

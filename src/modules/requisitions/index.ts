@@ -1,10 +1,13 @@
-export { cancelRequisition, createRequisition, updateRequisitionDraft } from './application/requisition-commands';
+export { requisitionApprovalDocument } from './application/approval-document';
+export { cancelRequisition, closeRequisition, createRequisition, submitRequisition, updateRequisitionDraft } from './application/requisition-commands';
 export {
   getRequisition,
   listRequisitions,
+  REQUISITION_ACTIONS,
   REQUISITION_DETAIL_KEYS,
   REQUISITION_LINE_KEYS,
   REQUISITION_SUMMARY_KEYS,
+  type RequisitionAction,
   type RequisitionDetailDto,
   type RequisitionLineDto,
   type RequisitionSummaryDto,

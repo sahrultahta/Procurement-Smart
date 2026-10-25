@@ -47,28 +47,28 @@ Personas (fictional): **Rina** (requester, Operations), **Bayu** (approver, Oper
 - The server computes line totals and the PR total. A total sent by the browser is rejected.
 - The PR belongs to Rina's department, taken from her profile, not from the form.
 
-**US-PR-02 Edit my draft.** *(Phase 5a for drafts; returned requisitions in 5b.)* Rina edits her PR while it is `draft` or `returned`. If someone else changed it since she loaded it, she gets "this requisition changed, reload" (`CONFLICT`).
+**US-PR-02 Edit my draft.** *(Phase 5a for drafts, Phase 5b for returned requisitions.)* Rina edits her PR while it is `draft` or `returned`. If someone else changed it since she loaded it, she gets "this requisition changed, reload" (`CONFLICT`).
 
-**US-PR-03 Submit for approval.** Rina submits. The approval route is resolved from the active policy (department + total) and frozen.
+**US-PR-03 Submit for approval.** *(Phase 5b.)* Rina submits. The approval route is resolved from the active policy (department + total) and frozen.
 - If no rule matches, submission fails with `NO_APPROVAL_ROUTE`. The PR is never auto-approved.
 - After submission, the lines are read-only.
 
-**US-PR-04 Withdraw or cancel.** *(Drafts: Phase 5a. Pending and approved: 5b.)* Rina can cancel her PR while draft, returned, or pending (with a reason when pending), or when approved but nothing has been ordered yet.
+**US-PR-04 Withdraw or cancel.** *(Drafts: Phase 5a. Pending and approved: Phase 5b.)* Rina can cancel her PR while draft, returned, or pending (with a reason when pending), or when approved but nothing has been ordered yet.
 
 **US-PR-05 See only what I'm allowed to.** *(Phase 5a.)* Rina sees only her own PRs. Bayu sees PRs of the departments he approves for. Dewi, Sari, and Lena see all. Opening another person's PR by URL returns "not found" for Rina.
 
 ## Approvals
 
-**US-AP-01 Approval inbox.** Bayu sees the steps he is eligible to decide right now. Steps he is barred from by SoD are not listed.
+**US-AP-01 Approval inbox.** *(Phase 5b.)* Bayu sees the steps he is eligible to decide right now. Steps he is barred from by SoD are not listed.
 
-**US-AP-02 Decide.** Bayu approves, rejects (comment required), or returns for changes (comment required).
+**US-AP-02 Decide.** *(Phase 5b.)* Bayu approves, rejects (comment required), or returns for changes (comment required).
 - **Rina cannot approve her own PR**, even if she also holds `approver` for her department (`SELF_APPROVAL`, blocked in the app and by a DB trigger).
 - One person cannot approve two steps of the same round (`DUPLICATE_APPROVER`).
 - If Bayu and another approver click Approve on the same step at the same time, exactly one decision is recorded and the other person is told it was already decided.
 
-**US-AP-03 Multi-step progression.** After step 1 is approved, step 2 becomes pending for its eligible approvers. Approving the final step approves the document. Rejecting any step rejects it. Returning any step returns it to the requester, and resubmitting starts a new round from step 1.
+**US-AP-03 Multi-step progression.** *(Phase 5b.)* After step 1 is approved, step 2 becomes pending for its eligible approvers. Approving the final step approves the document. Rejecting any step rejects it. Returning any step returns it to the requester, and resubmitting starts a new round from step 1.
 
-**US-AP-04 Approval history.** Anyone who can see the document sees its full approval history across rounds: who, when, decision, and comment.
+**US-AP-04 Approval history.** *(Phase 5b.)* Anyone who can see the document sees its full approval history across rounds: who, when, decision, and comment.
 
 ## Sourcing
 

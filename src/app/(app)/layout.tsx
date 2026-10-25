@@ -31,6 +31,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 Requisitions
               </Link>
             ) : null}
+            {actor.permissions.has('approval.decide') ? (
+              <Link href="/approvals" className="text-muted-foreground hover:text-foreground">
+                Approvals
+              </Link>
+            ) : null}
             {actor.permissions.has('supplier.read') ? (
               <Link href="/suppliers" className="text-muted-foreground hover:text-foreground">
                 Suppliers

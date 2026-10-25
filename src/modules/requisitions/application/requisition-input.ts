@@ -26,6 +26,10 @@ export const requisitionFields = {
 
 export const versionField = z.number().int().min(1).max(2_147_483_647);
 
+/** Cancel reason: optional for drafts; the command requires it when withdrawing or after approval. */
+export const reasonField = z.preprocess(blankToNull, z.string().trim().max(500).nullable());
+export const requiredReasonField = z.string().trim().min(1, 'Give a reason (required)').max(500);
+
 type LineInput = z.output<typeof lineInput>;
 
 /** "2 pcs Printer paper @ 4.5": numbers without trailing zeros, so input and stored rows compare equal. */
@@ -45,7 +49,9 @@ export const requisitionAudit = defineAuditPolicy<{
   departmentCode: string;
   lines: string[];
   status: string;
+  round: number;
+  approvalRoute: string[];
 }>({
   entityType: 'requisition',
-  fields: ['number', 'title', 'justification', 'neededBy', 'estimatedTotal', 'currencyCode', 'departmentCode', 'lines', 'status'],
+  fields: ['number', 'title', 'justification', 'neededBy', 'estimatedTotal', 'currencyCode', 'departmentCode', 'lines', 'status', 'round', 'approvalRoute'],
 });

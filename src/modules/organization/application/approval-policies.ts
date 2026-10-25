@@ -117,7 +117,8 @@ export const getActiveApprovalPolicy = defineQuery({
   handler: async ({ tx }, input): Promise<ApprovalPolicyDto | null> => {
     const policy = await findActivePolicy(tx, input.documentType);
     if (!policy) return null;
-    const [directory, names] = await Promise.all([findDepartmentDirectory(tx), findUserDisplayNames(tx, [policy.createdByUserId])]);
+    const directory = await findDepartmentDirectory(tx);
+    const names = await findUserDisplayNames(tx, [policy.createdByUserId]);
     return {
       id: policy.id,
       versionNo: policy.versionNo,

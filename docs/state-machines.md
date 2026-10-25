@@ -6,7 +6,7 @@ Notation: **Actor** is the permission plus any resource rule. **Guards** must al
 
 ---
 
-## 1. Purchase requisition (PR) (table implemented in Phase 5a; PR-T01, T02, T07 wired; the rest in 5b)
+## 1. Purchase requisition (PR) (implemented in Phases 5a and 5b)
 
 ```mermaid
 stateDiagram-v2
@@ -41,11 +41,18 @@ stateDiagram-v2
 
 Invariant PR-I1: `0 ≤ ordered_qty ≤ quantity` per line (DB CHECK). Ordered quantity changes only through PO commands.
 
-Implementation (Phase 5a): the pure table is `modules/requisitions/domain/requisition.ts`, all 49 (status, command) pairs tested in `tests/unit/requisition-domain.test.ts`. `requisition.create`, `.update`, and `.cancel` (draft and returned) are commands now; `.submit`, the approval-driven transitions, PR-T08, PR-T09, and PR-T10 arrive with Phase 5b. The year in `PR-YYYY-NNNNNN` is the current year in the org time zone. A trigger keeps lines read-only outside `draft` and `returned` (T-02).
+Implementation (Phase 5a): the pure table is `modules/requisitions/domain/requisition.ts`, all 49 (status, command) pairs tested in `tests/unit/requisition-domain.test.ts`. The year in `PR-YYYY-NNNNNN` is the current year in the org time zone. A trigger keeps lines read-only outside `draft` and `returned` (T-02).
+
+Implementation (Phase 5b), where the table above left room:
+- PR-T03 guards fail as `BUSINESS_RULE` `ZERO_TOTAL` (no lines, or a total of 0), `NEEDED_BY_IN_PAST` (before today in the org time zone; today itself is fine), and `NO_APPROVAL_ROUTE` (no active policy; publishing requires any-department rules covering every amount from 0, so a published policy always has a route). The route is resolved from the stored total and department.
+- PR-T04 to T06 run inside `approval.decide`: the requisitions module implements the approvals port (`modules/requisitions/application/approval-document.ts`), registered in `src/server/approvals.ts`. Each writes `requisition.approved`, `.rejected`, or `.returned` (the approver's comment as the reason).
+- PR-T07 to T09 are one command, `requisition.cancel` (permission `requisition.create` **or** `po.create`). The requester may cancel in every state that allows it; a `po.create` holder who is not the requester only when `approved` (otherwise `FORBIDDEN`). A reason is required when withdrawing or after approval (`VALIDATION_FAILED` on `reason`). PR-T09 with any ordered quantity is `ALREADY_ORDERED`.
+- PR-T10 `requisition.close` needs `po.create` and a reason (1 to 500 characters).
+- `current_approval_request_id` always points at the latest round; `submitted_at` is the latest submission. CHECKs keep these consistent with the status (for example, no `approved` without `approved_at`, no `closed` without its close fields).
 
 ---
 
-## 2. Approval request and steps (shared by PR and PO)
+## 2. Approval request and steps (shared by PR and PO; implemented in Phase 5b)
 
 One **approval request** per submission round. Its **steps** are a snapshot taken at submit time from the active approval policy, matched by document type, department, and amount. Later policy changes never affect an in-flight request.
 
@@ -74,6 +81,14 @@ stateDiagram-v2
 Eligibility of a step: a user is eligible if they hold an **active** assignment of `required_role` whose scope is the document's department or org-wide (`scope_mode = document_department`), or an org-wide assignment (`scope_mode = organization`), and SoD does not exclude them. If no user is eligible, the step stays pending and shows up in the approval-aging report. Approvals are never skipped automatically.
 
 Invariants: AP-I1 at most one `pending` request per document (partial unique index). AP-I2 at most one decision per step (decided fields set once, from `pending` only). AP-I3 SOD-01 is also enforced by a DB trigger. AP-I4 SOD-02 is also enforced by a unique index on `(approval_request_id, decided_by_user_id)`.
+
+Implementation (Phase 5b):
+- The pure tables are in `modules/approvals/domain/approval.ts`: steps (6 statuses × 5 events: activate, approve, reject, return, cancel) and requests (5 statuses × 4 events), all pairs tested in `tests/unit/approval-domain.test.ts`.
+- A step snapshot stores `required_role` and `scope_department_id`: the document's department for `document_department` steps, NULL for `organization` steps. An org-wide assignment of the role qualifies for any step of that role; a department assignment only for a step scoped to that department. Finance is always org-wide.
+- `approval.decide` locks the document first, then the request (ADR 0008 C8, the same order as submit and withdraw), and checks in this order: the caller can see the document (else `NOT_FOUND`, like a missing request), the request is pending and the step is pending (`INVALID_TRANSITION`, "already decided" or "not open yet"), the request version (`CONFLICT`), SOD-01 (`SELF_APPROVAL`), SOD-02 (`DUPLICATE_APPROVER`), then role and scope read fresh from the database (`NOT_ELIGIBLE_APPROVER`; a role revoked after sign-in no longer counts).
+- A comment is optional to approve and required to reject or return (1 to 2000 characters, `VALIDATION_FAILED` on `comment`).
+- Every request change bumps its `version`. Steps record `activated_at` when they open (the inbox sorts by it). Audit: `approval.requested` (route and amount), `approval.decided`, `approval.cancelled`, all on entity type `approval_request`.
+- `awarded_by_user_id` (SOD-06) exists and the trigger checks it, but it stays NULL until purchase orders (Phase 7).
 
 ---
 

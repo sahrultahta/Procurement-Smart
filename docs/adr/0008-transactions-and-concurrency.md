@@ -1,6 +1,6 @@
 # ADR 0008: Transactions and concurrency control
 
-- Status: Accepted. Amended 2026-10-22 (Phase 3b): mechanism C9, the admin-set lock.
+- Status: Accepted. Amended 2026-10-22 (Phase 3b): mechanism C9, the admin-set lock. Phase 5b (2026-10-25): the lock order for approvals (C8) and CC-01, CC-02 implemented.
 - Date: 2026-10-18
 
 ## Context
@@ -41,6 +41,17 @@ Row locks cannot protect an invariant over a **set** of rows that no single row 
 This narrows the earlier rejection of advisory locks below: they are not used *instead of* row locks and constraints, only for set-level invariants, and only inside the database.
 
 **CC-08:** two admins remove each other (revoke/revoke, deactivate/deactivate, revoke/deactivate). A third connection holds the set lock until both commands are waiting on it, then releases it. Over 20 iterations exactly one succeeds, the other gets `FORBIDDEN` or `LAST_ADMIN`, and exactly one admin remains. With the lock removed, both succeed on the first iteration (mutation check, Phase 3b report).
+
+## Implemented in Phase 5b (2026-10-25)
+
+- **C8 lock order for approvals:** the document row first, then its approval request. Submit and withdraw lock the requisition and then open or cancel the round; `approval.decide` reads the request without a lock only to find its document, locks the document through the approvals port, and only then locks the request. A mutation check that makes the decision skip the document lock turns the withdrawal race below into a deadlock (`40P01`), which the test detects.
+- **C1 on approval requests:** every decision bumps the request's `version`; the inbox and the decision form carry it.
+
+| Test | Assertion |
+| --- | --- |
+| CC-01 | 2 to 10 approvers decide step 1 of the same request at once (approve, reject, or return), forced to overlap (a third connection holds the requisition row until all of them wait), 20 times: exactly one succeeds, the others get `INVALID_TRANSITION` or `CONFLICT`, exactly one step has a decider, one `approval.decided` audit row, and request, steps, and requisition agree. |
+| CC-02 | An edit and a submit on the same requisition version, forced to overlap, 20 times, alternating who queues first: one succeeds, the other gets `CONFLICT`; after an edit win nothing was submitted, after a submit win the lines and the request's amount equal what was stored before the edit (no lost update). Both outcomes occurred. |
+| Withdraw vs last approval | Withdrawal and the final approval forced to overlap, 20 times: one wins; the loser gets the version `CONFLICT` (withdrawal) or "already complete" (approval), never a deadlock; request and requisition end `approved/approved` or `cancelled/cancelled`. |
 
 ## Implemented in Phase 5a (2026-10-23)
 

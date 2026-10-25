@@ -1,10 +1,11 @@
 import 'server-only';
 import { z } from 'zod';
+import { findApprovalHistory, findOpenDecision, type ApprovalRoundDto, type OpenDecisionDto } from '@/modules/approvals';
 import { findDepartmentDirectory, findUserDisplayNames } from '@/modules/identity';
 import { defineQuery } from '@/shared/application/runner';
 import { dec, toFixedScale } from '@/shared/decimal/decimal';
 import { fail } from '@/shared/result';
-import { REQUISITION_STATUSES, isEditable, type RequisitionStatus } from '../domain/requisition';
+import { REQUISITION_STATUSES, isEditable, nextRequisitionStatus, type RequisitionStatus } from '../domain/requisition';
 import { findLines, findRequisition, isVisible, searchRequisitions, type RequisitionRow } from '../infrastructure/requisition-repository';
 import { READ_PERMISSIONS, visibilityFor } from './visibility';
 
@@ -12,6 +13,10 @@ import { READ_PERMISSIONS, visibilityFor } from './visibility';
  * Requisition read models. Visibility is applied in SQL for lists and checked for single
  * reads; a requisition the caller may not see is NOT_FOUND, never FORBIDDEN (no existence leak).
  */
+
+/** What the caller can do with a requisition now. The commands check again on their own. */
+export const REQUISITION_ACTIONS = ['edit', 'submit', 'cancel', 'close'] as const;
+export type RequisitionAction = (typeof REQUISITION_ACTIONS)[number];
 
 export type RequisitionSummaryDto = {
   id: string;
@@ -57,11 +62,20 @@ export type RequisitionDetailDto = RequisitionSummaryDto & {
   justification: string | null;
   updatedAt: string;
   version: number;
+  submittedAt: string | null;
+  approvedAt: string | null;
   cancelledAt: string | null;
   cancelReason: string | null;
+  closedAt: string | null;
+  closeReason: string | null;
   lines: RequisitionLineDto[];
-  /** The caller is the requester and the requisition can still be edited or cancelled. */
+  /** Every approval round, oldest first (US-AP-04). */
+  approvalHistory: ApprovalRoundDto[];
+  /** The approval step the caller may decide right now, if any (US-AP-02). */
+  openDecision: OpenDecisionDto | null;
+  /** The caller is the requester and the requisition can still be edited (draft or returned). */
   callerCanEdit: boolean;
+  callerActions: RequisitionAction[];
 };
 export const REQUISITION_DETAIL_KEYS = [
   ...REQUISITION_SUMMARY_KEYS,
@@ -69,10 +83,17 @@ export const REQUISITION_DETAIL_KEYS = [
   'justification',
   'updatedAt',
   'version',
+  'submittedAt',
+  'approvedAt',
   'cancelledAt',
   'cancelReason',
+  'closedAt',
+  'closeReason',
   'lines',
+  'approvalHistory',
+  'openDecision',
   'callerCanEdit',
+  'callerActions',
 ] as const;
 
 const money = (value: string, scale: number) => toFixedScale(dec(value), scale);
@@ -140,21 +161,36 @@ export const getRequisition = defineQuery({
   handler: async ({ tx, actor }, input): Promise<RequisitionDetailDto> => {
     const row = await findRequisition(tx, input.requisitionId);
     if (!row || !isVisible(await visibilityFor(tx, actor), row)) fail('NOT_FOUND', 'Requisition not found.');
-    const [lines, names, directory] = await Promise.all([
-      findLines(tx, row.id),
-      findUserDisplayNames(tx, [row.requesterUserId]),
-      findDepartmentDirectory(tx),
-    ]);
+    // One transaction, one connection: these run one after another.
+    const lines = await findLines(tx, row.id);
+    const names = await findUserDisplayNames(tx, [row.requesterUserId]);
+    const directory = await findDepartmentDirectory(tx);
+    const approvalHistory = await findApprovalHistory(tx, 'requisition', row.id);
+    const openDecision = await findOpenDecision(tx, actor, 'requisition', row.id);
     const department = directory.find((d) => d.id === row.departmentId);
     const status = row.status as RequisitionStatus;
+    const owner = row.requesterUserId === actor.userId && actor.permissions.has('requisition.create');
+    const purchasing = actor.permissions.has('po.create');
+    const ordered = lines.some((l) => dec(l.orderedQty).gt(0));
+    const callerActions: RequisitionAction[] = [];
+    if (owner && isEditable(status)) callerActions.push('edit', 'submit');
+    // PR-T07/T08 for the requester; PR-T09 (approved, nothing ordered) also for procurement.
+    if (nextRequisitionStatus(status, 'cancel') && (owner || (purchasing && status === 'approved')) && !(status === 'approved' && ordered)) {
+      callerActions.push('cancel');
+    }
+    if (purchasing && nextRequisitionStatus(status, 'close')) callerActions.push('close');
     return {
       ...summary(row, names.get(row.requesterUserId) ?? 'Unknown user', department?.code ?? ''),
       departmentName: department?.name ?? '',
       justification: row.justification,
       updatedAt: row.updatedAt.toISOString(),
       version: row.version,
+      submittedAt: row.submittedAt?.toISOString() ?? null,
+      approvedAt: row.approvedAt?.toISOString() ?? null,
       cancelledAt: row.cancelledAt?.toISOString() ?? null,
       cancelReason: row.cancelReason,
+      closedAt: row.closedAt?.toISOString() ?? null,
+      closeReason: row.closeReason,
       lines: lines.map((l) => ({
         lineNo: l.lineNo,
         description: l.description,
@@ -165,7 +201,10 @@ export const getRequisition = defineQuery({
         orderedQty: quantity(l.orderedQty),
         remainingQty: dec(l.quantity).sub(dec(l.orderedQty)).toString(),
       })),
-      callerCanEdit: row.requesterUserId === actor.userId && actor.permissions.has('requisition.create') && isEditable(status),
+      approvalHistory,
+      openDecision,
+      callerCanEdit: callerActions.includes('edit'),
+      callerActions,
     };
   },
 });

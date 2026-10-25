@@ -1,19 +1,32 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatAmount, formatDate, formatMoney, formatTimestamp } from '@/lib/format';
-import { getRequisition } from '@/modules/requisitions';
+import { getRequisition, type RequisitionDetailDto } from '@/modules/requisitions';
 import { getOrganization } from '@/server/organization-profile';
 import { getRequestContext } from '@/server/request-context';
 import { runQuery } from '@/shared/application/runner';
-import { CancelRequisitionForm } from '../_components/cancel-form';
+import { ApprovalHistory } from '../_components/approval-history';
+import { CancelRequisitionForm, type CancelMode } from '../_components/cancel-form';
 import { RequisitionStatusBadge, requisitionNotice } from '../_components/requisition-status';
+import { CloseRequisitionForm, DecisionForm, SubmitRequisitionForm } from '../_components/workflow-forms';
 
 export const metadata: Metadata = { title: 'Requisition' };
+
+function cancelMode(status: RequisitionDetailDto['status']): CancelMode {
+  return status === 'pending_approval' ? 'withdraw' : status === 'approved' ? 'approved' : 'draft';
+}
+
+/** The approver's comment from the step that sent it back, in the latest round. */
+function returnComment(r: RequisitionDetailDto): { by: string; comment: string } | null {
+  const latest = r.approvalHistory.at(-1);
+  const step = latest?.status === 'returned' ? latest.steps.find((s) => s.status === 'returned') : undefined;
+  return step?.decidedBy && step.comment ? { by: step.decidedBy, comment: step.comment } : null;
+}
 
 export default async function RequisitionPage(props: {
   params: Promise<{ id: string }>;
@@ -34,6 +47,8 @@ export default async function RequisitionPage(props: {
   }
   const r = result.data;
   const { timezone } = await getOrganization();
+  const returned = r.status === 'returned' ? returnComment(r) : null;
+  const can = new Set(r.callerActions);
 
   return (
     <div className="grid gap-6">
@@ -54,6 +69,29 @@ export default async function RequisitionPage(props: {
         </Alert>
       ) : null}
 
+      {returned ? (
+        <Alert>
+          <AlertTitle>Returned for changes by {returned.by}</AlertTitle>
+          <AlertDescription className="whitespace-pre-line">{returned.comment}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {r.openDecision ? (
+        <Card>
+          <CardHeader>
+            <h2 className="font-semibold">Your approval</h2>
+          </CardHeader>
+          <CardContent>
+            <DecisionForm
+              approvalRequestId={r.openDecision.approvalRequestId}
+              stepNo={r.openDecision.stepNo}
+              version={r.openDecision.requestVersion}
+              stepLabel={`${r.openDecision.label}, ${r.openDecision.stepNo} of ${r.openDecision.stepCount}`}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <h2 className="font-semibold">Details</h2>
@@ -64,12 +102,33 @@ export default async function RequisitionPage(props: {
             <dd>{formatDate(r.neededBy)}</dd>
             <dt className="text-muted-foreground">Justification</dt>
             <dd className="whitespace-pre-line">{r.justification ?? '—'}</dd>
+            {r.submittedAt ? (
+              <>
+                <dt className="text-muted-foreground">Last submitted</dt>
+                <dd>{formatTimestamp(r.submittedAt, timezone)}</dd>
+              </>
+            ) : null}
+            {r.approvedAt ? (
+              <>
+                <dt className="text-muted-foreground">Approved</dt>
+                <dd>{formatTimestamp(r.approvedAt, timezone)}</dd>
+              </>
+            ) : null}
             {r.cancelledAt ? (
               <>
                 <dt className="text-muted-foreground">Cancelled</dt>
                 <dd>
                   {formatTimestamp(r.cancelledAt, timezone)}
                   {r.cancelReason ? `: ${r.cancelReason}` : ''}
+                </dd>
+              </>
+            ) : null}
+            {r.closedAt ? (
+              <>
+                <dt className="text-muted-foreground">Closed</dt>
+                <dd>
+                  {formatTimestamp(r.closedAt, timezone)}
+                  {r.closeReason ? `: ${r.closeReason}` : ''}
                 </dd>
               </>
             ) : null}
@@ -119,18 +178,31 @@ export default async function RequisitionPage(props: {
         </CardContent>
       </Card>
 
-      {r.callerCanEdit ? (
+      <Card>
+        <CardHeader>
+          <h2 className="font-semibold">Approval</h2>
+        </CardHeader>
+        <CardContent>
+          <ApprovalHistory rounds={r.approvalHistory} currency={{ code: r.currencyCode, scale: r.currencyScale }} timezone={timezone} />
+        </CardContent>
+      </Card>
+
+      {can.size > 0 ? (
         <Card>
           <CardHeader>
             <h2 className="font-semibold">Actions</h2>
           </CardHeader>
           <CardContent className="grid gap-6">
-            <div>
-              <Button asChild variant="outline">
-                <Link href={`/requisitions/${r.id}/edit`}>Edit requisition</Link>
-              </Button>
-            </div>
-            <CancelRequisitionForm requisitionId={r.id} version={r.version} />
+            {can.has('edit') ? (
+              <div>
+                <Button asChild variant="outline">
+                  <Link href={`/requisitions/${r.id}/edit`}>Edit requisition</Link>
+                </Button>
+              </div>
+            ) : null}
+            {can.has('submit') ? <SubmitRequisitionForm requisitionId={r.id} version={r.version} /> : null}
+            {can.has('close') ? <CloseRequisitionForm requisitionId={r.id} version={r.version} /> : null}
+            {can.has('cancel') ? <CancelRequisitionForm requisitionId={r.id} version={r.version} mode={cancelMode(r.status)} /> : null}
           </CardContent>
         </Card>
       ) : null}

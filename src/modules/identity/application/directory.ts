@@ -1,9 +1,10 @@
 import 'server-only';
 import type { Database, Tx } from '@/shared/db/transaction';
-import { findApproverAssignmentDepartments, listDepartments, type DepartmentRecord } from '../infrastructure/admin-repository';
+import type { Role } from '../domain/roles';
+import { findRoleAssignmentDepartments, listDepartments, type DepartmentRecord } from '../infrastructure/admin-repository';
 
 /*
- * Read-only lookups other modules need (departments by code or id, approver scopes).
+ * Read-only lookups other modules need (departments by code or id, role scopes).
  * Results are plain records; callers decide what reaches a client.
  */
 
@@ -14,16 +15,21 @@ export async function findDepartmentDirectory(db: Database | Tx): Promise<Depart
   return listDepartments(db);
 }
 
-export type ApproverScope = { organizationWide: boolean; departmentIds: string[] };
+export type RoleScope = { organizationWide: boolean; departmentIds: string[] };
+export type ApproverScope = RoleScope;
 
 /**
- * Where a user holds an active `approver` assignment (ADR 0006): org-wide, or the listed
- * departments. A deactivated profile has no scope at all.
+ * Where a user holds an active assignment of `role` (ADR 0006): org-wide, or the listed
+ * departments. A deactivated profile or a revoked assignment gives no scope at all.
  */
-export async function findApproverScope(db: Database | Tx, userId: string): Promise<ApproverScope> {
-  const scopes = await findApproverAssignmentDepartments(db, userId);
+export async function findRoleScope(db: Database | Tx, userId: string, role: Role): Promise<RoleScope> {
+  const scopes = await findRoleAssignmentDepartments(db, userId, role);
   return {
     organizationWide: scopes.includes(null),
     departmentIds: scopes.filter((id): id is string => id !== null),
   };
+}
+
+export async function findApproverScope(db: Database | Tx, userId: string): Promise<ApproverScope> {
+  return findRoleScope(db, userId, 'approver');
 }

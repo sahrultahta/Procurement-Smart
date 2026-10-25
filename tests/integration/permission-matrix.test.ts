@@ -55,9 +55,16 @@ const EXPECTED: Record<string, readonly Caller[]> = {
   'admin.approvalPolicy.list': ['admin'],
   'requisition.create': ['requester'],
   'requisition.update': ['requester'],
-  'requisition.cancel': ['requester'],
   'requisition.list': ['requester', 'approver', 'procurement', 'finance', 'auditor'],
   'requisition.get': ['requester', 'approver', 'procurement', 'finance', 'auditor'],
+  // Phase 5b. Submitting is the requester's; cancelling an approved requisition is also
+  // procurement's (PR-T09, po.create), and so is closing (PR-T10). Approval decisions and the
+  // inbox need approval.decide (approver, finance); the step's role is checked per step.
+  'requisition.submit': ['requester'],
+  'requisition.cancel': ['requester', 'procurement'],
+  'requisition.close': ['procurement'],
+  'approval.decide': ['approver', 'finance'],
+  'approval.inbox': ['approver', 'finance'],
 };
 
 let t: TestDatabase;

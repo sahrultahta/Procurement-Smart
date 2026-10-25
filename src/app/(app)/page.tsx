@@ -22,8 +22,8 @@ export default async function HomePage() {
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           <p>
-            Available so far: suppliers (with maker-checker review) and requisition drafts. Submitting requisitions for approval
-            arrives in the next phase; quotations, purchase orders, and receipts after that.
+            Available so far: suppliers (with maker-checker review), purchase requisitions, and their multi-step approvals.
+            Quotations, purchase orders, and receipts come in later phases.
           </p>
         </CardContent>
       </Card>

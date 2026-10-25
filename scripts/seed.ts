@@ -1,8 +1,9 @@
 /**
  * Fictional demo data (ADR 0001): three departments, one user per role, all @example.com; three
  * suppliers registered by Dewi (procurement), two of them approved by Sari (finance); the organization
- * name, a default approval policy published by Ada (admin), and one draft requisition by Rina. All of
- * it goes through the real commands. Idempotent: existing data is left as it is.
+ * name, a default approval policy published by Ada (admin), one draft requisition by Rina, and one she
+ * submitted, waiting for Bayu (step 1) and then Sari (step 2). All of it goes through the real
+ * commands. Idempotent: existing data is left as it is.
  *
  *   npm run seed                                   create missing demo users
  *   npm run seed -- --reset-passwords              also give existing seed users new passwords
@@ -49,7 +50,7 @@ const { resolveActor } = await import('@/modules/identity');
 const { createSupplier, reviewSupplier } = await import('@/modules/suppliers');
 const { runCommand, runQuery } = await import('@/shared/application/runner');
 const { getActiveApprovalPolicy, getSettings, publishApprovalPolicy, updateOrganizationSettings } = await import('@/modules/organization');
-const { createRequisition, listRequisitions } = await import('@/modules/requisitions');
+const { createRequisition, listRequisitions, submitRequisition } = await import('@/modules/requisitions');
 
 type SeedUser = { email: string; name: string; departmentCode: string | null; roles: { role: string; departmentCode: string | null }[] };
 
@@ -201,6 +202,23 @@ try {
       ],
     });
     if (!draft.ok) throw new Error(`Creating the demo requisition failed: ${draft.error.message}`);
+    summary.requisitionsCreated++;
+  }
+
+  // And one submitted for approval (from 1,000: Bayu for OPS, then Sari for finance).
+  const submittedTitle = 'Laptop docking stations for Operations';
+  const existingSubmitted = await runQuery(requester, listRequisitions, { q: submittedTitle });
+  if (!existingSubmitted.ok) throw new Error(`Listing requisitions failed: ${existingSubmitted.error.message}`);
+  if (existingSubmitted.data.items.length === 0) {
+    const created = await runCommand(requester, createRequisition, {
+      title: submittedTitle,
+      justification: 'Fictional demo requisition (seed data), waiting for approval.',
+      neededBy: '2030-03-31',
+      lines: [{ description: 'USB-C docking station', quantity: '6', uom: 'pcs', estimatedUnitPrice: '189.00' }],
+    });
+    if (!created.ok) throw new Error(`Creating the submitted demo requisition failed: ${created.error.message}`);
+    const submitted = await runCommand(requester, submitRequisition, { requisitionId: created.data.requisitionId, expectedVersion: created.data.version });
+    if (!submitted.ok) throw new Error(`Submitting the demo requisition failed: ${submitted.error.message}`);
     summary.requisitionsCreated++;
   }
 

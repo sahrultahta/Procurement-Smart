@@ -4,18 +4,19 @@ An open-source procurement workflow system: suppliers, purchase requisitions wit
 
 ## Status
 
-**Phases 0–4 are done, and Phase 5a (settings, approval policies, requisition drafts) is implemented.** What works today:
+**Phases 0–4 and 5a are done, and Phase 5b (submission and multi-step approvals) is implemented.** What works today:
 - signing in and out;
 - one-time password-setup links;
 - seven roles with code-defined permissions;
 - administration screens: create, edit, deactivate, and reactivate users; grant and revoke roles; manage departments (with separation of duties: no admin can change their own account, and the last admin cannot be removed);
 - suppliers: register, search, maker-checker review (the person who registers or renames a supplier cannot approve it), block and unblock, deactivate and reactivate, with duplicate detection that ignores punctuation;
 - organization settings (name, time zone, currency that locks with the first requisition) and versioned approval policies with an editor;
-- purchase requisition drafts: lines, server-computed totals, edit, cancel, and visibility by role (own, department, all);
+- purchase requisitions: lines, server-computed totals, edit, cancel, and visibility by role (own, department, all);
+- multi-step approvals: submitting freezes the route from the active policy; an approval inbox; approve, reject, or return for changes with comments; resubmission in a new round; withdraw, cancel after approval, and close; full approval history. Nobody approves their own requisition or two steps of one round (checked by the application and the database);
 - an append-only audit trail;
 - decimal-safe money calculations.
 
-**Submitting requisitions for approval, quotations, orders, and receipts are not implemented yet.** Work happens in gated phases, and each phase ends with a report of exactly what was run and what passed (`docs/reports/`). Local setup is described in [docs/development.md](docs/development.md).
+**Quotations, purchase orders, and goods receipts are not implemented yet.** Work happens in gated phases, and each phase ends with a report of exactly what was run and what passed (`docs/reports/`). Local setup is described in [docs/development.md](docs/development.md).
 
 ## Design documents
 
