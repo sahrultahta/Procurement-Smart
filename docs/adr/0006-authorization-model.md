@@ -1,6 +1,6 @@
 # ADR 0006: Code-defined RBAC, scoped assignments, separation-of-duties policies
 
-- Status: Accepted. Amended by [ADR 0014](0014-identity-and-sign-in.md): `buyer` is renamed `procurement` (same permissions), and every active user gets the base permission `account.read`. Amended 2026-10-22 (Phase 4): new permission `supplier.block`, see below. SOD-01 and SOD-02 implemented in Phase 5b (2026-10-25), see the end.
+- Status: Accepted. Amended by [ADR 0014](0014-identity-and-sign-in.md): `buyer` is renamed `procurement` (same permissions), and every active user gets the base permission `account.read`. Amended 2026-10-22 (Phase 4): new permission `supplier.block`, see below. SOD-01 and SOD-02 implemented in Phase 5b (2026-10-25), see the end. Amended 2026-10-25 (Phase 6a): new permission `rfq.read`, see the end.
 - Date: 2026-10-18
 
 ## Context
@@ -97,3 +97,13 @@ No decision changes; this records where the rules live.
 - **Application:** `approval.decide` checks SOD-01 (`SELF_APPROVAL`: the submitter, or the awarding buyer once purchase orders exist) and SOD-02 (`DUPLICATE_APPROVER`: one decision per person per round) after locking the request, then the step's role and scope, read fresh from the database (a revoked assignment stops counting at once, even mid-session). The inbox applies the same rules in SQL, so barred steps are not listed (US-AP-01).
 - **Database:** trigger `approval_steps_no_self_approval` (SQLSTATE `PFD01`) and the unique index `approval_steps_distinct_deciders`. Both are proven by direct SQL as the app role in `tests/integration/approvals.test.ts`, and mutation checks show that removing the application check makes the tests fail rather than fall through to the backstop.
 - **Resource rule on cancel:** `requisition.cancel` requires `requisition.create` or `po.create` (any of, ADR 0010 amendment); a `po.create` holder who is not the requester may cancel only an approved requisition (PR-T09).
+
+## Amendment (2026-10-25, Phase 6a): `rfq.read`
+
+The table above lets only procurement manage RFQs and quotations, and gives nobody a way to read them. Finance will compare quotations when it approves purchase orders (Phase 7), and the auditor reviews sourcing decisions, so reading gets its own permission (maintainer decision 2026-10-25):
+
+| Permission | requester | approver | procurement | receiver | finance | auditor | admin |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| `rfq.read` | | | ✓ | | ✓ | ✓ | |
+
+These are exactly the roles with `requisition.read.all`, so RFQs need no row scoping. Managing stays with `rfq.manage`. Verified by `tests/unit/roles.test.ts` and the operation matrix in `tests/integration/permission-matrix.test.ts`; a mutation check that removes it from finance fails both.

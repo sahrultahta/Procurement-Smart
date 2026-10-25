@@ -1,4 +1,11 @@
 export { requisitionApprovalDocument } from './application/approval-document';
+export {
+  findRequisitionForSourcing,
+  findRequisitionHeaders,
+  lockRequisitionForSourcing,
+  type RequisitionForSourcing,
+  type SourcingLine,
+} from './application/sourcing';
 export { cancelRequisition, closeRequisition, createRequisition, submitRequisition, updateRequisitionDraft } from './application/requisition-commands';
 export {
   getRequisition,

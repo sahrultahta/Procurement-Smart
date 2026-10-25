@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, asc, eq, gt, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, ne, or, sql, type SQL } from 'drizzle-orm';
 import type { Database, Tx } from '@/shared/db/transaction';
 import { suppliers } from './schema';
 
@@ -131,6 +131,14 @@ export async function searchSuppliers(db: Queryable, search: SupplierSearch): Pr
     )
     .orderBy(asc(suppliers.code))
     .limit(search.limit);
+}
+
+export async function findSupplierRecords(db: Queryable, ids: readonly string[]): Promise<Pick<SupplierRow, 'id' | 'code' | 'legalName' | 'status'>[]> {
+  if (ids.length === 0) return [];
+  return db
+    .select({ id: suppliers.id, code: suppliers.code, legalName: suppliers.legalName, status: suppliers.status })
+    .from(suppliers)
+    .where(inArray(suppliers.id, [...new Set(ids)]));
 }
 
 export async function listActiveSuppliers(db: Queryable): Promise<Pick<SupplierRow, 'id' | 'code' | 'legalName'>[]> {

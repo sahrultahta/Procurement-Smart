@@ -33,7 +33,7 @@ flowchart TD
 
   approvals --> org
   requisitions --> approvals & org
-  sourcing --> requisitions & suppliers
+  sourcing --> requisitions & suppliers & org
   purchasing --> requisitions & sourcing & suppliers & approvals & org
   receiving --> purchasing & org
 ```
@@ -45,6 +45,7 @@ Rules:
 - `health` (operational readiness for `GET /api/health`, added in Phase 1) imports only `shared`. It is public by design and returns only up/down status.
 - The graph is encoded once, as `MODULE_DEPENDENCIES` in `eslint.config.mjs`. Change that and this diagram together.
 - A module may also expose `tables.ts`: its table declarations, so that other modules' schema files can declare foreign keys to them (for example `suppliers.created_by_user_id` → `users.id`). Only schema files use it; queries on those tables stay in the owning module.
+- The **sourcing** module (Phase 6a: RFQs; quotations and award in 6b) reads requisitions, suppliers, and the organization's time zone through their public APIs (the `organization` edge was added in Phase 6a, for RFQ due times and numbers).
 - The **approvals** module (Phase 5b) holds approval requests and steps, eligibility, separation of duties, the inbox, and `approval.decide`. Requisitions call it to open and cancel rounds; it reaches requisitions only through the `ApprovalDocumentPort` that `src/server/approvals.ts` registers, so Server Actions and tests that decide import `decideApproval` from there.
 - The **organization** module (Phase 5a) holds settings and approval policies. Departments were built in Phase 3a inside **identity** (users are assigned to them) and stay there; organization and requisitions reach them through identity's public API.
 - `src/server/` is the composition root. `src/server/schema.ts` re-exports every module's tables for drizzle-kit.

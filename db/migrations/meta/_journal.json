@@ -85,6 +85,20 @@
       "when": 1792902885043,
       "tag": "0011_approvals_guards_and_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792916964792,
+      "tag": "0012_rfqs",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792916982317,
+      "tag": "0013_rfqs_guards_and_grants",
+      "breakpoints": true
     }
   ]
 }

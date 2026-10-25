@@ -58,6 +58,8 @@ For a real installation, create only the first administrator: `npm run bootstrap
 
 **Approvals (Phase 5b).** Rina submits a requisition with **Submit for approval**. `bayu.approver@example.com` finds it under **Approvals** and records a decision on the requisition page (approve, return for changes, or reject; a comment is required for the last two). From 1,000 a second step goes to `sari.finance@example.com`. A returned requisition can be edited and resubmitted (round 2). Rina can withdraw a pending one (with a reason); Dewi (procurement) can cancel or close an approved one. The seed adds one submitted requisition, *Laptop docking stations for Operations*, waiting for Bayu.
 
+**RFQs (Phase 6a).** As `dewi.procurement@example.com`, open an approved requisition and choose **Request quotations**: pick lines and quantities, invite active suppliers, set when quotations are due (in the organization's time zone), then issue, close, or cancel it under **RFQs**. `sari.finance@example.com` and `lena.auditor@example.com` can read RFQs. The seed adds *Office chairs for Operations*, approved by Bayu, with an issued RFQ to the two approved suppliers.
+
 **E2E database.** `npm run test:e2e` never touches `procureflow_dev`. Before starting the server, Playwright runs `scripts/e2e-db.ts`, which drops and recreates `pf_e2e` (with `TEST_DATABASE_URL`) and migrates it. Global setup then creates the E2E users (`e2e.*@example.com`, credentials in `.local/e2e-credentials.json`). Users cannot be deleted, so a throwaway database is the only way to keep test users out of the demo data. If a server is already listening on port 3100, Playwright reuses it, and no fresh database is made: stop that server first.
 
 ## Everyday commands

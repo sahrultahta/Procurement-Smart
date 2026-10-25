@@ -42,6 +42,15 @@ This narrows the earlier rejection of advisory locks below: they are not used *i
 
 **CC-08:** two admins remove each other (revoke/revoke, deactivate/deactivate, revoke/deactivate). A third connection holds the set lock until both commands are waiting on it, then releases it. Over 20 iterations exactly one succeeds, the other gets `FORBIDDEN` or `LAST_ADMIN`, and exactly one admin remains. With the lock removed, both succeed on the first iteration (mutation check, Phase 3b report).
 
+## Implemented in Phase 6a (2026-10-25)
+
+- **C8, requisition before RFQ:** `rfq.create`, `rfq.update`, and `rfq.issue` lock the requisition row, then the RFQ. Holding the requisition lock while checking "is this line on another RFQ that is not cancelled?" makes concurrent drafts of the same line queue up; the `rfq_lines` trigger repeats the check as a backstop.
+- **C5** allocates `RFQ-YYYY-NNNNNN` numbers (year in the org time zone).
+
+| Test | Assertion |
+| --- | --- |
+| One live RFQ per requisition line | 5 parallel `rfq.create` for the same line, forced to overlap (a third connection holds the requisition row until all wait), 20 times: exactly one succeeds, the others get `LINE_ALREADY_IN_RFQ`, one RFQ line exists, `RFQ-` numbers stay gapless. A mutation check that drops the requisition lock lets the four others reach the trigger (`PFB01`) instead. |
+
 ## Implemented in Phase 5b (2026-10-25)
 
 - **C8 lock order for approvals:** the document row first, then its approval request. Submit and withdraw lock the requisition and then open or cancel the round; `approval.decide` reads the request without a lock only to find its document, locks the document through the approvals port, and only then locks the request. A mutation check that makes the decision skip the document lock turns the withdrawal race below into a deadlock (`40P01`), which the test detects.

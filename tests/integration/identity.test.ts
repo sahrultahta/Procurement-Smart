@@ -52,7 +52,7 @@ describe('actor resolution', () => {
     const actor = await resolveActor(t.appDb, multiId);
     expect(actor?.roles).toEqual(['auditor', 'receiver']);
     expect([...(actor?.permissions ?? [])].sort()).toEqual(
-      ['account.read', 'audit.read', 'po.read.all', 'po.read.issued', 'receipt.create', 'receipt.read', 'report.view', 'requisition.read.all', 'supplier.read'].sort(),
+      ['account.read', 'audit.read', 'po.read.all', 'po.read.issued', 'receipt.create', 'receipt.read', 'report.view', 'requisition.read.all', 'rfq.read', 'supplier.read'].sort(),
     );
   });
 

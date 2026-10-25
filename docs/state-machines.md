@@ -130,7 +130,7 @@ Rule SUP-R1: only `active` suppliers can be invited to RFQs, quoted, put on new 
 
 ---
 
-## 4. Request for quotation (RFQ) and quotation
+## 4. Request for quotation (RFQ) and quotation (RFQ lifecycle implemented in Phase 6a; quotations and award in 6b)
 
 ```mermaid
 stateDiagram-v2
@@ -151,6 +151,13 @@ stateDiagram-v2
 | RFQ-T04 | issued → closed | `rfq.close` | `rfq.manage` | | No more quotations |
 | RFQ-T05 | closed → awarded | `quotation.award` | `quotation.award` | Chosen quotation `submitted`, `valid_until` ≥ today, supplier `active`. If PR `estimated_total` ≥ `rfq_required_above` and fewer than `min_quotes` quotations were submitted, a justification is required. If the chosen quotation is not the lowest total among valid submitted quotations, a justification is required. | Chosen → `awarded`, other submitted → `not_awarded`. `awarded_by` recorded (for SOD-06). |
 | RFQ-T06 | draft / issued / closed → cancelled | `rfq.cancel` | `rfq.manage` | reason | Open quotations stay as recorded |
+
+Implementation (Phase 6a), where the table above left room:
+- The pure table is `modules/sourcing/domain/rfq.ts`; all 25 (status, command) pairs are tested in `tests/unit/rfq-domain.test.ts`. The award command (RFQ-T05) arrives with quotations in Phase 6b.
+- RFQ-T01 and T02 guards fail as `REQUISITION_NOT_APPROVED`, `QUANTITY_EXCEEDS_REMAINING` (with `details: [{lineNo, remaining}]`), `LINE_ALREADY_IN_RFQ`, and `SUPPLIER_NOT_ACTIVE`. A requisition line can be on only one RFQ that is not cancelled (maintainer decision 2026-10-25); cancelling an RFQ frees its lines. Descriptions and units are copied from the requisition lines.
+- RFQ-T03 also re-checks that the requisition is still approved and that every invited supplier is still active; it fails as `NO_SUPPLIERS_INVITED` or `RESPONSE_DUE_IN_PAST` (the due time must be later than now). The due time is entered as a local time in the org time zone; a time skipped by a daylight-saving change is refused.
+- RFQ-T06 needs a reason (1 to 500 characters). Every transition is audited (`rfq.created`, `.updated`, `.issued`, `.closed`, `.cancelled`).
+- Lock order (ADR 0008 C8): create, update, and issue lock the requisition row, then the RFQ.
 
 Quotation (recorded by the buyer; suppliers have no login in v1):
 

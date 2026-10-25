@@ -130,6 +130,15 @@ flowchart LR
 - **Approval history is tamper-resistant in the database:** snapshot columns and completed requests are frozen, steps only move forward and cannot be added later, nothing can be deleted (`PFD01` for every role; no DELETE grant).
 - **Residual:** if nobody is eligible for a step (for example, the only approver of a department is the requester), the step stays pending; nothing is skipped automatically. The approval-aging report (Phase 9) will show it. There are no notifications yet: approvers have to open their inbox.
 
+### Phase 6a status (2026-10-25)
+
+- **AB-07 (skipping competitive sourcing), first half:** RFQs start only from approved requisitions, ask for no more than what is left to order, and invite only active suppliers (SUP-R1), in the application and in the database. A requisition line can be on only one RFQ that is not cancelled, so parallel or duplicate sourcing of the same need is refused (also under concurrency). The justification rules for too few quotes or a non-lowest award, and `RFQ_REQUIRED` on purchase orders, come in Phases 6b and 7.
+- **T-01 (tampered fields):** status, number, creator, descriptions, units, and times sent by the client are `VALIDATION_FAILED`; descriptions and units are copied from the requisition (and the trigger refuses anything else).
+- **T-02 (changing a document after it is issued):** lines, invitations, title, and due time are frozen once an RFQ is issued, for every role (`PFB01`).
+- **T-03:** RFQ search terms are matched literally (`%`, `_`).
+- **E-01:** the 8 new operations are in the operation matrix; `rfq.read` is in the role matrix (ADR 0006 amendment).
+- **Residual:** ProcureFlow does not send RFQs to suppliers; the buyer does, outside the system, so the invitation list records intent, not delivery.
+
 - **Residual:** normalization does not catch look-alike names that differ in letters (for example "Maju Jaya" and "Maju Jaja") or a dropped legal suffix ("PT Maju Jaya" and "Maju Jaya"). Those remain a review task for finance, not a rule.
 
 ## 7. Accepted risks and out of scope

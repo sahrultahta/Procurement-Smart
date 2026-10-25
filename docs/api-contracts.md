@@ -11,7 +11,7 @@ These are the contracts of the application layer (ADR 0010). In v1 they are invo
 - **`idempotencyKey?: string(8..100)`** is accepted on every `*.create` command (ADR 0008 C6).
 - **Never accepted from clients:** ids of new rows, numbers, totals, statuses, `*_by` / `*_at` fields, `department_id` on requisitions (taken from the actor's profile), `currency_code` (taken from org settings). Sending them fails strict validation.
 - **Lists:** cursor pagination `{ cursor?: string, limit?: 1..100 = 25 }`. Sorting only by whitelisted fields. Filters are typed enums or dates, never raw SQL fragments.
-- **Business-rule sub-codes** (`error.code = 'BUSINESS_RULE'`, `error.rule = ...`): `SELF_APPROVAL`, `DUPLICATE_APPROVER`, `NO_APPROVAL_ROUTE`, `NOT_ELIGIBLE_APPROVER`, `SUPPLIER_NOT_ACTIVE`, `SUPPLIER_DUPLICATE`, `MAKER_CHECKER`, `OVER_ORDER`, `RFQ_REQUIRED`, `MIN_QUOTES_JUSTIFICATION_REQUIRED`, `NON_LOWEST_JUSTIFICATION_REQUIRED`, `QUOTATION_EXPIRED`, `ORDER_RECEIVE_CONFLICT` (SOD-04), `OVER_RECEIPT`, `RECEIPTS_EXIST`, `ALREADY_REVERSED`, `PO_CLOSED`, `SELF_ADMINISTRATION`, `LAST_ADMIN`, `EMAIL_TAKEN`, `UNKNOWN_DEPARTMENT`, `ROLE_NOT_SCOPABLE`, `ROLE_ALREADY_ASSIGNED`, `USER_DEACTIVATED`, `PASSWORD_ALREADY_SET`, `DEPARTMENT_CODE_TAKEN`, `NO_DEPARTMENT`, `CURRENCY_LOCKED`, `IDEMPOTENCY_KEY_REUSED`, `CURRENCY_MISMATCH`, `AMOUNT_TOO_LARGE`, `ZERO_TOTAL`, `NEEDED_BY_IN_PAST`, `ALREADY_ORDERED`, `INTEGRITY_CONSTRAINT` (a database constraint caught what an application check should have; logged at warn).
+- **Business-rule sub-codes** (`error.code = 'BUSINESS_RULE'`, `error.rule = ...`): `SELF_APPROVAL`, `DUPLICATE_APPROVER`, `NO_APPROVAL_ROUTE`, `NOT_ELIGIBLE_APPROVER`, `SUPPLIER_NOT_ACTIVE`, `SUPPLIER_DUPLICATE`, `MAKER_CHECKER`, `OVER_ORDER`, `RFQ_REQUIRED`, `MIN_QUOTES_JUSTIFICATION_REQUIRED`, `NON_LOWEST_JUSTIFICATION_REQUIRED`, `QUOTATION_EXPIRED`, `ORDER_RECEIVE_CONFLICT` (SOD-04), `OVER_RECEIPT`, `RECEIPTS_EXIST`, `ALREADY_REVERSED`, `PO_CLOSED`, `SELF_ADMINISTRATION`, `LAST_ADMIN`, `EMAIL_TAKEN`, `UNKNOWN_DEPARTMENT`, `ROLE_NOT_SCOPABLE`, `ROLE_ALREADY_ASSIGNED`, `USER_DEACTIVATED`, `PASSWORD_ALREADY_SET`, `DEPARTMENT_CODE_TAKEN`, `NO_DEPARTMENT`, `CURRENCY_LOCKED`, `IDEMPOTENCY_KEY_REUSED`, `CURRENCY_MISMATCH`, `AMOUNT_TOO_LARGE`, `ZERO_TOTAL`, `NEEDED_BY_IN_PAST`, `ALREADY_ORDERED`, `REQUISITION_NOT_APPROVED`, `QUANTITY_EXCEEDS_REMAINING`, `LINE_ALREADY_IN_RFQ`, `NO_SUPPLIERS_INVITED`, `RESPONSE_DUE_IN_PAST`, `INTEGRITY_CONSTRAINT` (a database constraint caught what an application check should have; logged at warn).
 - **Database conditions are mapped by the runner** (`src/shared/application/runner.ts`, Phase 2):
 
   | SQLSTATE | Result |
@@ -20,7 +20,7 @@ These are the contracts of the application layer (ADR 0010). In v1 they are invo
   | `40001` / `40P01` | `CONFLICT`, after up to 3 whole-transaction retries for retry-safe commands |
   | `23505` | `CONFLICT` |
   | `23502` / `23503` / `23514` / `23P01` | `BUSINESS_RULE` / `INTEGRITY_CONSTRAINT` |
-  | anything else (incl. `PFA01`, `PFR01`, `PFS01`, `PFO01`, `PFP01`, `PFQ01`, `PFD01`, `25006`, `57014`) | `INTERNAL`, with a generic message; details only in the server log |
+  | anything else (incl. `PFA01`, `PFR01`, `PFS01`, `PFO01`, `PFP01`, `PFQ01`, `PFD01`, `PFB01`, `25006`, `57014`) | `INTERNAL`, with a generic message; details only in the server log |
 
 Each command writes the audit action `<command name, past tense>` (e.g. `requisition.submit` writes `requisition.submitted`) unless noted.
 
@@ -131,6 +131,13 @@ Queries: `approval.inbox` (pending steps the actor is eligible to decide, exclud
 | `quotation.award` | `quotation.award` | rfqId, quotationId, expectedVersion (RFQ), justification? | RFQ-T05 + justification rules | `POST /rfqs/{id}/award` |
 
 Queries: `rfq.list`, `rfq.get` (with a quotation comparison matrix computed server-side: per-line unit prices, totals, lowest-valid flag).
+
+**Implemented in Phase 6a** (`src/modules/sourcing/`): `rfq.create`, `rfq.update`, `rfq.issue`, `rfq.close`, `rfq.cancel`, `rfq.list`, `rfq.get`, and `rfq.sourcingOptions`. Details:
+- Input fields: `title` (1–200), `responseDueAt` as a local date and time in the org time zone (`YYYY-MM-DDTHH:mm`, an HTML `datetime-local` value; outputs are ISO 8601 UTC), `lines` (1–200 of `{ requisitionLineId, quantity }`, each line once), `supplierIds` (0–50, each once). `create` takes `requisitionId` and accepts `idempotencyKey`. Descriptions and units come from the requisition lines.
+- Errors: `REQUISITION_NOT_APPROVED`, `QUANTITY_EXCEEDS_REMAINING` (`details: [{ lineNo, remaining }]`), `LINE_ALREADY_IN_RFQ` (names the other RFQ), `SUPPLIER_NOT_ACTIVE`, `NO_SUPPLIERS_INVITED` and `RESPONSE_DUE_IN_PAST` (issue only); a line of another requisition is `VALIDATION_FAILED` on `lines.N.requisitionLineId`. `cancel` needs a `reason` (1–500). Outputs: `create` `{ rfqId, number, version }`; the others `{ version }` or `{ version, status }`.
+- Permissions: the commands and `rfq.sourcingOptions` need `rfq.manage` (procurement); `rfq.list` and `rfq.get` need `rfq.read` (procurement, finance, auditor; ADR 0006 amendment). These roles read every requisition, so RFQs are not scoped further.
+- `rfq.list` filters by `status`, `requisitionId`, and `q` (number or title, literal match), pages by number (newest first). `rfq.get` returns the requisition's number, title, and status, lines with their requisition line numbers, invited suppliers with their current status, user **names**, and `callerActions` (`edit`, `issue`, `close`, `cancel`). `rfq.sourcingOptions` `{ requisitionId, rfqId? }` returns the requisition's lines with what is left and the other RFQ each is on, plus the active suppliers, for the form.
+- The comparison matrix, quotations, and award come with Phase 6b.
 
 ## Purchase orders
 

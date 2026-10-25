@@ -15,7 +15,7 @@ export const MODULE_DEPENDENCIES = {
   approvals: ['organization'],
   suppliers: [],
   requisitions: ['approvals', 'organization'],
-  sourcing: ['requisitions', 'suppliers'],
+  sourcing: ['requisitions', 'suppliers', 'organization'],
   purchasing: ['requisitions', 'sourcing', 'suppliers', 'approvals', 'organization'],
   receiving: ['purchasing', 'organization'],
   reporting: [],

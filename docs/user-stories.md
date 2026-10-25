@@ -72,7 +72,7 @@ Personas (fictional): **Rina** (requester, Operations), **Bayu** (approver, Oper
 
 ## Sourcing
 
-**US-SRC-01 Request quotations.** Dewi creates an RFQ from approved PR lines with remaining quantity, invites active suppliers, sets a due date, and issues it.
+**US-SRC-01 Request quotations.** *(Phase 6a.)* Dewi creates an RFQ from approved PR lines with remaining quantity, invites active suppliers, sets a due date, and issues it.
 
 **US-SRC-02 Record quotations.** Dewi records each supplier's quotation (unit price per line, validity, lead time). Suppliers have no login in v1.
 

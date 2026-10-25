@@ -1,9 +1,10 @@
 /**
  * Fictional demo data (ADR 0001): three departments, one user per role, all @example.com; three
  * suppliers registered by Dewi (procurement), two of them approved by Sari (finance); the organization
- * name, a default approval policy published by Ada (admin), one draft requisition by Rina, and one she
- * submitted, waiting for Bayu (step 1) and then Sari (step 2). All of it goes through the real
- * commands. Idempotent: existing data is left as it is.
+ * name, a default approval policy published by Ada (admin), one draft requisition by Rina, one she
+ * submitted, waiting for Bayu (step 1) and then Sari (step 2), and one Bayu approved, with an RFQ
+ * Dewi issued to the two approved suppliers. All of it goes through the real commands.
+ * Idempotent: existing data is left as it is.
  *
  *   npm run seed                                   create missing demo users
  *   npm run seed -- --reset-passwords              also give existing seed users new passwords
@@ -51,6 +52,8 @@ const { createSupplier, reviewSupplier } = await import('@/modules/suppliers');
 const { runCommand, runQuery } = await import('@/shared/application/runner');
 const { getActiveApprovalPolicy, getSettings, publishApprovalPolicy, updateOrganizationSettings } = await import('@/modules/organization');
 const { createRequisition, listRequisitions, submitRequisition } = await import('@/modules/requisitions');
+const { createRfq, issueRfq, listRfqs, rfqSourcingOptions } = await import('@/modules/sourcing');
+const { decideApproval } = await import('@/server/approvals');
 
 type SeedUser = { email: string; name: string; departmentCode: string | null; roles: { role: string; departmentCode: string | null }[] };
 
@@ -79,7 +82,7 @@ const SUPPLIERS = [
 ];
 
 const credentials: Record<string, { name: string; password: string; roles: string[] }> = {};
-const summary = { departmentsCreated: 0, usersCreated: 0, usersSkipped: 0, passwordsSet: 0, suppliersCreated: 0, suppliersSkipped: 0, settingsUpdated: 0, policiesPublished: 0, requisitionsCreated: 0 };
+const summary = { departmentsCreated: 0, usersCreated: 0, usersSkipped: 0, passwordsSet: 0, suppliersCreated: 0, suppliersSkipped: 0, settingsUpdated: 0, policiesPublished: 0, requisitionsCreated: 0, rfqsCreated: 0 };
 
 try {
   const db = getDb();
@@ -222,6 +225,54 @@ try {
     summary.requisitionsCreated++;
   }
 
+  // One approved by Bayu (under 1,000: one step), sourced by Dewi with an issued RFQ.
+  const sourcedTitle = 'Office chairs for Operations';
+  const existingSourced = await runQuery(requester, listRequisitions, { q: sourcedTitle });
+  if (!existingSourced.ok) throw new Error(`Listing requisitions failed: ${existingSourced.error.message}`);
+  let sourcedId = existingSourced.data.items[0]?.id ?? null;
+  if (!sourcedId) {
+    const created = await runCommand(requester, createRequisition, {
+      title: sourcedTitle,
+      justification: 'Fictional demo requisition (seed data), approved and out for quotation.',
+      neededBy: '2030-04-30',
+      lines: [
+        { description: 'Ergonomic office chair', quantity: '4', uom: 'pcs', estimatedUnitPrice: '180.00' },
+        { description: 'Chair mat', quantity: '4', uom: 'pcs', estimatedUnitPrice: '35.00' },
+      ],
+    });
+    if (!created.ok) throw new Error(`Creating the sourced demo requisition failed: ${created.error.message}`);
+    const submitted = await runCommand(requester, submitRequisition, { requisitionId: created.data.requisitionId, expectedVersion: created.data.version });
+    if (!submitted.ok) throw new Error(`Submitting the sourced demo requisition failed: ${submitted.error.message}`);
+    const approved = await runCommand(await actorOf('bayu.approver'), decideApproval, {
+      approvalRequestId: submitted.data.approvalRequestId,
+      stepNo: 1,
+      expectedVersion: 1,
+      decision: 'approve',
+      comment: 'Seed data: approved for the demo',
+    });
+    if (!approved.ok) throw new Error(`Approving the sourced demo requisition failed: ${approved.error.message}`);
+    sourcedId = created.data.requisitionId;
+    summary.requisitionsCreated++;
+  }
+  const buyer = await actorOf('dewi.procurement');
+  const existingRfqs = await runQuery(buyer, listRfqs, { requisitionId: sourcedId });
+  if (!existingRfqs.ok) throw new Error(`Listing RFQs failed: ${existingRfqs.error.message}`);
+  if (existingRfqs.data.items.length === 0) {
+    const options = await runQuery(buyer, rfqSourcingOptions, { requisitionId: sourcedId });
+    if (!options.ok) throw new Error(`Reading RFQ options failed: ${options.error.message}`);
+    const rfq = await runCommand(buyer, createRfq, {
+      requisitionId: sourcedId,
+      title: sourcedTitle,
+      responseDueAt: '2030-03-15T17:00',
+      lines: options.data.lines.map((l) => ({ requisitionLineId: l.id, quantity: l.remainingQty })),
+      supplierIds: options.data.suppliers.map((s) => s.id),
+    });
+    if (!rfq.ok) throw new Error(`Creating the demo RFQ failed: ${rfq.error.message}`);
+    const issued = await runCommand(buyer, issueRfq, { rfqId: rfq.data.rfqId, expectedVersion: rfq.data.version });
+    if (!issued.ok) throw new Error(`Issuing the demo RFQ failed: ${issued.error.message}`);
+    summary.rfqsCreated++;
+  }
+
   if (Object.keys(credentials).length > 0) {
     mkdirSync(dirname(outFile), { recursive: true });
     writeFileSync(outFile, `${JSON.stringify(credentials, null, 2)}\n`, { mode: 0o600 });
@@ -230,7 +281,7 @@ try {
     `Seed done: ${summary.departmentsCreated} departments created, ${summary.usersCreated} users created, ` +
       `${summary.usersSkipped} existing users skipped, ${summary.passwordsSet} passwords set, ` +
       `${summary.suppliersCreated} suppliers created, ${summary.suppliersSkipped} existing suppliers skipped, ` +
-      `${summary.settingsUpdated} settings updated, ${summary.policiesPublished} policies published, ${summary.requisitionsCreated} requisitions created.`,
+      `${summary.settingsUpdated} settings updated, ${summary.policiesPublished} policies published, ${summary.requisitionsCreated} requisitions created, ${summary.rfqsCreated} RFQs created.`,
   );
   if (summary.passwordsSet > 0) console.log(`Sign-in credentials for the users above: ${outFile}`);
 } finally {

@@ -11,3 +11,4 @@ export * from '../modules/suppliers/infrastructure/schema';
 export * from '../modules/organization/infrastructure/schema';
 export * from '../modules/approvals/infrastructure/schema';
 export * from '../modules/requisitions/infrastructure/schema';
+export * from '../modules/sourcing/infrastructure/schema';

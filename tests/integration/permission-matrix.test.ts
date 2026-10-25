@@ -65,6 +65,16 @@ const EXPECTED: Record<string, readonly Caller[]> = {
   'requisition.close': ['procurement'],
   'approval.decide': ['approver', 'finance'],
   'approval.inbox': ['approver', 'finance'],
+  // Phase 6a. Managing RFQs is procurement's (rfq.manage); reading them is also finance's and
+  // the auditor's (rfq.read, ADR 0006 amendment). The RFQ form's options are for managers only.
+  'rfq.create': ['procurement'],
+  'rfq.update': ['procurement'],
+  'rfq.issue': ['procurement'],
+  'rfq.close': ['procurement'],
+  'rfq.cancel': ['procurement'],
+  'rfq.list': ['procurement', 'finance', 'auditor'],
+  'rfq.get': ['procurement', 'finance', 'auditor'],
+  'rfq.sourcingOptions': ['procurement'],
 };
 
 let t: TestDatabase;

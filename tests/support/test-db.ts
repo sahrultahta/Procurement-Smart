@@ -92,7 +92,18 @@ export async function createTestDatabase(): Promise<TestDatabase> {
     appDb: drizzle({ client: appPool }),
     drop: async () => {
       await Promise.all([pool.end(), appPool.end()]);
-      await withAdminClient((admin) => admin.query(`DROP DATABASE IF EXISTS ${admin.escapeIdentifier(name)} WITH (FORCE)`));
+      // A closed app-role connection's backend can outlive pool.end() for a moment, and FORCE may not
+      // terminate another role's backend (42501, "permission denied to terminate process"): wait, retry.
+      for (let attempt = 1; ; attempt++) {
+        try {
+          await withAdminClient((admin) => admin.query(`DROP DATABASE IF EXISTS ${admin.escapeIdentifier(name)} WITH (FORCE)`));
+          return;
+        } catch (error) {
+          const code = (error as { code?: string }).code;
+          if (code !== '42501' || attempt >= 20) throw error;
+          await sleep(100 * attempt);
+        }
+      }
     },
   };
 }

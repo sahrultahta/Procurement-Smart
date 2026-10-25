@@ -7,11 +7,13 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatAmount, formatDate, formatMoney, formatTimestamp } from '@/lib/format';
 import { getRequisition, type RequisitionDetailDto } from '@/modules/requisitions';
+import { listRfqs } from '@/modules/sourcing';
 import { getOrganization } from '@/server/organization-profile';
 import { getRequestContext } from '@/server/request-context';
 import { runQuery } from '@/shared/application/runner';
 import { ApprovalHistory } from '../_components/approval-history';
 import { CancelRequisitionForm, type CancelMode } from '../_components/cancel-form';
+import { RfqStatusBadge } from '../../rfqs/_components/rfq-status';
 import { RequisitionStatusBadge, requisitionNotice } from '../_components/requisition-status';
 import { CloseRequisitionForm, DecisionForm, SubmitRequisitionForm } from '../_components/workflow-forms';
 
@@ -34,7 +36,8 @@ export default async function RequisitionPage(props: {
 }) {
   const { id } = await props.params;
   const notice = requisitionNotice((await props.searchParams).notice);
-  const result = await runQuery(await getRequestContext(), getRequisition, { requisitionId: id });
+  const request = await getRequestContext();
+  const result = await runQuery(request, getRequisition, { requisitionId: id });
   if (!result.ok) {
     // Someone else's requisition looks exactly like one that does not exist (US-PR-05).
     if (result.error.code === 'NOT_FOUND' || result.error.code === 'VALIDATION_FAILED') notFound();
@@ -49,6 +52,9 @@ export default async function RequisitionPage(props: {
   const { timezone } = await getOrganization();
   const returned = r.status === 'returned' ? returnComment(r) : null;
   const can = new Set(r.callerActions);
+  // Sourcing is shown to those who may read RFQs; the page composes both modules' queries.
+  const rfqs = request.actor?.permissions.has('rfq.read') ? await runQuery(request, listRfqs, { requisitionId: r.id, limit: 100 }) : null;
+  const canSource = r.status === 'approved' && (request.actor?.permissions.has('rfq.manage') ?? false);
 
   return (
     <div className="grid gap-6">
@@ -186,6 +192,53 @@ export default async function RequisitionPage(props: {
           <ApprovalHistory rounds={r.approvalHistory} currency={{ code: r.currencyCode, scale: r.currencyScale }} timezone={timezone} />
         </CardContent>
       </Card>
+
+      {rfqs?.ok && (rfqs.data.items.length > 0 || canSource) ? (
+        <Card>
+          <CardHeader>
+            <h2 className="font-semibold">Requests for quotation</h2>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            {rfqs.data.items.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No RFQ for this requisition yet.</p>
+            ) : (
+              <Table aria-label="Requests for quotation">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Number</TableHead>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Quotations due</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rfqs.data.items.map((q) => (
+                    <TableRow key={q.id}>
+                      <TableCell className="font-mono">
+                        <Link href={`/rfqs/${q.id}`} className="underline-offset-4 hover:underline">
+                          {q.number}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="whitespace-normal">{q.title}</TableCell>
+                      <TableCell>{formatTimestamp(q.responseDueAt, timezone)}</TableCell>
+                      <TableCell>
+                        <RfqStatusBadge status={q.status} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            {canSource ? (
+              <div>
+                <Button asChild variant="outline">
+                  <Link href={`/rfqs/new?requisitionId=${r.id}`}>Request quotations</Link>
+                </Button>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {can.size > 0 ? (
         <Card>
