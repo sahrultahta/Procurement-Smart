@@ -111,6 +111,11 @@ export default defineConfig([
           selector: "CallExpression[callee.name=/^(numeric|decimal)$/] Property[key.name='mode'][value.value='number']",
           message: "numeric mode 'number' uses floating point. Read numeric as string (ADR 0007).",
         },
+        {
+          // A useActionState form: React would reset its fields after a refused submission.
+          selector: "JSXOpeningElement[name.name='form'] > JSXAttribute[name.name='action'] > JSXExpressionContainer > Identifier[name='formAction']",
+          message: 'Use <ActionForm> from @/components/action-form: a plain <form action={formAction}> loses what was typed when the server refuses it.',
+        },
       ],
     },
   },

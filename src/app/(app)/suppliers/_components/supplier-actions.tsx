@@ -5,6 +5,7 @@ import { FieldError, FormMessage } from '@/components/form-message';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { ActionForm } from '@/components/action-form';
 import { IDLE, type ActionState } from '@/lib/action-state';
 import {
   blockSupplierAction,
@@ -36,7 +37,7 @@ export function ReviewForm(props: Target & { callerIsMaker: boolean }) {
     );
   }
   return (
-    <form action={formAction} className="grid gap-3" noValidate>
+    <ActionForm action={formAction} className="grid gap-3" noValidate>
       <Hidden {...props} />
       <div className="grid gap-2">
         <Label htmlFor="review-note">Review note (required to reject)</Label>
@@ -52,7 +53,7 @@ export function ReviewForm(props: Target & { callerIsMaker: boolean }) {
           Reject
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }
 
@@ -66,7 +67,7 @@ function ReasonForm(props: {
 }) {
   const [state, formAction, pending] = useActionState(props.action, IDLE);
   return (
-    <form action={formAction} className="grid gap-3" noValidate>
+    <ActionForm action={formAction} className="grid gap-3" noValidate>
       <Hidden {...props.target} />
       <div className="grid gap-2">
         <Label htmlFor={props.id}>{props.label}</Label>
@@ -79,7 +80,7 @@ function ReasonForm(props: {
           {props.button}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }
 
@@ -100,7 +101,7 @@ export function DeactivateForm(target: Target) {
 export function ReactivateForm(target: Target) {
   const [state, formAction, pending] = useActionState(reactivateSupplierAction, IDLE);
   return (
-    <form action={formAction} className="grid gap-3">
+    <ActionForm action={formAction} className="grid gap-3">
       <Hidden {...target} />
       <FormMessage state={state} />
       <div>
@@ -108,6 +109,6 @@ export function ReactivateForm(target: Target) {
           Reactivate supplier
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }

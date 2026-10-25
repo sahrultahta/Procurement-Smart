@@ -5,6 +5,7 @@ import { FieldError, FormMessage } from '@/components/form-message';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { ActionForm } from '@/components/action-form';
 import { IDLE } from '@/lib/action-state';
 import { cancelRequisitionAction } from '../actions';
 
@@ -21,7 +22,7 @@ export function CancelRequisitionForm({ requisitionId, version, mode }: { requis
   const [state, formAction, pending] = useActionState(cancelRequisitionAction, IDLE);
   const text = TEXT[mode];
   return (
-    <form action={formAction} className="grid gap-3" noValidate>
+    <ActionForm action={formAction} className="grid gap-3" noValidate>
       <input type="hidden" name="requisitionId" value={requisitionId} />
       <input type="hidden" name="expectedVersion" value={version} />
       <input type="hidden" name="mode" value={mode} />
@@ -44,6 +45,6 @@ export function CancelRequisitionForm({ requisitionId, version, mode }: { requis
           {text.button}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }

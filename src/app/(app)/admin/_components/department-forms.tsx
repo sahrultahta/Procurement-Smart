@@ -5,13 +5,14 @@ import { FieldError, FormMessage } from '@/components/form-message';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ActionForm } from '@/components/action-form';
 import { IDLE } from '@/lib/action-state';
 import { createDepartmentAction, updateDepartmentAction } from '../actions';
 
 export function CreateDepartmentForm() {
   const [state, formAction, pending] = useActionState(createDepartmentAction, IDLE);
   return (
-    <form action={formAction} className="grid gap-3 sm:grid-cols-[10rem_1fr_auto] sm:items-end" noValidate>
+    <ActionForm action={formAction} state={state} resetOnSuccess className="grid gap-3 sm:grid-cols-[10rem_1fr_auto] sm:items-end" noValidate>
       <div className="grid gap-2">
         <Label htmlFor="department-code">Code</Label>
         <Input id="department-code" name="code" required maxLength={16} placeholder="OPS" autoComplete="off" disabled={pending} />
@@ -29,14 +30,14 @@ export function CreateDepartmentForm() {
         <p className="text-sm text-muted-foreground">2 to 16 uppercase letters, digits, or dashes. The code cannot be changed later.</p>
         <FormMessage state={state} />
       </div>
-    </form>
+    </ActionForm>
   );
 }
 
 export function DepartmentRowForm(props: { id: string; code: string; name: string; isActive: boolean; version: number }) {
   const [state, formAction, pending] = useActionState(updateDepartmentAction, IDLE);
   return (
-    <form action={formAction} className="grid gap-2" noValidate aria-label={`Department ${props.code}`}>
+    <ActionForm action={formAction} className="grid gap-2" noValidate aria-label={`Department ${props.code}`}>
       <input type="hidden" name="departmentId" value={props.id} />
       <input type="hidden" name="expectedVersion" value={props.version} />
       <div className="grid gap-3 sm:grid-cols-[6rem_1fr_8rem_auto] sm:items-center">
@@ -51,6 +52,6 @@ export function DepartmentRowForm(props: { id: string; code: string; name: strin
         </Button>
       </div>
       <FormMessage state={state} />
-    </form>
+    </ActionForm>
   );
 }

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
+import { ActionForm } from '@/components/action-form';
 import { IDLE, type ActionState } from '@/lib/action-state';
 import { createSupplierAction, updateSupplierAction } from '../actions';
 
@@ -78,7 +79,7 @@ export function SupplierForm(props: {
   const values = props.supplier?.values ?? EMPTY;
 
   return (
-    <form action={formAction} className="grid gap-4" noValidate>
+    <ActionForm action={formAction} className="grid gap-4" noValidate>
       {props.supplier ? (
         <>
           <input type="hidden" name="supplierId" value={props.supplier.id} />
@@ -131,6 +132,6 @@ export function SupplierForm(props: {
           {pending ? 'Saving…' : editing ? 'Save changes' : 'Register supplier'}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }

@@ -5,6 +5,7 @@ import { FieldError, FormMessage } from '@/components/form-message';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ActionForm } from '@/components/action-form';
 import { IDLE, type ActionState } from '@/lib/action-state';
 import type { SourcingOptionsDto } from '@/modules/sourcing';
 import { createRfqAction, updateRfqAction } from '../actions';
@@ -39,9 +40,6 @@ export function RfqForm(props: { options: SourcingOptionsDto; timezone: string; 
       }),
     ),
   );
-  // Controlled, because React resets uncontrolled fields after every form action, also a failed one.
-  const [title, setTitle] = useState(initial?.title ?? props.options.requisition.title);
-  const [responseDueAt, setResponseDueAt] = useState(initial?.responseDueAt ?? '');
   const [suppliers, setSuppliers] = useState<Set<string>>(() => new Set(initial?.supplierIds ?? []));
   // One key per form: a double submit returns the first RFQ instead of a second one.
   const [idempotencyKey] = useState(() => crypto.randomUUID());
@@ -59,7 +57,7 @@ export function RfqForm(props: { options: SourcingOptionsDto; timezone: string; 
     });
 
   return (
-    <form action={formAction} className="grid gap-5" noValidate>
+    <ActionForm action={formAction} className="grid gap-5" noValidate>
       <input type="hidden" name="lines" value={JSON.stringify(chosenLines)} />
       <input type="hidden" name="supplierIds" value={JSON.stringify(props.options.suppliers.filter((s) => suppliers.has(s.id)).map((s) => s.id))} />
       {props.rfq ? (
@@ -76,20 +74,12 @@ export function RfqForm(props: { options: SourcingOptionsDto; timezone: string; 
       <div className="grid gap-4 sm:grid-cols-[1fr_16rem]">
         <div className="grid gap-2">
           <Label htmlFor="rfq-title">Title</Label>
-          <Input id="rfq-title" name="title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={200} disabled={pending} />
+          <Input id="rfq-title" name="title" defaultValue={initial?.title ?? props.options.requisition.title} required maxLength={200} disabled={pending} />
           <FieldError state={state} name="title" />
         </div>
         <div className="grid gap-2">
           <Label htmlFor="rfq-due">Quotations due ({props.timezone})</Label>
-          <Input
-            id="rfq-due"
-            name="responseDueAt"
-            type="datetime-local"
-            value={responseDueAt}
-            onChange={(e) => setResponseDueAt(e.target.value)}
-            required
-            disabled={pending}
-          />
+          <Input id="rfq-due" name="responseDueAt" type="datetime-local" defaultValue={initial?.responseDueAt ?? ''} required disabled={pending} />
           <FieldError state={state} name="responseDueAt" />
         </div>
       </div>
@@ -170,6 +160,6 @@ export function RfqForm(props: { options: SourcingOptionsDto; timezone: string; 
           {editing ? 'Save changes' : 'Create draft RFQ'}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }

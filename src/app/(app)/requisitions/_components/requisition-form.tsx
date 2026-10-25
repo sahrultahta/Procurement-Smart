@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { ActionForm } from '@/components/action-form';
 import { IDLE, type ActionState } from '@/lib/action-state';
 import { formatMoney } from '@/lib/format';
 import { MONEY_INPUT_PATTERN, QUANTITY_INPUT_PATTERN } from '@/shared/decimal/decimal';
@@ -55,7 +56,7 @@ export function RequisitionForm(props: {
   const update = (index: number, change: Partial<FormLine>) => setLines((all) => all.map((l, i) => (i === index ? { ...l, ...change } : l)));
 
   return (
-    <form action={formAction} className="grid gap-5" noValidate>
+    <ActionForm action={formAction} className="grid gap-5" noValidate>
       <input type="hidden" name="lines" value={JSON.stringify(lines)} />
       {props.requisition ? (
         <>
@@ -140,6 +141,6 @@ export function RequisitionForm(props: {
           {pending ? 'Saving…' : editing ? 'Save changes' : 'Create draft'}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }

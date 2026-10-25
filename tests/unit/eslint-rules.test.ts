@@ -130,6 +130,14 @@ describe('banned APIs', () => {
     expect(ids).toContain('no-restricted-syntax');
   });
 
+  it('rejects a plain <form action={formAction}> (use ActionForm, which keeps fields after a refusal)', async () => {
+    const form = (tag: string) =>
+      `'use client';\nimport { useActionState } from 'react';\nexport function F({ act }: { act: (s: null, f: FormData) => Promise<null> }) {\n  const [, formAction] = useActionState(act, null);\n  return <${tag} action={formAction} />;\n}\n`;
+    expect(await ruleIds('src/app/probe.tsx', form('form'))).toContain('no-restricted-syntax');
+    const allowed = form('ActionForm').replace("import { useActionState } from 'react';", "import { useActionState } from 'react';\nimport { ActionForm } from '@/components/action-form';");
+    expect(await ruleIds('src/app/probe.tsx', allowed)).not.toContain('no-restricted-syntax');
+  });
+
   it('rejects dangerouslySetInnerHTML', async () => {
     const ids = await ruleIds(
       'src/app/probe.tsx',

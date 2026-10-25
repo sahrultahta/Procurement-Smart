@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
+import { ActionForm } from '@/components/action-form';
 import { IDLE } from '@/lib/action-state';
 import { createUserAction } from '../actions';
 import { SetupLink } from './setup-link';
@@ -45,7 +46,7 @@ function CreateUserFormRound({ departments, roles, onAnother }: Props & { onAnot
   }
 
   return (
-    <form action={formAction} className="grid gap-5" noValidate>
+    <ActionForm action={formAction} className="grid gap-5" noValidate>
       <div className="grid gap-2">
         <Label htmlFor="name">Name</Label>
         <Input id="name" name="name" required maxLength={120} autoComplete="off" disabled={pending} />
@@ -96,6 +97,6 @@ function CreateUserFormRound({ departments, roles, onAnother }: Props & { onAnot
           {pending ? 'Creating…' : 'Create user'}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }

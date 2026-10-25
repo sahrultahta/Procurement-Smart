@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
+import { ActionForm } from '@/components/action-form';
 import { IDLE } from '@/lib/action-state';
 import { updateSettingsAction } from '../actions';
 
@@ -17,7 +18,7 @@ export function SettingsForm(props: {
   const [state, formAction, pending] = useActionState(updateSettingsAction, IDLE);
   const { settings } = props;
   return (
-    <form action={formAction} className="grid gap-4" noValidate>
+    <ActionForm action={formAction} className="grid gap-4" noValidate>
       <input type="hidden" name="expectedVersion" value={settings.version} />
       <div className="grid gap-2">
         <Label htmlFor="settings-org-name">Organization name</Label>
@@ -80,6 +81,6 @@ export function SettingsForm(props: {
           {pending ? 'Saving…' : 'Save settings'}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
+import { ActionForm } from '@/components/action-form';
 import { IDLE, type ActionState } from '@/lib/action-state';
 import { publishPolicyAction } from '../actions';
 import { STEP_LABELS, STEP_VALUES, type EditorDepartment, type EditorRule, type StepChoice } from './policy-choices';
@@ -38,7 +39,7 @@ export function PolicyEditor(props: { initialName: string; initialRules: EditorR
   const tableErrors = state.status === 'error' ? [...(state.fieldErrors?.['rules'] ?? []), ...(state.fieldErrors?.['_form'] ?? [])] : [];
 
   return (
-    <form action={formAction} className="grid gap-5" noValidate>
+    <ActionForm action={formAction} className="grid gap-5" noValidate>
       <input type="hidden" name="rules" value={payload} />
       <div className="grid gap-2">
         <Label htmlFor="policy-name">Version name</Label>
@@ -158,6 +159,6 @@ export function PolicyEditor(props: { initialName: string; initialRules: EditorR
           {pending ? 'Publishing…' : 'Publish new version'}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }

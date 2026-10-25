@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
+import { ActionForm } from '@/components/action-form';
 import { IDLE } from '@/lib/action-state';
 import {
   deactivateUserAction,
@@ -33,7 +34,7 @@ export function ProfileForm(props: {
 }) {
   const [state, formAction, pending] = useActionState(updateUserAction, IDLE);
   return (
-    <form action={formAction} className="grid gap-4" noValidate>
+    <ActionForm action={formAction} className="grid gap-4" noValidate>
       <input type="hidden" name="userId" value={props.userId} />
       <input type="hidden" name="expectedVersion" value={props.version} />
       <div className="grid gap-2">
@@ -58,14 +59,14 @@ export function ProfileForm(props: {
           {pending ? 'Saving…' : 'Save profile'}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }
 
 export function DeactivateForm({ userId, version }: { userId: string; version: number }) {
   const [state, formAction, pending] = useActionState(deactivateUserAction, IDLE);
   return (
-    <form action={formAction} className="grid gap-3" noValidate>
+    <ActionForm action={formAction} className="grid gap-3" noValidate>
       <input type="hidden" name="userId" value={userId} />
       <input type="hidden" name="expectedVersion" value={version} />
       <div className="grid gap-2">
@@ -80,14 +81,14 @@ export function DeactivateForm({ userId, version }: { userId: string; version: n
           {pending ? 'Deactivating…' : 'Deactivate user'}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }
 
 export function ReactivateForm({ userId, version }: { userId: string; version: number }) {
   const [state, formAction, pending] = useActionState(reactivateUserAction, IDLE);
   return (
-    <form action={formAction} className="grid gap-3">
+    <ActionForm action={formAction} className="grid gap-3">
       <input type="hidden" name="userId" value={userId} />
       <input type="hidden" name="expectedVersion" value={version} />
       <FormMessage state={state} />
@@ -96,14 +97,14 @@ export function ReactivateForm({ userId, version }: { userId: string; version: n
           {pending ? 'Reactivating…' : 'Reactivate user'}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }
 
 export function SetupLinkForm({ userId }: { userId: string }) {
   const [state, formAction, pending] = useActionState(issueSetupLinkAction, IDLE);
   return (
-    <form action={formAction} className="grid gap-3">
+    <ActionForm action={formAction} className="grid gap-3">
       <input type="hidden" name="userId" value={userId} />
       <FormMessage state={state} />
       {state.status === 'ok' && state.link ? <SetupLink url={state.link} /> : null}
@@ -112,14 +113,14 @@ export function SetupLinkForm({ userId }: { userId: string }) {
           {pending ? 'Creating link…' : 'Issue new setup link'}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }
 
 export function GrantRoleForm({ userId, roles, departments }: { userId: string; roles: RoleOption[]; departments: DepartmentOption[] }) {
   const [state, formAction, pending] = useActionState(grantRoleAction, IDLE);
   return (
-    <form action={formAction} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end" noValidate>
+    <ActionForm action={formAction} state={state} resetOnSuccess className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end" noValidate>
       <input type="hidden" name="userId" value={userId} />
       <div className="grid gap-2">
         <Label htmlFor="grant-role">Role</Label>
@@ -149,14 +150,14 @@ export function GrantRoleForm({ userId, roles, departments }: { userId: string; 
         <p className="mb-2 text-sm text-muted-foreground">Only Requester and Approver can be limited to one department.</p>
         <FormMessage state={state} />
       </div>
-    </form>
+    </ActionForm>
   );
 }
 
 export function RevokeRoleForm({ userId, assignmentId, label }: { userId: string; assignmentId: string; label: string }) {
   const [state, formAction, pending] = useActionState(revokeRoleAction, IDLE);
   return (
-    <form action={formAction} className="grid gap-2" noValidate>
+    <ActionForm action={formAction} className="grid gap-2" noValidate>
       <input type="hidden" name="userId" value={userId} />
       <input type="hidden" name="assignmentId" value={assignmentId} />
       <div className="flex gap-2">
@@ -166,6 +167,6 @@ export function RevokeRoleForm({ userId, assignmentId, label }: { userId: string
         </Button>
       </div>
       {state.status === 'error' ? <FormMessage state={state} /> : null}
-    </form>
+    </ActionForm>
   );
 }

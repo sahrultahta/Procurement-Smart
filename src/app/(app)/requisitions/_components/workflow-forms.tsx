@@ -5,6 +5,7 @@ import { FieldError, FormMessage } from '@/components/form-message';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { ActionForm } from '@/components/action-form';
 import { IDLE } from '@/lib/action-state';
 import { closeRequisitionAction, decideApprovalAction, submitRequisitionAction } from '../actions';
 
@@ -13,7 +14,7 @@ import { closeRequisitionAction, decideApprovalAction, submitRequisitionAction }
 export function SubmitRequisitionForm({ requisitionId, version }: { requisitionId: string; version: number }) {
   const [state, formAction, pending] = useActionState(submitRequisitionAction, IDLE);
   return (
-    <form action={formAction} className="grid gap-3">
+    <ActionForm action={formAction} className="grid gap-3">
       <input type="hidden" name="requisitionId" value={requisitionId} />
       <input type="hidden" name="expectedVersion" value={version} />
       <p className="text-sm text-muted-foreground">
@@ -26,14 +27,14 @@ export function SubmitRequisitionForm({ requisitionId, version }: { requisitionI
           Submit for approval
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }
 
 export function CloseRequisitionForm({ requisitionId, version }: { requisitionId: string; version: number }) {
   const [state, formAction, pending] = useActionState(closeRequisitionAction, IDLE);
   return (
-    <form action={formAction} className="grid gap-3" noValidate>
+    <ActionForm action={formAction} className="grid gap-3" noValidate>
       <input type="hidden" name="requisitionId" value={requisitionId} />
       <input type="hidden" name="expectedVersion" value={version} />
       <div className="grid gap-2">
@@ -55,7 +56,7 @@ export function CloseRequisitionForm({ requisitionId, version }: { requisitionId
           Close requisition
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }
 
@@ -78,7 +79,7 @@ export function DecisionForm({
 }) {
   const [state, formAction, pending] = useActionState(decideApprovalAction, IDLE);
   return (
-    <form action={formAction} className="grid gap-4" noValidate>
+    <ActionForm action={formAction} className="grid gap-4" noValidate>
       <input type="hidden" name="approvalRequestId" value={approvalRequestId} />
       <input type="hidden" name="stepNo" value={stepNo} />
       <input type="hidden" name="expectedVersion" value={version} />
@@ -113,6 +114,6 @@ export function DecisionForm({
           Record decision
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }
