@@ -42,6 +42,18 @@ This narrows the earlier rejection of advisory locks below: they are not used *i
 
 **CC-08:** two admins remove each other (revoke/revoke, deactivate/deactivate, revoke/deactivate). A third connection holds the set lock until both commands are waiting on it, then releases it. Over 20 iterations exactly one succeeds, the other gets `FORBIDDEN` or `LAST_ADMIN`, and exactly one admin remains. With the lock removed, both succeed on the first iteration (mutation check, Phase 3b report).
 
+## Implemented in Phase 6b (2026-10-25)
+
+- **C8, requisition → RFQ → quotations:** `quotation.award` locks the requisition, then the RFQ, then all of the RFQ's quotations in id order. Recording, editing, submitting, and withdrawing a quotation, and closing an RFQ (which discards its drafts), lock the RFQ first and then the quotation(s), so none of them can interleave with an award.
+- **C4:** the partial unique index `quotations_one_live_per_supplier` backs "one live quotation per supplier per RFQ"; the RFQ row lock makes concurrent recordings queue up before they reach it.
+- **C1 on quotations:** every change bumps the quotation's `version`; the award checks the RFQ's.
+
+| Test | Assertion |
+| --- | --- |
+| One live quotation per supplier | 5 parallel `quotation.record` for the same supplier and RFQ, forced to overlap (a third connection holds the RFQ row until all wait), 20 times: exactly one succeeds, the others get `SUPPLIER_ALREADY_QUOTED`, one live quotation exists. |
+| One award per RFQ | 2 parallel `quotation.award` of different quotations, forced to overlap on the requisition row, 20 times: one succeeds, the other gets `CONFLICT`; exactly one quotation is awarded and the other not awarded. |
+| Award vs withdrawal | `quotation.award` and `quotation.withdraw` of the same quotation, forced to overlap on the RFQ row, 20 times: if the award goes first the withdrawal gets `CONFLICT` (the quotation changed); if the withdrawal goes first the award gets `INVALID_TRANSITION`; the RFQ and the quotation always end consistent (awarded and awarded, or closed and withdrawn). |
+
 ## Implemented in Phase 6a (2026-10-25)
 
 - **C8, requisition before RFQ:** `rfq.create`, `rfq.update`, and `rfq.issue` lock the requisition row, then the RFQ. Holding the requisition lock while checking "is this line on another RFQ that is not cancelled?" makes concurrent drafts of the same line queue up; the `rfq_lines` trigger repeats the check as a backstop.

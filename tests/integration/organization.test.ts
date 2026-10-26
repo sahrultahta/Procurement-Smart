@@ -68,7 +68,7 @@ describe('P5a-AC1: organization settings', () => {
   });
 
   it('updates with a version check, validates time zone and currency, and audits the change', async () => {
-    const input = { orgName: 'Example Holdings', timezone: 'Asia/Jakarta', currencyCode: 'IDR', currencyScale: 0, expectedVersion: 1 };
+    const input = { orgName: 'Example Holdings', timezone: 'Asia/Jakarta', currencyCode: 'IDR', currencyScale: 0, rfqRequiredAbove: null, minQuotes: 3, expectedVersion: 1 };
     for (const bad of [
       { ...input, timezone: 'Mars/Olympus' },
       { ...input, currencyCode: 'XYZ' },
@@ -96,7 +96,7 @@ describe('P5a-AC1: organization settings', () => {
     data(await run(rina, createRequisition, { title: 'First', justification: null, neededBy: '2030-01-01', lines: [{ description: 'Pens', quantity: '1', uom: 'box', estimatedUnitPrice: '5' }] }));
     const settings = data(await run(ada, getSettings, {}));
     expect(settings.currencyLocked).toBe(true);
-    const base = { orgName: 'Example Holdings', timezone: 'UTC', currencyCode: 'USD', currencyScale: 2, expectedVersion: settings.version };
+    const base = { orgName: 'Example Holdings', timezone: 'UTC', currencyCode: 'USD', currencyScale: 2, rfqRequiredAbove: null, minQuotes: 3, expectedVersion: settings.version };
     expect(await run(ada, updateOrganizationSettings, { ...base, currencyCode: 'EUR' })).toMatchObject({
       ok: false,
       error: { code: 'BUSINESS_RULE', rule: 'CURRENCY_LOCKED' },
@@ -115,6 +115,62 @@ describe('P5a-AC1: organization settings', () => {
     }
     expect(await sqlStateOf(() => t.appPool.query('DELETE FROM org_settings'))).toBe('42501');
     expect(await sqlStateOf(() => t.appPool.query("INSERT INTO org_settings VALUES (1, 'x', 'UTC', 'USD', 2)"))).toBe('42501');
+  });
+});
+
+describe('P6b-AC2: the award rule in the settings', () => {
+  const rule = (result: Result<unknown>) => (result.ok ? 'ok' : (result.error.rule ?? result.error.code));
+
+  it('validates the RFQ threshold and the minimum number of quotations, admins only, audited; unchanged values write nothing', async () => {
+    const settings = data(await run(ada, getSettings, {}));
+    // Migration 0014: no threshold (never required), minimum 3.
+    expect(settings).toMatchObject({ rfqRequiredAbove: null, minQuotes: 3 });
+    const base = {
+      orgName: settings.orgName,
+      timezone: settings.timezone,
+      currencyCode: settings.currencyCode,
+      currencyScale: settings.currencyScale,
+      rfqRequiredAbove: null as string | null,
+      minQuotes: 3,
+      expectedVersion: settings.version,
+    };
+    for (const bad of [
+      { rfqRequiredAbove: 500 }, // a JSON number, not a decimal string (ADR 0007)
+      { rfqRequiredAbove: '-1' },
+      { rfqRequiredAbove: '1e3' },
+      { rfqRequiredAbove: '1.00001' },
+      { rfqRequiredAbove: '' },
+      { minQuotes: 0 },
+      { minQuotes: 11 },
+      { minQuotes: 2.5 },
+      { minQuotes: '3' },
+      { minQuotes: null },
+    ]) {
+      expect({ bad, result: rule(await run(ada, updateOrganizationSettings, { ...base, ...bad })) }).toEqual({ bad, result: 'VALIDATION_FAILED' });
+    }
+    for (const omitted of ['rfqRequiredAbove', 'minQuotes'] as const) {
+      const without: Record<string, unknown> = { ...base };
+      delete without[omitted];
+      expect({ omitted, result: rule(await run(ada, updateOrganizationSettings, without)) }).toEqual({ omitted, result: 'VALIDATION_FAILED' });
+    }
+    for (const as of [rina, lena]) expect(rule(await run(as, updateOrganizationSettings, { ...base, rfqRequiredAbove: '500' }))).toBe('FORBIDDEN');
+
+    const v = base.expectedVersion;
+    expect(data(await run(ada, updateOrganizationSettings, { ...base, rfqRequiredAbove: '500.00', minQuotes: 2 }))).toEqual({ version: v + 1 });
+    expect(data(await run(ada, getSettings, {}))).toMatchObject({ rfqRequiredAbove: '500', minQuotes: 2, version: v + 1 });
+    expect((await auditOf('1')).at(-1)).toMatchObject({ action: 'settings.updated', actor: ada, changes: { rfqRequiredAbove: [null, '500'], minQuotes: [3, 2] } });
+    expect(Object.keys((await auditOf('1')).at(-1).changes).sort()).toEqual(['minQuotes', 'rfqRequiredAbove']);
+    const events = (await auditOf('1')).length;
+    expect(data(await run(ada, updateOrganizationSettings, { ...base, rfqRequiredAbove: '500.0000', minQuotes: 2, expectedVersion: v + 1 }))).toEqual({ version: v + 1 });
+    expect((await auditOf('1')).length).toBe(events);
+    expect(data(await run(ada, updateOrganizationSettings, { ...base, rfqRequiredAbove: null, minQuotes: 10, expectedVersion: v + 1 }))).toEqual({ version: v + 2 });
+    expect((await auditOf('1')).at(-1)).toMatchObject({ changes: { rfqRequiredAbove: ['500', null], minQuotes: [2, 10] } });
+    expect(data(await run(ada, updateOrganizationSettings, { ...base, rfqRequiredAbove: '0', minQuotes: 3, expectedVersion: v + 2 }))).toEqual({ version: v + 3 });
+    expect(data(await run(ada, getSettings, {}))).toMatchObject({ rfqRequiredAbove: '0', minQuotes: 3 });
+
+    for (const statement of ['UPDATE org_settings SET min_quotes = 0', 'UPDATE org_settings SET min_quotes = 11', 'UPDATE org_settings SET rfq_required_above = -1']) {
+      expect(await sqlStateOf(() => t.appPool.query(statement))).toBe('23514');
+    }
   });
 });
 

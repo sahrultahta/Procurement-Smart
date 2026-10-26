@@ -11,7 +11,16 @@ import { IDLE } from '@/lib/action-state';
 import { updateSettingsAction } from '../actions';
 
 export function SettingsForm(props: {
-  settings: { orgName: string; timezone: string; currencyCode: string; currencyScale: number; currencyLocked: boolean; version: number };
+  settings: {
+    orgName: string;
+    timezone: string;
+    currencyCode: string;
+    currencyScale: number;
+    rfqRequiredAbove: string | null;
+    minQuotes: number;
+    currencyLocked: boolean;
+    version: number;
+  };
   timeZones: string[];
   currencies: string[];
 }) {
@@ -75,6 +84,39 @@ export function SettingsForm(props: {
       ) : (
         <p className="text-sm text-muted-foreground">The currency locks when the first requisition is created.</p>
       )}
+      <fieldset className="grid gap-4 sm:grid-cols-2" disabled={pending}>
+        <legend className="mb-2 text-sm font-medium">Quotations (awarding an RFQ)</legend>
+        <div className="grid gap-2">
+          <Label htmlFor="settings-rfq-threshold">Minimum applies from (estimated total)</Label>
+          <Input
+            id="settings-rfq-threshold"
+            name="rfqRequiredAbove"
+            inputMode="decimal"
+            defaultValue={settings.rfqRequiredAbove ?? ''}
+            aria-describedby="settings-rfq-threshold-hint"
+          />
+          <FieldError state={state} name="rfqRequiredAbove" />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="settings-min-quotes">Minimum valid quotations</Label>
+          <Input
+            id="settings-min-quotes"
+            name="minQuotes"
+            type="number"
+            min={1}
+            max={10}
+            step={1}
+            defaultValue={settings.minQuotes}
+            aria-describedby="settings-rfq-threshold-hint"
+          />
+          <FieldError state={state} name="minQuotes" />
+        </div>
+        <p id="settings-rfq-threshold-hint" className="text-sm text-muted-foreground sm:col-span-2">
+          When a requisition&apos;s estimated total is at or above this amount and an RFQ received fewer valid quotations than the minimum, the
+          buyer must justify the award. Leave the amount empty to never require it. Choosing a quotation that is not the lowest always needs
+          a justification.
+        </p>
+      </fieldset>
       <FormMessage state={state} />
       <div>
         <Button type="submit" disabled={pending}>

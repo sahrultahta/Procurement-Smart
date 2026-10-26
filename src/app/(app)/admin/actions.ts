@@ -140,6 +140,9 @@ export async function updateSettingsAction(_previous: ActionState, form: FormDat
     timezone: text(form, 'timezone'),
     currencyCode: text(form, 'currencyCode'),
     currencyScale: integer(form, 'currencyScale'),
+    // Empty means "never": no minimum number of quotations.
+    rfqRequiredAbove: optional(form, 'rfqRequiredAbove'),
+    minQuotes: integer(form, 'minQuotes'),
     expectedVersion: integer(form, 'expectedVersion'),
   });
   if (result.ok) revalidatePath('/', 'layout');

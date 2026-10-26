@@ -153,7 +153,7 @@ stateDiagram-v2
 | RFQ-T06 | draft / issued / closed → cancelled | `rfq.cancel` | `rfq.manage` | reason | Open quotations stay as recorded |
 
 Implementation (Phase 6a), where the table above left room:
-- The pure table is `modules/sourcing/domain/rfq.ts`; all 25 (status, command) pairs are tested in `tests/unit/rfq-domain.test.ts`. The award command (RFQ-T05) arrives with quotations in Phase 6b.
+- The pure table is `modules/sourcing/domain/rfq.ts`; all 25 (status, command) pairs are tested in `tests/unit/rfq-domain.test.ts`. The award command (RFQ-T05) is implemented in Phase 6b (below).
 - RFQ-T01 and T02 guards fail as `REQUISITION_NOT_APPROVED`, `QUANTITY_EXCEEDS_REMAINING` (with `details: [{lineNo, remaining}]`), `LINE_ALREADY_IN_RFQ`, and `SUPPLIER_NOT_ACTIVE`. A requisition line can be on only one RFQ that is not cancelled (maintainer decision 2026-10-25); cancelling an RFQ frees its lines. Descriptions and units are copied from the requisition lines.
 - RFQ-T03 also re-checks that the requisition is still approved and that every invited supplier is still active; it fails as `NO_SUPPLIERS_INVITED` or `RESPONSE_DUE_IN_PAST` (the due time must be later than now). The due time is entered as a local time in the org time zone; a time skipped by a daylight-saving change is refused.
 - RFQ-T06 needs a reason (1 to 500 characters). Every transition is audited (`rfq.created`, `.updated`, `.issued`, `.closed`, `.cancelled`).
@@ -168,6 +168,18 @@ Quotation (recorded by the buyer; suppliers have no login in v1):
 | QUO-T03 | draft → submitted | `quotation.submit` | RFQ `issued`, `valid_until` ≥ today |
 | QUO-T04 | submitted → withdrawn | `quotation.withdraw` | RFQ not `awarded`. Reason required. |
 | QUO-T05 | submitted → awarded / not_awarded | (system, RFQ-T05) | |
+
+Implementation (Phase 6b), where the tables above left room:
+- The pure table is `modules/sourcing/domain/quotation.ts`: 5 statuses × 5 commands (`update`, `submit`, `withdraw`, and the system's `award` and `award_other`), all 25 pairs tested in `tests/unit/quotation-domain.test.ts`.
+- **Amendment (maintainer decision 2026-10-25): a draft can be discarded.** `quotation.withdraw` on a draft (draft → withdrawn) discards it while the RFQ is issued, with a reason, as for QUO-T04.
+- **QUO-T01** fails as `SUPPLIER_NOT_INVITED`, `SUPPLIER_NOT_ACTIVE`, or `SUPPLIER_ALREADY_QUOTED`, and as `INVALID_TRANSITION` unless the RFQ is issued. The guards of QUO-T02 apply to recording too: every RFQ line is priced exactly once (`VALIDATION_FAILED`), quantities come from the RFQ, and totals are computed by the server at the requisition's currency scale, in the requisition's currency.
+- **QUO-T02 and T03 also need the RFQ issued.** QUO-T03 needs `valid_until` ≥ today in the organization's time zone (`QUOTATION_EXPIRED`) and the supplier still active (`SUPPLIER_NOT_ACTIVE`).
+- **Late quotations (maintainer decision 2026-10-25):** after `response_due_at` a quotation is still recorded and submitted while the RFQ is issued, and is flagged late (`submitted_at` > `response_due_at`, both kept; `submitted_at` comes from the application clock). The comparison and the audit event show it.
+- **QUO-T04** works until the award: while the RFQ is issued or closed. Afterwards the supplier may record a new quotation while the RFQ is issued.
+- **RFQ-T04 amendment (maintainer decision 2026-10-25): closing discards the drafts** nobody submitted (audited `quotation.withdrawn`, reason "Not submitted before the RFQ was closed"); the close form warns first. **RFQ-T06:** quotations of a cancelled RFQ stay as recorded and can no longer change.
+- **Valid quotation (maintainer decision 2026-10-25):** submitted (or already awarded or not awarded), `valid_until` ≥ today (org time zone), supplier active. Only valid quotations count towards `min_quotes` and the lowest total; RFQ-T05's "fewer than `min_quotes` quotations were submitted" therefore counts valid ones. A tie makes each tied quotation the lowest.
+- **RFQ-T05** checks, in this order: RFQ closed (`INVALID_TRANSITION`), version, requisition still approved (`REQUISITION_NOT_APPROVED`), the quotation is on this RFQ (`NOT_FOUND`) and submitted (`INVALID_TRANSITION`), `QUOTATION_EXPIRED`, `SUPPLIER_NOT_ACTIVE`, then the justification: `MIN_QUOTES_JUSTIFICATION_REQUIRED` when the minimum applies (requisition `estimated_total` ≥ `rfq_required_above` and fewer valid quotations than `min_quotes`), otherwise `NON_LOWEST_JUSTIFICATION_REQUIRED`; `details.reasons` lists both when both apply, and one text (1 to 2000 characters) covers both. The RFQ stores who awarded it (SOD-06 in Phase 7), when, the justification, and the rule as it stood (threshold, minimum, valid count, and both flags), so a later settings change does not rewrite it. Audited `rfq.awarded` (the justification is the reason), `quotation.awarded`, `quotation.notAwarded`.
+- **Lock order (ADR 0008 C8):** the award locks the requisition, the RFQ, then all its quotations; recording, editing, submitting, withdrawing, and closing lock the RFQ, then the quotation(s).
 
 ---
 

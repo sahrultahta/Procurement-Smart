@@ -9,8 +9,8 @@ import { departments, users } from '../../identity/tables';
 const tz = { withTimezone: true, mode: 'date' } as const;
 
 /**
- * The single settings row (id = 1, created by the migration). Phase 5a holds only the
- * fields Phase 5 uses; later phases add theirs (maintainer decision, 2026-10-22).
+ * The single settings row (id = 1, created by the migration). Each phase adds the fields its
+ * behavior uses (maintainer decision, 2026-10-22): Phase 5a name, time zone, currency; 6b sourcing.
  */
 export const orgSettings = pgTable(
   'org_settings',
@@ -22,6 +22,9 @@ export const orgSettings = pgTable(
     currencyScale: smallint('currency_scale').notNull(),
     /** Set by the first monetary document; from then on the currency cannot change (trigger). */
     currencyLockedAt: timestamp('currency_locked_at', tz),
+    /** Phase 6b: from this requisition estimated total, fewer than `min_quotes` quotations need a justification. NULL: never. */
+    rfqRequiredAbove: numeric('rfq_required_above', { precision: 20, scale: 4 }),
+    minQuotes: smallint('min_quotes').notNull().default(3),
     updatedAt: timestamp('updated_at', tz).notNull().defaultNow(),
     updatedByUserId: uuid('updated_by_user_id').references(() => users.id, { onDelete: 'restrict' }),
     version: integer('version').notNull().default(1),
@@ -32,6 +35,8 @@ export const orgSettings = pgTable(
     check('org_settings_timezone_length', sql`char_length(${t.timezone}) BETWEEN 1 AND 64`),
     check('org_settings_currency_code_format', sql`${t.currencyCode} ~ '^[A-Z]{3}$'`),
     check('org_settings_currency_scale_range', sql`${t.currencyScale} BETWEEN 0 AND 4`),
+    check('org_settings_rfq_required_above_non_negative', sql`${t.rfqRequiredAbove} IS NULL OR ${t.rfqRequiredAbove} >= 0`),
+    check('org_settings_min_quotes_range', sql`${t.minQuotes} BETWEEN 1 AND 10`),
   ],
 );
 

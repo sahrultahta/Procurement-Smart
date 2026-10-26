@@ -29,6 +29,13 @@ export function formatMoney(value: string, currency: string, scale: number): str
   }).format(value as Intl.StringNumericLiteral);
 }
 
+/** A unit price: at least the currency's decimals, and up to the 4 it may have (ADR 0007). */
+export function formatUnitPrice(value: string, scale: number): string {
+  return new Intl.NumberFormat('en', { minimumFractionDigits: scale, maximumFractionDigits: Math.max(scale, 4) }).format(
+    value as Intl.StringNumericLiteral,
+  );
+}
+
 /** Amounts without a currency symbol, e.g. policy limits. */
 export function formatAmount(value: string, scale: number): string {
   return new Intl.NumberFormat('en', { minimumFractionDigits: scale, maximumFractionDigits: scale }).format(

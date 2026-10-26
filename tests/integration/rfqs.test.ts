@@ -156,8 +156,8 @@ describe('P6a-AC2: creating an RFQ (RFQ-T01)', () => {
       callerActions: ['edit', 'issue', 'cancel'],
     });
     expect(detail.lines).toEqual([
-      { lineNo: 1, requisitionLineNo: 1, description: 'A4 paper', quantity: '20', uom: 'ream' },
-      { lineNo: 2, requisitionLineNo: 2, description: 'Toner cartridge', quantity: '1.5', uom: 'pcs' },
+      { id: expect.any(String), lineNo: 1, requisitionLineNo: 1, description: 'A4 paper', quantity: '20', uom: 'ream' },
+      { id: expect.any(String), lineNo: 2, requisitionLineNo: 2, description: 'Toner cartridge', quantity: '1.5', uom: 'pcs' },
     ]);
     expect(detail.suppliers.map((x) => [x.code, x.legalName, x.status])).toEqual(
       expect.arrayContaining([
@@ -371,7 +371,8 @@ describe('P6a-AC4: issuing (RFQ-T03)', () => {
     const detail = await get(u.lena, rfq.rfqId);
     expect(detail).toMatchObject({ status: 'issued', issuedBy: 'Fajar Procurement', callerActions: [] });
     expect(detail.issuedAt).not.toBeNull();
-    expect((await get(u.dewi, rfq.rfqId)).callerActions).toEqual(['close', 'cancel']);
+    // Phase 6b: quotations are recorded while it is issued.
+    expect((await get(u.dewi, rfq.rfqId)).callerActions).toEqual(['close', 'cancel', 'record']);
     expect((await auditOf(rfq.rfqId)).map((e) => [e.action, e.changes.status])).toEqual([
       ['rfq.created', [null, 'draft']],
       ['rfq.issued', ['draft', 'issued']],
@@ -403,7 +404,8 @@ describe('P6a-AC5: closing and cancelling (RFQ-T04, T06)', () => {
     expect(rule(await run(u.dewi, closeRfq, { rfqId: rfq.rfqId, expectedVersion: 1 }))).toBe('CONFLICT');
     expect(data(await run(u.dewi, closeRfq, { rfqId: rfq.rfqId, expectedVersion: 2 }))).toEqual({ version: 3, status: 'closed' });
     expect(await get(u.sari, rfq.rfqId)).toMatchObject({ status: 'closed', closedBy: 'Dewi Procurement' });
-    expect((await get(u.dewi, rfq.rfqId)).callerActions).toEqual(['cancel']);
+    // Phase 6b: a closed RFQ is awarded.
+    expect((await get(u.dewi, rfq.rfqId)).callerActions).toEqual(['cancel', 'award']);
     expect(rule(await run(u.dewi, closeRfq, { rfqId: rfq.rfqId, expectedVersion: 3 }))).toBe('INVALID_TRANSITION');
   });
 

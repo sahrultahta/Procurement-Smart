@@ -11,72 +11,38 @@ import { allocateDocumentNumber, formatDocumentNumber } from '@/shared/db/docume
 import { idempotencyKeyField, withIdempotency } from '@/shared/db/idempotency';
 import type { Tx } from '@/shared/db/transaction';
 import { AppFailure, fail, failBusinessRule } from '@/shared/result';
-import { isRfqStatus, nextRfqStatus, type RfqCommand, type RfqStatus } from '../domain/rfq';
+import type { RfqStatus } from '../domain/rfq';
+import { lockQuotations, updateQuotation } from '../infrastructure/quotation-repository';
 import {
   findInvitations,
   findLinesOnOtherRfqs,
-  findRfq,
   findRfqLines,
   insertRfq,
-  lockRfq,
   replaceRfqLines,
   syncInvitations,
   updateRfq,
   type RfqLineValues,
   type RfqRow,
 } from '../infrastructure/rfq-repository';
+import { DISCARDED_AT_CLOSE, quotationAudit } from './quotation-input';
 import { reasonField, rfqAudit, rfqFields, versionField } from './rfq-input';
+import {
+  assertRequisitionApproved as assertApproved,
+  assertRfqTransition as assertTransition,
+  assertRfqVersion as assertVersion,
+  lockRfqRow as lockLoaded,
+  lockRfqWithRequisition as lockWithRequisition,
+} from './rfq-locks';
 
 /*
- * The RFQ lifecycle (US-SRC-01; RFQ-T01 to T04, T06). Award (RFQ-T05) arrives with quotations
- * in Phase 6b. Lock order (ADR 0008 C8): the requisition, then the RFQ.
+ * The RFQ lifecycle (US-SRC-01; RFQ-T01 to T04, T06). The award (RFQ-T05) is in award.ts.
+ * Lock order (ADR 0008 C8): the requisition, then the RFQ, then its quotations.
  */
 
 type DraftInput = { title: string; responseDueAt: string; lines: z.output<typeof rfqFields.lines>; supplierIds: string[] };
-type LoadedRfq = RfqRow & { status: RfqStatus };
-
-const STATUS_LABEL: Record<RfqStatus, string> = {
-  draft: 'a draft',
-  issued: 'issued',
-  closed: 'closed',
-  awarded: 'awarded',
-  cancelled: 'cancelled',
-};
 
 function invalid(fieldErrors: Record<string, string[]>): never {
   throw new AppFailure({ code: 'VALIDATION_FAILED', message: 'Some fields are invalid.', fieldErrors });
-}
-
-function assertTransition(row: LoadedRfq, command: RfqCommand, verb: string): RfqStatus {
-  const status = nextRfqStatus(row.status, command);
-  if (!status) fail('INVALID_TRANSITION', `An RFQ that is ${STATUS_LABEL[row.status]} cannot be ${verb}.`);
-  return status;
-}
-
-function assertVersion(row: RfqRow, expectedVersion: number): void {
-  if (row.version !== expectedVersion) fail('CONFLICT', 'This RFQ was changed since you loaded it. Reload the page and try again.');
-}
-
-async function lockLoaded(tx: Tx, id: string): Promise<LoadedRfq> {
-  const row = await lockRfq(tx, id);
-  if (!row) fail('NOT_FOUND', 'RFQ not found.');
-  if (!isRfqStatus(row.status)) throw new Error(`Unknown RFQ status ${row.status}`);
-  return { ...row, status: row.status };
-}
-
-/** The requisition first, then the RFQ (C8). The RFQ is read once without a lock to find its requisition. */
-async function lockWithRequisition(tx: Tx, id: string): Promise<{ row: LoadedRfq; requisition: RequisitionForSourcing }> {
-  const found = await findRfq(tx, id);
-  if (!found) fail('NOT_FOUND', 'RFQ not found.');
-  const requisition = await lockRequisitionForSourcing(tx, found.requisitionId);
-  if (!requisition) throw new Error(`requisition ${found.requisitionId} of RFQ ${id} is missing`);
-  return { row: await lockLoaded(tx, id), requisition };
-}
-
-function assertApproved(requisition: RequisitionForSourcing): void {
-  if (requisition.status !== 'approved') {
-    failBusinessRule('REQUISITION_NOT_APPROVED', `Requisition ${requisition.number} is not approved, so it cannot be sourced.`);
-  }
 }
 
 type PreparedDraft = { responseDueAt: Date; lines: RfqLineValues[]; supplierIds: string[]; audit: { lines: string[]; suppliers: string[]; responseDueAt: string } };
@@ -246,7 +212,7 @@ export const issueRfq = defineCommand({
   },
 });
 
-/** RFQ-T04: no more quotations. */
+/** RFQ-T04: no more quotations. Drafts nobody submitted are discarded (maintainer decision 2026-10-25). */
 export const closeRfq = defineCommand({
   name: 'rfq.close',
   permission: 'rfq.manage',
@@ -255,6 +221,21 @@ export const closeRfq = defineCommand({
     const row = await lockLoaded(tx, input.rfqId);
     assertVersion(row, input.expectedVersion);
     const status = assertTransition(row, 'close', 'closed');
+    for (const draft of (await lockQuotations(tx, row.id)).filter((q) => q.status === 'draft')) {
+      await updateQuotation(tx, draft.id, draft.version, {
+        status: 'withdrawn',
+        withdrawnAt: sql`now()`,
+        withdrawnByUserId: actor.userId,
+        withdrawReason: DISCARDED_AT_CLOSE,
+      });
+      await recordAuditEvent(tx, request, {
+        action: 'quotation.withdrawn',
+        entityType: 'quotation',
+        entityId: draft.id,
+        changes: auditChanges(quotationAudit, { status: 'draft' }, { status: 'withdrawn' }),
+        reason: DISCARDED_AT_CLOSE,
+      });
+    }
     const version = await updateRfq(tx, row.id, row.version, { status, closedAt: sql`now()`, closedByUserId: actor.userId });
     await recordAuditEvent(tx, request, {
       action: 'rfq.closed',

@@ -75,6 +75,13 @@ const EXPECTED: Record<string, readonly Caller[]> = {
   'rfq.list': ['procurement', 'finance', 'auditor'],
   'rfq.get': ['procurement', 'finance', 'auditor'],
   'rfq.sourcingOptions': ['procurement'],
+  // Phase 6b. Recording, editing, submitting, and withdrawing quotations need quotation.record;
+  // the award needs quotation.award (both procurement). Reading them is rfq.get (rfq.read).
+  'quotation.record': ['procurement'],
+  'quotation.update': ['procurement'],
+  'quotation.submit': ['procurement'],
+  'quotation.withdraw': ['procurement'],
+  'quotation.award': ['procurement'],
 };
 
 let t: TestDatabase;

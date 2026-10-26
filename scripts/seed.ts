@@ -52,7 +52,7 @@ const { createSupplier, reviewSupplier } = await import('@/modules/suppliers');
 const { runCommand, runQuery } = await import('@/shared/application/runner');
 const { getActiveApprovalPolicy, getSettings, publishApprovalPolicy, updateOrganizationSettings } = await import('@/modules/organization');
 const { createRequisition, listRequisitions, submitRequisition } = await import('@/modules/requisitions');
-const { createRfq, issueRfq, listRfqs, rfqSourcingOptions } = await import('@/modules/sourcing');
+const { createRfq, getRfq, issueRfq, listRfqs, recordQuotation, rfqSourcingOptions, submitQuotation } = await import('@/modules/sourcing');
 const { decideApproval } = await import('@/server/approvals');
 
 type SeedUser = { email: string; name: string; departmentCode: string | null; roles: { role: string; departmentCode: string | null }[] };
@@ -82,7 +82,26 @@ const SUPPLIERS = [
 ];
 
 const credentials: Record<string, { name: string; password: string; roles: string[] }> = {};
-const summary = { departmentsCreated: 0, usersCreated: 0, usersSkipped: 0, passwordsSet: 0, suppliersCreated: 0, suppliersSkipped: 0, settingsUpdated: 0, policiesPublished: 0, requisitionsCreated: 0, rfqsCreated: 0 };
+const summary = {
+  departmentsCreated: 0,
+  usersCreated: 0,
+  usersSkipped: 0,
+  passwordsSet: 0,
+  suppliersCreated: 0,
+  suppliersSkipped: 0,
+  settingsUpdated: 0,
+  policiesPublished: 0,
+  requisitionsCreated: 0,
+  rfqsCreated: 0,
+  quotationsCreated: 0,
+};
+
+// Fictional quotations for the demo RFQ (by supplier name): Sample Industrial Parts is lower in
+// total, Example Office Supplies on the chair mats. Prices exclude tax.
+const QUOTATIONS = [
+  { legalName: 'Example Office Supplies Ltd', supplierReference: 'EOS-Q-2030-017', validUntil: '2030-06-30', leadTimeDays: 14, prices: ['175.00', '32.00'] },
+  { legalName: 'Sample Industrial Parts Co.', supplierReference: 'SIP-7741', validUntil: '2030-05-31', leadTimeDays: 21, prices: ['168.00', '36.00'] },
+];
 
 try {
   const db = getDb();
@@ -152,16 +171,19 @@ try {
     }
   }
 
-  // Organization name (USD scale 2 stays, decision D3) and the default approval policy, as Ada.
+  // Organization name (USD scale 2 stays, decision D3), the award rule (from 500, 3 valid
+  // quotations), and the default approval policy, as Ada. A missing RFQ threshold is set again.
   const admin = await actorOf('ada.admin');
   const settings = await runQuery(admin, getSettings, {});
   if (!settings.ok) throw new Error(`Reading settings failed: ${settings.error.message}`);
-  if (settings.data.orgName === 'My organization') {
+  if (settings.data.orgName === 'My organization' || settings.data.rfqRequiredAbove === null) {
     const updated = await runCommand(admin, updateOrganizationSettings, {
-      orgName: 'Example Organization',
+      orgName: settings.data.orgName === 'My organization' ? 'Example Organization' : settings.data.orgName,
       timezone: settings.data.timezone,
       currencyCode: settings.data.currencyCode,
       currencyScale: settings.data.currencyScale,
+      rfqRequiredAbove: settings.data.rfqRequiredAbove ?? '500',
+      minQuotes: settings.data.minQuotes,
       expectedVersion: settings.data.version,
     });
     if (!updated.ok) throw new Error(`Updating settings failed: ${updated.error.message}`);
@@ -273,6 +295,31 @@ try {
     summary.rfqsCreated++;
   }
 
+  // Two quotations Dewi recorded and submitted on that RFQ, which stays issued for the demo.
+  const sourced = await runQuery(buyer, listRfqs, { requisitionId: sourcedId });
+  if (!sourced.ok) throw new Error(`Listing RFQs failed: ${sourced.error.message}`);
+  const demoRfqId = sourced.data.items[0]?.id;
+  const demo = demoRfqId ? await runQuery(buyer, getRfq, { rfqId: demoRfqId }) : null;
+  if (demo && !demo.ok) throw new Error(`Reading the demo RFQ failed: ${demo.error.message}`);
+  if (demo?.ok && demo.data.status === 'issued' && demo.data.quotations.length === 0) {
+    for (const quotation of QUOTATIONS) {
+      const supplier = demo.data.suppliers.find((s) => s.legalName === quotation.legalName);
+      if (!supplier) throw new Error(`${quotation.legalName} is not invited to the demo RFQ`);
+      const recorded = await runCommand(buyer, recordQuotation, {
+        rfqId: demo.data.id,
+        supplierId: supplier.id,
+        supplierReference: quotation.supplierReference,
+        validUntil: quotation.validUntil,
+        leadTimeDays: quotation.leadTimeDays,
+        lines: demo.data.lines.map((l, i) => ({ rfqLineId: l.id, unitPrice: quotation.prices[i] ?? '0' })),
+      });
+      if (!recorded.ok) throw new Error(`Recording the quotation from ${quotation.legalName} failed: ${recorded.error.message}`);
+      const submitted = await runCommand(buyer, submitQuotation, { quotationId: recorded.data.quotationId, expectedVersion: recorded.data.version });
+      if (!submitted.ok) throw new Error(`Submitting the quotation from ${quotation.legalName} failed: ${submitted.error.message}`);
+      summary.quotationsCreated++;
+    }
+  }
+
   if (Object.keys(credentials).length > 0) {
     mkdirSync(dirname(outFile), { recursive: true });
     writeFileSync(outFile, `${JSON.stringify(credentials, null, 2)}\n`, { mode: 0o600 });
@@ -281,7 +328,7 @@ try {
     `Seed done: ${summary.departmentsCreated} departments created, ${summary.usersCreated} users created, ` +
       `${summary.usersSkipped} existing users skipped, ${summary.passwordsSet} passwords set, ` +
       `${summary.suppliersCreated} suppliers created, ${summary.suppliersSkipped} existing suppliers skipped, ` +
-      `${summary.settingsUpdated} settings updated, ${summary.policiesPublished} policies published, ${summary.requisitionsCreated} requisitions created, ${summary.rfqsCreated} RFQs created.`,
+      `${summary.settingsUpdated} settings updated, ${summary.policiesPublished} policies published, ${summary.requisitionsCreated} requisitions created, ${summary.rfqsCreated} RFQs created, ${summary.quotationsCreated} quotations created.`,
   );
   if (summary.passwordsSet > 0) console.log(`Sign-in credentials for the users above: ${outFile}`);
 } finally {

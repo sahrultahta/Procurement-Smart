@@ -30,13 +30,20 @@ export function IssueRfqForm({ rfqId, version }: Props) {
   );
 }
 
-export function CloseRfqForm({ rfqId, version }: Props) {
+export function CloseRfqForm({ rfqId, version, draftCount }: Props & { draftCount: number }) {
   const [state, formAction, pending] = useActionState(closeRfqAction, IDLE);
   return (
     <ActionForm action={formAction} className="grid gap-3">
       <input type="hidden" name="rfqId" value={rfqId} />
       <input type="hidden" name="expectedVersion" value={version} />
       <p className="text-sm text-muted-foreground">Close the RFQ when every invited supplier has answered or the due time has passed.</p>
+      {draftCount > 0 ? (
+        <p role="note" className="text-sm">
+          {draftCount === 1 ? '1 draft quotation has' : `${draftCount} draft quotations have`} not been submitted. Closing discards{' '}
+          {draftCount === 1 ? 'it' : 'them'}: submit {draftCount === 1 ? 'it' : 'them'} first to have {draftCount === 1 ? 'it' : 'them'}{' '}
+          compared.
+        </p>
+      ) : null}
       <FormMessage state={state} />
       <div>
         <Button type="submit" variant="outline" disabled={pending}>

@@ -42,7 +42,30 @@ export const rfqAudit = defineAuditPolicy<{
   lines: string[];
   suppliers: string[];
   status: string;
+  // The award (Phase 6b): the winner, and the rule as it stood. The justification is the event's reason.
+  awardedTo: string;
+  awardedTotal: string;
+  rfqRequiredAbove: string | null;
+  minQuotes: number;
+  validQuotations: number;
+  belowMinQuotes: boolean;
+  notLowest: boolean;
 }>({
   entityType: 'rfq',
-  fields: ['number', 'requisitionNumber', 'title', 'responseDueAt', 'lines', 'suppliers', 'status'],
+  fields: [
+    'number',
+    'requisitionNumber',
+    'title',
+    'responseDueAt',
+    'lines',
+    'suppliers',
+    'status',
+    'awardedTo',
+    'awardedTotal',
+    'rfqRequiredAbove',
+    'minQuotes',
+    'validQuotations',
+    'belowMinQuotes',
+    'notLowest',
+  ],
 });

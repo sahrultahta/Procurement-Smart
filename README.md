@@ -4,7 +4,7 @@ An open-source procurement workflow system: suppliers, purchase requisitions wit
 
 ## Status
 
-**Phases 0–5 are done, and Phase 6a (requests for quotation) is implemented.** What works today:
+**Phases 0–5 and 6a are done, and Phase 6b (quotations and award) is implemented.** What works today:
 - signing in and out;
 - one-time password-setup links;
 - seven roles with code-defined permissions;
@@ -14,10 +14,11 @@ An open-source procurement workflow system: suppliers, purchase requisitions wit
 - purchase requisitions: lines, server-computed totals, edit, cancel, and visibility by role (own, department, all);
 - multi-step approvals: submitting freezes the route from the active policy; an approval inbox; approve, reject, or return for changes with comments; resubmission in a new round; withdraw, cancel after approval, and close; full approval history. Nobody approves their own requisition or two steps of one round (checked by the application and the database);
 - requests for quotation (RFQs): procurement drafts one from an approved requisition, picks lines and quantities (never more than is left to order, and never a line already on another open RFQ), invites active suppliers, sets a due time, and issues, closes, or cancels it; finance and auditors can read RFQs;
+- quotations: procurement records what each invited supplier quoted (a price per line, validity, lead time), submits it, and compares them in a server-computed table (lowest valid total and lowest price per line, late and expired quotations marked); awarding needs a justification when too few valid quotations arrived above a configurable amount, or for a quotation that is not the lowest;
 - an append-only audit trail;
 - decimal-safe money calculations.
 
-**Recording quotations, awarding them, purchase orders, and goods receipts are not implemented yet.** Work happens in gated phases, and each phase ends with a report of exactly what was run and what passed (`docs/reports/`). Local setup is described in [docs/development.md](docs/development.md).
+**Purchase orders and goods receipts are not implemented yet.** Work happens in gated phases, and each phase ends with a report of exactly what was run and what passed (`docs/reports/`). Local setup is described in [docs/development.md](docs/development.md).
 
 ## Design documents
 

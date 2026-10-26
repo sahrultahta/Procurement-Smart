@@ -48,6 +48,8 @@ const round = (page: Page, n: number) => page.getByRole('table', { name: `Approv
 
 test.describe('P5b-AC13 / P5-AC11: the golden path', () => {
   test('Rina submits, Bayu approves step 1, Sari approves step 2, the history shows both, Dewi closes it', async ({ browser }) => {
+    // Four sign-ins: about 31 s while the Phase 6b specs run in parallel, over the 30 s default.
+    test.setTimeout(90_000);
     const rina = await personaPage(browser, 'rina.requester', 190);
     const csp = watchCspViolations(rina);
     const title = `Docking stations ${run}`;

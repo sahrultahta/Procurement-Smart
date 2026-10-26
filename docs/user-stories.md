@@ -74,9 +74,9 @@ Personas (fictional): **Rina** (requester, Operations), **Bayu** (approver, Oper
 
 **US-SRC-01 Request quotations.** *(Phase 6a.)* Dewi creates an RFQ from approved PR lines with remaining quantity, invites active suppliers, sets a due date, and issues it.
 
-**US-SRC-02 Record quotations.** Dewi records each supplier's quotation (unit price per line, validity, lead time). Suppliers have no login in v1.
+**US-SRC-02 Record quotations.** *(Phase 6b.)* Dewi records each supplier's quotation (unit price per line, validity, lead time). Suppliers have no login in v1.
 
-**US-SRC-03 Compare and award.** Dewi sees a server-computed comparison (per-line prices, totals, lowest valid quote) and awards one quotation.
+**US-SRC-03 Compare and award.** *(Phase 6b.)* Dewi sees a server-computed comparison (per-line prices, totals, lowest valid quote) and awards one quotation.
 - If fewer than the minimum number of quotations were received for a PR above the RFQ threshold, or she picks a quote that isn't the lowest, she must write a justification, which is audited.
 - Expired quotations (`valid_until` in the past) can't be awarded.
 

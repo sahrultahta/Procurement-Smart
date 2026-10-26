@@ -23,7 +23,7 @@ export async function lockSettings(tx: Tx): Promise<SettingsRow> {
 export async function updateSettings(
   tx: Tx,
   expectedVersion: number,
-  values: Pick<SettingsRow, 'orgName' | 'timezone' | 'currencyCode' | 'currencyScale' | 'updatedByUserId'>,
+  values: Pick<SettingsRow, 'orgName' | 'timezone' | 'currencyCode' | 'currencyScale' | 'rfqRequiredAbove' | 'minQuotes' | 'updatedByUserId'>,
 ): Promise<number> {
   const [row] = await tx
     .update(orgSettings)

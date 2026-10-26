@@ -130,6 +130,15 @@ flowchart LR
 - **Approval history is tamper-resistant in the database:** snapshot columns and completed requests are frozen, steps only move forward and cannot be added later, nothing can be deleted (`PFD01` for every role; no DELETE grant).
 - **Residual:** if nobody is eligible for a step (for example, the only approver of a department is the requester), the step stays pending; nothing is skipped automatically. The approval-aging report (Phase 9) will show it. There are no notifications yet: approvers have to open their inbox.
 
+### Phase 6b status (2026-10-25)
+
+- **AB-07 (skipping competitive sourcing), second half:** the award needs a justification when fewer valid quotations than `min_quotes` arrived for a requisition at or above `rfq_required_above`, and whenever the chosen quotation is not the lowest valid total; the justification is the audit event's reason. Only valid quotations count (submitted, not expired, supplier active), so an expired or blocked supplier's low price cannot make up the numbers. The rule the award used is stored with it, so lowering the minimum afterwards leaves a trace, and the database refuses an award whose "fewer than the minimum" flag does not match. `RFQ_REQUIRED` on purchase orders comes in Phase 7.
+- **T-01 (tampered fields):** quantities, totals, currency, status, and who and when sent by the client are `VALIDATION_FAILED`; quantities come from the RFQ, totals from the server (and the triggers refuse anything else, also at commit).
+- **T-02 (changing a document after it is submitted):** a submitted quotation's terms, lines, and submission time are frozen, and an awarded RFQ cannot change at all, for every role (`PFB02`, `PFB01`).
+- **E-01:** the 5 new operations are in the operation matrix (procurement only); finance and the auditor read quotations through `rfq.read`.
+- **R-01:** recording, editing, submitting (with the late flag), withdrawing, discarding at close, and the award are audited in the same transaction.
+- **Residual:** the buyer who records quotations may also award them; v1 has no maker-checker here (the spec has none). The control comes in Phase 7: SOD-06 keeps the awarding buyer off the purchase order's approval. Expiry and "lowest valid" are checked by the application only (they depend on its clock and the org time zone). Quotations are typed in by the buyer from what suppliers sent outside the system; ProcureFlow cannot prove a supplier really quoted that price.
+
 ### Phase 6a status (2026-10-25)
 
 - **AB-07 (skipping competitive sourcing), first half:** RFQs start only from approved requisitions, ask for no more than what is left to order, and invite only active suppliers (SUP-R1), in the application and in the database. A requisition line can be on only one RFQ that is not cancelled, so parallel or duplicate sourcing of the same need is refused (also under concurrency). The justification rules for too few quotes or a non-lowest award, and `RFQ_REQUIRED` on purchase orders, come in Phases 6b and 7.

@@ -86,7 +86,7 @@ describe('the first requisition racing a currency change', () => {
         const admin = await contextOf(db.appDb, await provisionActor(db.appDb, 'a@example.com', 'A', ['admin']));
         const [created, changed] = await Promise.all([
           runCommand(requester, createRequisition, draft('First'), { db: db.appDb }),
-          runCommand(admin, updateOrganizationSettings, { orgName: 'X', timezone: 'UTC', currencyCode: 'EUR', currencyScale: 2, expectedVersion: 1 }, { db: db.appDb }),
+          runCommand(admin, updateOrganizationSettings, { orgName: 'X', timezone: 'UTC', currencyCode: 'EUR', currencyScale: 2, rfqRequiredAbove: null, minQuotes: 3, expectedVersion: 1 }, { db: db.appDb }),
         ]);
         expect(created.ok).toBe(true);
         outcomes.add(changed.ok ? 'currency changed first' : `refused: ${changed.error.rule}`);
@@ -100,5 +100,6 @@ describe('the first requisition racing a currency change', () => {
     }
     // Every outcome seen is one of the two legal orders.
     for (const outcome of outcomes) expect(['currency changed first', 'refused: CURRENCY_LOCKED']).toContain(outcome);
-  });
+    // Ten database clones and drops: about 20 s alone, over the 30 s default while the whole suite runs in parallel.
+  }, 120_000);
 });

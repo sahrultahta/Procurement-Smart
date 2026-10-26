@@ -64,10 +64,28 @@ export async function updateRfq(
   id: string,
   expectedVersion: number,
   values: Partial<
-    Pick<RfqRow, 'title' | 'responseDueAt' | 'status' | 'issuedByUserId' | 'closedByUserId' | 'cancelledByUserId' | 'cancelReason'> & {
+    Pick<
+      RfqRow,
+      | 'title'
+      | 'responseDueAt'
+      | 'status'
+      | 'issuedByUserId'
+      | 'closedByUserId'
+      | 'cancelledByUserId'
+      | 'cancelReason'
+      | 'awardedQuotationId'
+      | 'awardedByUserId'
+      | 'awardJustification'
+      | 'awardRfqRequiredAbove'
+      | 'awardMinQuotes'
+      | 'awardValidQuotes'
+      | 'awardBelowMinQuotes'
+      | 'awardNotLowest'
+    > & {
       issuedAt: SQL;
       closedAt: SQL;
       cancelledAt: SQL;
+      awardedAt: SQL;
     }
   >,
 ): Promise<number> {

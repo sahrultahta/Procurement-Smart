@@ -2,27 +2,64 @@ import 'server-only';
 import { z } from 'zod';
 import { auditChanges, defineAuditPolicy, recordAuditEvent } from '@/modules/audit';
 import { defineCommand, defineQuery } from '@/shared/application/runner';
+import { dec, moneyInput } from '@/shared/decimal/decimal';
 import type { Database, Tx } from '@/shared/db/transaction';
 import { fail, failBusinessRule } from '@/shared/result';
 import { isCurrencyCode, isTimeZone } from '../domain/settings';
 import { lockCurrency, lockSettings, readSettings, updateSettings, type SettingsRow } from '../infrastructure/organization-repository';
 
 /*
- * Organization settings (US-AD-04, Phase 5a: name, time zone, currency). The currency is
+ * Organization settings (US-AD-04). Phase 5a: name, time zone, currency; the currency is
  * locked by the first monetary document (`lockCurrencyForNewDocument`), then never changes.
+ * Phase 6b: the sourcing rules the award checks (RFQ-T05), `rfqRequiredAbove` and `minQuotes`.
  */
 
-const settingsAudit = defineAuditPolicy<{ orgName: string; timezone: string; currencyCode: string; currencyScale: number }>({
+type SettingsFields = {
+  orgName: string;
+  timezone: string;
+  currencyCode: string;
+  currencyScale: number;
+  rfqRequiredAbove: string | null;
+  minQuotes: number;
+};
+
+const settingsAudit = defineAuditPolicy<SettingsFields>({
   entityType: 'org_settings',
-  fields: ['orgName', 'timezone', 'currencyCode', 'currencyScale'],
+  fields: ['orgName', 'timezone', 'currencyCode', 'currencyScale', 'rfqRequiredAbove', 'minQuotes'],
 });
 
 export type OrganizationProfileDto = { orgName: string; timezone: string; currencyCode: string; currencyScale: number };
-export type SettingsDto = OrganizationProfileDto & { currencyLocked: boolean; version: number; updatedAt: string };
-export const SETTINGS_DTO_KEYS = ['orgName', 'timezone', 'currencyCode', 'currencyScale', 'currencyLocked', 'version', 'updatedAt'] as const;
+export type SettingsDto = OrganizationProfileDto & {
+  /** Decimal string without trailing zeros; null means the minimum never applies. */
+  rfqRequiredAbove: string | null;
+  minQuotes: number;
+  currencyLocked: boolean;
+  version: number;
+  updatedAt: string;
+};
+export const SETTINGS_DTO_KEYS = [
+  'orgName',
+  'timezone',
+  'currencyCode',
+  'currencyScale',
+  'rfqRequiredAbove',
+  'minQuotes',
+  'currencyLocked',
+  'version',
+  'updatedAt',
+] as const;
+
+/** An amount without trailing zeros, so the stored '500.0000' and the entered '500' compare equal. */
+function amount(value: string | null): string | null {
+  return value === null ? null : dec(value).toString();
+}
 
 function profile(row: SettingsRow): OrganizationProfileDto {
   return { orgName: row.orgName, timezone: row.timezone, currencyCode: row.currencyCode, currencyScale: row.currencyScale };
+}
+
+function fields(row: SettingsRow): SettingsFields {
+  return { ...profile(row), rfqRequiredAbove: amount(row.rfqRequiredAbove), minQuotes: row.minQuotes };
 }
 
 /** What every signed-in user may know about the organization: for display and formatting. */
@@ -39,7 +76,7 @@ export const getSettings = defineQuery({
   input: z.strictObject({}),
   handler: async ({ tx }): Promise<SettingsDto> => {
     const row = await readSettings(tx);
-    return { ...profile(row), currencyLocked: row.currencyLockedAt !== null, version: row.version, updatedAt: row.updatedAt.toISOString() };
+    return { ...fields(row), currencyLocked: row.currencyLockedAt !== null, version: row.version, updatedAt: row.updatedAt.toISOString() };
   },
 });
 
@@ -51,6 +88,9 @@ export const updateOrganizationSettings = defineCommand({
     timezone: z.string().refine(isTimeZone, 'Choose a time zone'),
     currencyCode: z.string().refine(isCurrencyCode, 'Choose a currency'),
     currencyScale: z.number().int().min(0).max(4),
+    /** An estimated total, or null for "never". */
+    rfqRequiredAbove: moneyInput.nullable(),
+    minQuotes: z.number().int().min(1, 'At least 1').max(10, 'At most 10'),
     expectedVersion: z.number().int().min(1).max(2_147_483_647),
   }),
   handler: async ({ tx, actor, request }, input): Promise<{ version: number }> => {
@@ -60,13 +100,15 @@ export const updateOrganizationSettings = defineCommand({
     if (currencyChanged && row.currencyLockedAt) {
       failBusinessRule('CURRENCY_LOCKED', 'The currency cannot change: requisitions already use it.');
     }
-    const changes = auditChanges(settingsAudit, profile(row), input);
+    const changes = auditChanges(settingsAudit, fields(row), { ...input, rfqRequiredAbove: amount(input.rfqRequiredAbove) });
     if (Object.keys(changes).length === 0) return { version: row.version };
     const version = await updateSettings(tx, row.version, {
       orgName: input.orgName,
       timezone: input.timezone,
       currencyCode: input.currencyCode,
       currencyScale: input.currencyScale,
+      rfqRequiredAbove: input.rfqRequiredAbove,
+      minQuotes: input.minQuotes,
       updatedByUserId: actor.userId,
     });
     await recordAuditEvent(tx, request, { action: 'settings.updated', entityType: 'org_settings', entityId: '1', changes });
@@ -81,4 +123,15 @@ export async function lockCurrencyForNewDocument(tx: Tx): Promise<{ code: string
 
 export async function findOrganizationTimezone(db: Database | Tx): Promise<string> {
   return (await readSettings(db)).timezone;
+}
+
+export type SourcingRules = { timezone: string; rfqRequiredAbove: string | null; minQuotes: number };
+
+/**
+ * For sourcing (Phase 6b): the time zone that decides "today", and the award's minimum-quotations
+ * rule. A plain read: the award stores the values it used, so a later change cannot rewrite it.
+ */
+export async function findSourcingRules(db: Database | Tx): Promise<SourcingRules> {
+  const row = await readSettings(db);
+  return { timezone: row.timezone, rfqRequiredAbove: amount(row.rfqRequiredAbove), minQuotes: row.minQuotes };
 }

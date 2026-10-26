@@ -1,6 +1,6 @@
 import 'server-only';
 import { inArray } from 'drizzle-orm';
-import { dec } from '@/shared/decimal/decimal';
+import { dec, toFixedScale } from '@/shared/decimal/decimal';
 import type { Database, Tx } from '@/shared/db/transaction';
 import { isRequisitionStatus, type RequisitionStatus } from '../domain/requisition';
 import { findLines, findRequisition, lockRequisition, type RequisitionRow } from '../infrastructure/requisition-repository';
@@ -26,6 +26,11 @@ export type RequisitionForSourcing = {
   number: string;
   title: string;
   status: RequisitionStatus;
+  /** Quotations are priced in the requisition's currency and rounded to its scale (Phase 6b). */
+  currencyCode: string;
+  currencyScale: number;
+  /** As approved, at the currency scale; the award compares it with `rfq_required_above`. */
+  estimatedTotal: string;
   lines: SourcingLine[];
 };
 
@@ -48,6 +53,9 @@ async function forSourcing(db: Database | Tx, row: RequisitionRow | null): Promi
     number: row.number,
     title: row.title,
     status: row.status,
+    currencyCode: row.currencyCode,
+    currencyScale: row.currencyScale,
+    estimatedTotal: toFixedScale(dec(row.estimatedTotal), row.currencyScale),
     lines: lines.map((l) => ({
       id: l.id,
       lineNo: l.lineNo,
