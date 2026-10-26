@@ -4,6 +4,7 @@
 - Base commit: `277296d` (Phase 6b). Phase 7 is committed as a single commit on top of it (2026-10-26, at the maintainer's request), together with this report. Not pushed: there is no remote.
 - Machine: Windows 10 Enterprise 19045, Node 24.21.0, npm 11.19.0, local PostgreSQL 18.6, Microsoft Edge (Playwright `msedge` channel)
 - Maintainer instruction (2026-10-26): "Oke, lanjut mulai implementasi nya" — implement Phase 7 without a separate plan-approval stop. The plan below was therefore written and implemented in one go; the decisions it takes are listed below. (2026-10-26) The maintainer asked to commit the working tree as one commit.
+- Maintainer review (2026-10-26, after the commit): decisions 1 to 13 below accepted as written, none changed.
 
 Status vocabulary: **Implemented**, **Tested**, **Verified** (run here, output observed). Nothing is **Deployed**.
 
@@ -28,7 +29,7 @@ Phase 7 delivers PLAN.md P7-AC1 to AC9. They are broken down as follows (each ro
 | P7-AC13 | E2E: a PO from an award goes to approval, finance approves, the buyer issues, the print view shows it; a PO below the threshold is approved on submit; the print view is `404` for a user who cannot read the PO | P7-AC9 | E2E |
 | P7-AC14 | Definition of done (PLAN.md) | all | commands below |
 
-### Decisions taken within the plan (please review)
+### Decisions taken within the plan (all accepted by the maintainer, 2026-10-26)
 
 1. **One requisition per purchase order.** A PO has a `requisition_id`, and every line comes from that requisition. The PO's department is the requisition's, which decides the approval route and who can see it. A requisition can have several POs (several suppliers, partial orders).
 2. **`over_receipt_tolerance_pct` moves from Phase 8 to Phase 7**, because issuing (PO-T05) needs it. The value used is stored on the PO at issue (`receipt_tolerance_pct`), so a later change cannot alter what an issued PO allows.
@@ -176,5 +177,5 @@ None.
 
 ### Next steps
 
-- Maintainer review of decisions 1 to 13; any change is a follow-up commit.
+- Done (2026-10-26): maintainer review of decisions 1 to 13, all accepted as written.
 - Phase 8: goods receipts (`receipt.*`, `po.receivable`, PO-T06, CC-04, SOD-04), opening the receipt-driven PO transitions in the trigger.
