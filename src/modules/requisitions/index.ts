@@ -1,5 +1,13 @@
 export { requisitionApprovalDocument } from './application/approval-document';
 export {
+  findRequisitionForPurchasing,
+  lockRequisitionForPurchasing,
+  releaseOrderedQuantity,
+  reserveOrderedQuantity,
+  type PurchasingLine,
+  type RequisitionForPurchasing,
+} from './application/purchasing';
+export {
   findRequisitionForSourcing,
   findRequisitionHeaders,
   lockRequisitionForSourcing,

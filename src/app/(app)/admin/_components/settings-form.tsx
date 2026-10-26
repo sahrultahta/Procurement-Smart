@@ -18,6 +18,9 @@ export function SettingsForm(props: {
     currencyScale: number;
     rfqRequiredAbove: string | null;
     minQuotes: number;
+    poApprovalThreshold: string | null;
+    poPriceTolerancePct: string;
+    overReceiptTolerancePct: string;
     currencyLocked: boolean;
     version: number;
   };
@@ -115,6 +118,47 @@ export function SettingsForm(props: {
           When a requisition&apos;s estimated total is at or above this amount and an RFQ received fewer valid quotations than the minimum, the
           buyer must justify the award. Leave the amount empty to never require it. Choosing a quotation that is not the lowest always needs
           a justification.
+        </p>
+      </fieldset>
+      <fieldset className="grid gap-4 sm:grid-cols-3" disabled={pending}>
+        <legend className="mb-2 text-sm font-medium">Purchase orders</legend>
+        <div className="grid gap-2">
+          <Label htmlFor="settings-po-threshold">Approval needed from (total with tax)</Label>
+          <Input
+            id="settings-po-threshold"
+            name="poApprovalThreshold"
+            inputMode="decimal"
+            defaultValue={settings.poApprovalThreshold ?? ''}
+            aria-describedby="settings-po-hint"
+          />
+          <FieldError state={state} name="poApprovalThreshold" />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="settings-po-tolerance">Price tolerance (%)</Label>
+          <Input
+            id="settings-po-tolerance"
+            name="poPriceTolerancePct"
+            inputMode="decimal"
+            defaultValue={settings.poPriceTolerancePct}
+            aria-describedby="settings-po-hint"
+          />
+          <FieldError state={state} name="poPriceTolerancePct" />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="settings-receipt-tolerance">Over-receipt tolerance (%)</Label>
+          <Input
+            id="settings-receipt-tolerance"
+            name="overReceiptTolerancePct"
+            inputMode="decimal"
+            defaultValue={settings.overReceiptTolerancePct}
+            aria-describedby="settings-po-hint"
+          />
+          <FieldError state={state} name="overReceiptTolerancePct" />
+        </div>
+        <p id="settings-po-hint" className="text-sm text-muted-foreground sm:col-span-3">
+          A submitted purchase order goes to approval when its total is at or above the amount, or when a unit price or the subtotal is
+          more than the price tolerance above the requisition estimate. Leave the amount empty to send every purchase order to approval.
+          The over-receipt tolerance is fixed on each purchase order when it is issued: it sets how much more than ordered can be received.
         </p>
       </fieldset>
       <FormMessage state={state} />

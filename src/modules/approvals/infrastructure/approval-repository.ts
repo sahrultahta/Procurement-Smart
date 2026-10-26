@@ -26,6 +26,7 @@ export async function insertRequest(
     | 'policyId'
     | 'policyVersionNo'
     | 'submittedByUserId'
+    | 'awardedByUserId'
   >,
 ): Promise<string> {
   const [row] = await tx.insert(approvalRequests).values(values).returning({ id: approvalRequests.id });

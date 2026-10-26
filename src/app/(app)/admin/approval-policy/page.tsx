@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatAmount, formatTimestamp } from '@/lib/format';
 import { listDepartments } from '@/modules/identity';
-import { describeStep, getActiveApprovalPolicy, listApprovalPolicyVersions } from '@/modules/organization';
+import { describeStep, getActiveApprovalPolicy, listApprovalPolicyVersions, type PolicyDocumentType } from '@/modules/organization';
 import { getOrganization } from '@/server/organization-profile';
 import { getRequestContext } from '@/server/request-context';
 import { runQuery } from '@/shared/application/runner';
@@ -18,16 +19,38 @@ function plain(amount: string): string {
   return amount.includes('.') ? amount.replace(/0+$/, '').replace(/\.$/, '') : amount;
 }
 
-const STARTER: EditorRule[] = [
-  { department: '', minAmount: '0', maxAmount: '1000', steps: ['approver_department'] },
-  { department: '', minAmount: '1000', maxAmount: '', steps: ['approver_department', 'finance'] },
-];
+const STARTER: Record<PolicyDocumentType, EditorRule[]> = {
+  requisition: [
+    { department: '', minAmount: '0', maxAmount: '1000', steps: ['approver_department'] },
+    { department: '', minAmount: '1000', maxAmount: '', steps: ['approver_department', 'finance'] },
+  ],
+  purchase_order: [
+    { department: '', minAmount: '0', maxAmount: '5000', steps: ['finance'] },
+    { department: '', minAmount: '5000', maxAmount: '', steps: ['approver_department', 'finance'] },
+  ],
+};
 
-export default async function ApprovalPolicyPage() {
+/** Each document type has its own policy (Phase 7 added purchase orders). */
+const DOCUMENTS: Record<PolicyDocumentType, { title: string; plural: string; missing: string }> = {
+  requisition: {
+    title: 'Approval policy for requisitions',
+    plural: 'Requisitions',
+    missing: 'No policy is published yet: requisitions cannot be submitted until one is.',
+  },
+  purchase_order: {
+    title: 'Approval policy for purchase orders',
+    plural: 'Purchase orders',
+    missing: 'No policy is published yet: purchase orders that need approval cannot be submitted until one is.',
+  },
+};
+
+export default async function ApprovalPolicyPage(props: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const documentType: PolicyDocumentType = (await props.searchParams).type === 'purchase_order' ? 'purchase_order' : 'requisition';
+  const labels = DOCUMENTS[documentType];
   const request = await getRequestContext();
   const [active, versions, departments, org] = await Promise.all([
-    runQuery(request, getActiveApprovalPolicy, { documentType: 'requisition' }),
-    runQuery(request, listApprovalPolicyVersions, { documentType: 'requisition' }),
+    runQuery(request, getActiveApprovalPolicy, { documentType }),
+    runQuery(request, listApprovalPolicyVersions, { documentType }),
     runQuery(request, listDepartments, {}),
     getOrganization(),
   ]);
@@ -38,11 +61,24 @@ export default async function ApprovalPolicyPage() {
   return (
     <div className="grid gap-6">
       <div className="grid gap-1">
-        <h1 className="text-2xl font-semibold">Approval policy for requisitions</h1>
+        <h1 className="text-2xl font-semibold">{labels.title}</h1>
         <p className="text-sm text-muted-foreground">
-          {policy ? `Version ${policy.versionNo}, “${policy.name}”, published by ${policy.createdBy} on ${formatTimestamp(policy.createdAt, org.timezone)}.` : 'No policy is published yet: requisitions cannot be submitted until one is.'}
+          {policy ? `Version ${policy.versionNo}, “${policy.name}”, published by ${policy.createdBy} on ${formatTimestamp(policy.createdAt, org.timezone)}.` : labels.missing}
         </p>
       </div>
+      <nav aria-label="Document type" className="flex gap-4 text-sm">
+        {(Object.keys(DOCUMENTS) as PolicyDocumentType[]).map((type) =>
+          type === documentType ? (
+            <span key={type} aria-current="page" className="font-medium">
+              {DOCUMENTS[type].plural}
+            </span>
+          ) : (
+            <Link key={type} href={type === 'requisition' ? '/admin/approval-policy' : '/admin/approval-policy?type=purchase_order'} className="text-muted-foreground underline-offset-4 hover:underline">
+              {DOCUMENTS[type].plural}
+            </Link>
+          ),
+        )}
+      </nav>
 
       {policy ? (
         <Card>
@@ -77,10 +113,12 @@ export default async function ApprovalPolicyPage() {
       <Card>
         <CardHeader>
           <h2 className="font-semibold">Publish a new version</h2>
-          <p className="text-sm text-muted-foreground">Published versions never change. Requisitions already submitted keep the steps they were given.</p>
+          <p className="text-sm text-muted-foreground">Published versions never change. {labels.plural} already submitted keep the steps they were given.</p>
         </CardHeader>
         <CardContent>
           <PolicyEditor
+            key={documentType}
+            documentType={documentType}
             initialName={policy ? `${policy.name} (revised)` : 'Standard approvals'}
             initialRules={
               policy
@@ -90,7 +128,7 @@ export default async function ApprovalPolicyPage() {
                     maxAmount: r.maxAmount ? plain(r.maxAmount) : '',
                     steps: r.steps.map(toChoice),
                   }))
-                : STARTER
+                : STARTER[documentType]
             }
             departments={departments.ok ? departments.data.filter((d) => d.isActive).map((d) => ({ code: d.code, name: d.name })) : []}
             currency={org.currencyCode}

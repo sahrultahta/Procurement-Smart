@@ -143,6 +143,10 @@ export async function updateSettingsAction(_previous: ActionState, form: FormDat
     // Empty means "never": no minimum number of quotations.
     rfqRequiredAbove: optional(form, 'rfqRequiredAbove'),
     minQuotes: integer(form, 'minQuotes'),
+    // Empty means "every purchase order needs approval".
+    poApprovalThreshold: optional(form, 'poApprovalThreshold'),
+    poPriceTolerancePct: text(form, 'poPriceTolerancePct').trim(),
+    overReceiptTolerancePct: text(form, 'overReceiptTolerancePct').trim(),
     expectedVersion: integer(form, 'expectedVersion'),
   });
   if (result.ok) revalidatePath('/', 'layout');
@@ -160,12 +164,15 @@ export async function publishPolicyAction(_previous: ActionState, form: FormData
   } catch {
     return { status: 'error', code: 'VALIDATION_FAILED', message: 'The rule table could not be read. Reload the page and try again.' };
   }
+  // The command accepts only the known document types.
+  const documentType = text(form, 'documentType');
   const result = await runCommand(await getRequestContext(), publishApprovalPolicy, {
-    documentType: 'requisition',
+    documentType,
     name: text(form, 'name'),
     rules,
   });
   if (!result.ok) return failed(result.error);
   revalidatePath('/admin/approval-policy');
-  return { status: 'ok', message: `Version ${result.data.versionNo} published. New submissions use it; requisitions already submitted keep their steps.` };
+  const documents = documentType === 'purchase_order' ? 'purchase orders' : 'requisitions';
+  return { status: 'ok', message: `Version ${result.data.versionNo} published. New submissions use it; ${documents} already submitted keep their steps.` };
 }

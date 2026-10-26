@@ -2,16 +2,17 @@ import 'server-only';
 import { z } from 'zod';
 import { auditChanges, defineAuditPolicy, recordAuditEvent } from '@/modules/audit';
 import { defineCommand, defineQuery } from '@/shared/application/runner';
-import { dec, moneyInput } from '@/shared/decimal/decimal';
+import { dec, moneyInput, percentInput } from '@/shared/decimal/decimal';
 import type { Database, Tx } from '@/shared/db/transaction';
 import { fail, failBusinessRule } from '@/shared/result';
 import { isCurrencyCode, isTimeZone } from '../domain/settings';
-import { lockCurrency, lockSettings, readSettings, updateSettings, type SettingsRow } from '../infrastructure/organization-repository';
+import { lockCurrency, lockSettings, readSettings, readSettingsForShare, updateSettings, type SettingsRow } from '../infrastructure/organization-repository';
 
 /*
  * Organization settings (US-AD-04). Phase 5a: name, time zone, currency; the currency is
  * locked by the first monetary document (`lockCurrencyForNewDocument`), then never changes.
  * Phase 6b: the sourcing rules the award checks (RFQ-T05), `rfqRequiredAbove` and `minQuotes`.
+ * Phase 7: the purchase-order approval rule (PO-T03) and the receipt tolerance fixed at issue (PO-T05).
  */
 
 type SettingsFields = {
@@ -21,11 +22,24 @@ type SettingsFields = {
   currencyScale: number;
   rfqRequiredAbove: string | null;
   minQuotes: number;
+  poApprovalThreshold: string | null;
+  poPriceTolerancePct: string;
+  overReceiptTolerancePct: string;
 };
 
 const settingsAudit = defineAuditPolicy<SettingsFields>({
   entityType: 'org_settings',
-  fields: ['orgName', 'timezone', 'currencyCode', 'currencyScale', 'rfqRequiredAbove', 'minQuotes'],
+  fields: [
+    'orgName',
+    'timezone',
+    'currencyCode',
+    'currencyScale',
+    'rfqRequiredAbove',
+    'minQuotes',
+    'poApprovalThreshold',
+    'poPriceTolerancePct',
+    'overReceiptTolerancePct',
+  ],
 });
 
 export type OrganizationProfileDto = { orgName: string; timezone: string; currencyCode: string; currencyScale: number };
@@ -33,6 +47,10 @@ export type SettingsDto = OrganizationProfileDto & {
   /** Decimal string without trailing zeros; null means the minimum never applies. */
   rfqRequiredAbove: string | null;
   minQuotes: number;
+  /** Decimal strings without trailing zeros; a null threshold means every purchase order needs approval. */
+  poApprovalThreshold: string | null;
+  poPriceTolerancePct: string;
+  overReceiptTolerancePct: string;
   currencyLocked: boolean;
   version: number;
   updatedAt: string;
@@ -44,6 +62,9 @@ export const SETTINGS_DTO_KEYS = [
   'currencyScale',
   'rfqRequiredAbove',
   'minQuotes',
+  'poApprovalThreshold',
+  'poPriceTolerancePct',
+  'overReceiptTolerancePct',
   'currencyLocked',
   'version',
   'updatedAt',
@@ -59,7 +80,14 @@ function profile(row: SettingsRow): OrganizationProfileDto {
 }
 
 function fields(row: SettingsRow): SettingsFields {
-  return { ...profile(row), rfqRequiredAbove: amount(row.rfqRequiredAbove), minQuotes: row.minQuotes };
+  return {
+    ...profile(row),
+    rfqRequiredAbove: amount(row.rfqRequiredAbove),
+    minQuotes: row.minQuotes,
+    poApprovalThreshold: amount(row.poApprovalThreshold),
+    poPriceTolerancePct: dec(row.poPriceTolerancePct).toString(),
+    overReceiptTolerancePct: dec(row.overReceiptTolerancePct).toString(),
+  };
 }
 
 /** What every signed-in user may know about the organization: for display and formatting. */
@@ -91,6 +119,10 @@ export const updateOrganizationSettings = defineCommand({
     /** An estimated total, or null for "never". */
     rfqRequiredAbove: moneyInput.nullable(),
     minQuotes: z.number().int().min(1, 'At least 1').max(10, 'At most 10'),
+    /** A purchase-order total (tax included), or null for "every purchase order". */
+    poApprovalThreshold: moneyInput.nullable(),
+    poPriceTolerancePct: percentInput,
+    overReceiptTolerancePct: percentInput,
     expectedVersion: z.number().int().min(1).max(2_147_483_647),
   }),
   handler: async ({ tx, actor, request }, input): Promise<{ version: number }> => {
@@ -100,7 +132,13 @@ export const updateOrganizationSettings = defineCommand({
     if (currencyChanged && row.currencyLockedAt) {
       failBusinessRule('CURRENCY_LOCKED', 'The currency cannot change: requisitions already use it.');
     }
-    const changes = auditChanges(settingsAudit, fields(row), { ...input, rfqRequiredAbove: amount(input.rfqRequiredAbove) });
+    const changes = auditChanges(settingsAudit, fields(row), {
+      ...input,
+      rfqRequiredAbove: amount(input.rfqRequiredAbove),
+      poApprovalThreshold: amount(input.poApprovalThreshold),
+      poPriceTolerancePct: dec(input.poPriceTolerancePct).toString(),
+      overReceiptTolerancePct: dec(input.overReceiptTolerancePct).toString(),
+    });
     if (Object.keys(changes).length === 0) return { version: row.version };
     const version = await updateSettings(tx, row.version, {
       orgName: input.orgName,
@@ -109,6 +147,9 @@ export const updateOrganizationSettings = defineCommand({
       currencyScale: input.currencyScale,
       rfqRequiredAbove: input.rfqRequiredAbove,
       minQuotes: input.minQuotes,
+      poApprovalThreshold: input.poApprovalThreshold,
+      poPriceTolerancePct: input.poPriceTolerancePct,
+      overReceiptTolerancePct: input.overReceiptTolerancePct,
       updatedByUserId: actor.userId,
     });
     await recordAuditEvent(tx, request, { action: 'settings.updated', entityType: 'org_settings', entityId: '1', changes });
@@ -134,4 +175,38 @@ export type SourcingRules = { timezone: string; rfqRequiredAbove: string | null;
 export async function findSourcingRules(db: Database | Tx): Promise<SourcingRules> {
   const row = await readSettings(db);
   return { timezone: row.timezone, rfqRequiredAbove: amount(row.rfqRequiredAbove), minQuotes: row.minQuotes };
+}
+
+export type PurchasingRules = {
+  timezone: string;
+  rfqRequiredAbove: string | null;
+  poApprovalThreshold: string | null;
+  poPriceTolerancePct: string;
+  overReceiptTolerancePct: string;
+};
+
+/**
+ * For purchase orders (Phase 7): "today", the RFQ threshold (RFQ_REQUIRED), the approval rule
+ * (PO-T03), and the receipt tolerance (PO-T05). Each order stores the values it used.
+ */
+export async function findPurchasingRules(db: Database | Tx): Promise<PurchasingRules> {
+  return purchasingRules(await readSettings(db));
+}
+
+/**
+ * The same, held until the caller's transaction ends (a shared lock): the database compares what
+ * a purchase order stores with the settings, so they must not change in between.
+ */
+export async function lockPurchasingRules(tx: Tx): Promise<PurchasingRules> {
+  return purchasingRules(await readSettingsForShare(tx));
+}
+
+function purchasingRules(row: SettingsRow): PurchasingRules {
+  return {
+    timezone: row.timezone,
+    rfqRequiredAbove: amount(row.rfqRequiredAbove),
+    poApprovalThreshold: amount(row.poApprovalThreshold),
+    poPriceTolerancePct: dec(row.poPriceTolerancePct).toString(),
+    overReceiptTolerancePct: dec(row.overReceiptTolerancePct).toString(),
+  };
 }

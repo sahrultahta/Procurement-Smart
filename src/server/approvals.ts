@@ -1,5 +1,6 @@
 import 'server-only';
 import { decideApproval, registerApprovalDocument } from '@/modules/approvals';
+import { purchaseOrderApprovalDocument } from '@/modules/purchasing';
 import { requisitionApprovalDocument } from '@/modules/requisitions';
 
 /*
@@ -9,5 +10,6 @@ import { requisitionApprovalDocument } from '@/modules/requisitions';
  * module directly, so the handlers are always in place.
  */
 registerApprovalDocument('requisition', requisitionApprovalDocument);
+registerApprovalDocument('purchase_order', purchaseOrderApprovalDocument);
 
 export { decideApproval };

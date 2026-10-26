@@ -14,6 +14,13 @@ export async function readSettings(db: Queryable): Promise<SettingsRow> {
   return row;
 }
 
+/** A shared lock: concurrent readers proceed, a settings change waits until this transaction ends. */
+export async function readSettingsForShare(tx: Tx): Promise<SettingsRow> {
+  const [row] = await tx.select().from(orgSettings).where(eq(orgSettings.id, 1)).for('share');
+  if (!row) throw new Error('org_settings row 1 is missing (migration 0009 creates it)');
+  return row;
+}
+
 export async function lockSettings(tx: Tx): Promise<SettingsRow> {
   const [row] = await tx.select().from(orgSettings).where(eq(orgSettings.id, 1)).for('update');
   if (!row) throw new Error('org_settings row 1 is missing (migration 0009 creates it)');
@@ -23,7 +30,19 @@ export async function lockSettings(tx: Tx): Promise<SettingsRow> {
 export async function updateSettings(
   tx: Tx,
   expectedVersion: number,
-  values: Pick<SettingsRow, 'orgName' | 'timezone' | 'currencyCode' | 'currencyScale' | 'rfqRequiredAbove' | 'minQuotes' | 'updatedByUserId'>,
+  values: Pick<
+    SettingsRow,
+    | 'orgName'
+    | 'timezone'
+    | 'currencyCode'
+    | 'currencyScale'
+    | 'rfqRequiredAbove'
+    | 'minQuotes'
+    | 'poApprovalThreshold'
+    | 'poPriceTolerancePct'
+    | 'overReceiptTolerancePct'
+    | 'updatedByUserId'
+  >,
 ): Promise<number> {
   const [row] = await tx
     .update(orgSettings)

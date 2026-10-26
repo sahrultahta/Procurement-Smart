@@ -9,7 +9,7 @@ import { ActionForm } from '@/components/action-form';
 import { IDLE } from '@/lib/action-state';
 import { closeRequisitionAction, decideApprovalAction, submitRequisitionAction } from '../actions';
 
-/* Submit (PR-T03), close (PR-T10), and an approval decision (AP-T02 to T04). */
+/* Submit (PR-T03), close (PR-T10), and an approval decision (AP-T02 to T04; requisitions and purchase orders). */
 
 export function SubmitRequisitionForm({ requisitionId, version }: { requisitionId: string; version: number }) {
   const [state, formAction, pending] = useActionState(submitRequisitionAction, IDLE);

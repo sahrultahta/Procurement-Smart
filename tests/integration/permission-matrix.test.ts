@@ -82,6 +82,18 @@ const EXPECTED: Record<string, readonly Caller[]> = {
   'quotation.submit': ['procurement'],
   'quotation.withdraw': ['procurement'],
   'quotation.award': ['procurement'],
+  // Phase 7. Purchase orders are procurement's (po.create); reading them is also finance's and the
+  // auditor's (po.read.all), the approvers' for their departments (po.read.department, ADR 0006
+  // amendment), and the receivers' once issued (po.read.issued). The form's options are for buyers.
+  'po.create': ['procurement'],
+  'po.update': ['procurement'],
+  'po.submit': ['procurement'],
+  'po.issue': ['procurement'],
+  'po.cancel': ['procurement'],
+  'po.close': ['procurement'],
+  'po.list': ['approver', 'procurement', 'receiver', 'finance', 'auditor'],
+  'po.get': ['approver', 'procurement', 'receiver', 'finance', 'auditor'],
+  'po.formOptions': ['procurement'],
 };
 
 let t: TestDatabase;

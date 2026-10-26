@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { PO_READ_PERMISSIONS } from '@/modules/purchasing';
 import { REQUISITION_READ_PERMISSIONS } from '@/modules/requisitions';
 import { getRequestContext } from '@/server/request-context';
 import { signOutAction } from './actions';
@@ -39,6 +40,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             {actor.permissions.has('rfq.read') ? (
               <Link href="/rfqs" className="text-muted-foreground hover:text-foreground">
                 RFQs
+              </Link>
+            ) : null}
+            {PO_READ_PERMISSIONS.some((p) => actor.permissions.has(p)) ? (
+              <Link href="/purchase-orders" className="text-muted-foreground hover:text-foreground">
+                Purchase orders
               </Link>
             ) : null}
             {actor.permissions.has('supplier.read') ? (

@@ -23,7 +23,13 @@ function ruleErrors(state: ActionState, index: number): string[] {
     .flatMap(([, messages]) => messages);
 }
 
-export function PolicyEditor(props: { initialName: string; initialRules: EditorRule[]; departments: EditorDepartment[]; currency: string }) {
+export function PolicyEditor(props: {
+  documentType: 'requisition' | 'purchase_order';
+  initialName: string;
+  initialRules: EditorRule[];
+  departments: EditorDepartment[];
+  currency: string;
+}) {
   const [state, formAction, pending] = useActionState(publishPolicyAction, IDLE);
   const [rules, setRules] = useState<EditorRule[]>(props.initialRules);
   const update = (index: number, change: Partial<EditorRule>) => setRules((all) => all.map((r, i) => (i === index ? { ...r, ...change } : r)));
@@ -40,6 +46,7 @@ export function PolicyEditor(props: { initialName: string; initialRules: EditorR
 
   return (
     <ActionForm action={formAction} className="grid gap-5" noValidate>
+      <input type="hidden" name="documentType" value={props.documentType} />
       <input type="hidden" name="rules" value={payload} />
       <div className="grid gap-2">
         <Label htmlFor="policy-name">Version name</Label>

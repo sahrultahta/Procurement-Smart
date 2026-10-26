@@ -74,6 +74,18 @@ Unblocking stays with `supplier.review` (finance), because an unblocked supplier
 
 SOD-03 is enforced in `supplier.review` (`MAKER_CHECKER`) and backed by the CHECK `suppliers_maker_checker` (reviewer ≠ creator and ≠ last identity changer). A trigger keeps `created_by_user_id` fixed (`PFS01`), so the maker cannot be rewritten.
 
+## Amendment (2026-10-26, Phase 7): `po.read.department`
+
+The table above gives approvers no way to read purchase orders, but a purchase-order approval policy may route a step to the approver of the order's department (`scope_mode = document_department`). They would then be asked to decide an order they cannot open. Reading gets a department-scoped permission, like requisitions:
+
+| Permission | requester | approver | procurement | receiver | finance | auditor | admin |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| `po.read.department` | | ✓ (scope) | | | | | |
+
+The scope is the approver assignment's departments (an organization-wide approver reads every PO), read fresh from the database in each query, and a PO's department is its requisition's. `po.read.issued` (receivers) covers issued, partially received, received, and closed POs. Verified by `tests/unit/roles.test.ts`, the operation matrix in `tests/integration/permission-matrix.test.ts`, and the visibility tests in `tests/integration/purchase-orders.test.ts`.
+
+SOD-01 for purchase orders: only the PO's creator edits and submits it, so the submitter the approvals module bars is always the creator. SOD-06: the round records the buyer who awarded the PO's quotation as `awarded_by_user_id`; the application (`SELF_APPROVAL`), the inbox, and the existing trigger `approval_steps_no_self_approval` bar them, and the PO's own trigger refuses a round that leaves them out.
+
 ## Alternatives considered
 
 - **DB-editable roles and permissions.** Rejected for v1: it lets an admin quietly create a super-role. It can be revisited with its own audit and approval flow.

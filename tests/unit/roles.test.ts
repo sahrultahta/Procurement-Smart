@@ -30,6 +30,8 @@ const EXPECTED: Record<Permission, readonly Role[]> = {
   'quotation.award': [P],
   'po.create': [P],
   'po.read.all': [P, F, U],
+  // ADR 0006 amendment (Phase 7): approvers read the purchase orders of the departments they approve for.
+  'po.read.department': [A],
   'po.read.issued': [V],
   'receipt.create': [V],
   'receipt.read': [P, V, F, U],

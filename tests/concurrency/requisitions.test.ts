@@ -86,7 +86,7 @@ describe('the first requisition racing a currency change', () => {
         const admin = await contextOf(db.appDb, await provisionActor(db.appDb, 'a@example.com', 'A', ['admin']));
         const [created, changed] = await Promise.all([
           runCommand(requester, createRequisition, draft('First'), { db: db.appDb }),
-          runCommand(admin, updateOrganizationSettings, { orgName: 'X', timezone: 'UTC', currencyCode: 'EUR', currencyScale: 2, rfqRequiredAbove: null, minQuotes: 3, expectedVersion: 1 }, { db: db.appDb }),
+          runCommand(admin, updateOrganizationSettings, { orgName: 'X', timezone: 'UTC', currencyCode: 'EUR', currencyScale: 2, rfqRequiredAbove: null, minQuotes: 3, poApprovalThreshold: null, poPriceTolerancePct: '0', overReceiptTolerancePct: '0', expectedVersion: 1 }, { db: db.appDb }),
         ]);
         expect(created.ok).toBe(true);
         outcomes.add(changed.ok ? 'currency changed first' : `refused: ${changed.error.rule}`);

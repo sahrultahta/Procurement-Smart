@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { publishApprovalPolicy } from '@/modules/organization';
+import { createPurchaseOrder } from '@/modules/purchasing';
 import { cancelRequisition, createRequisition, submitRequisition } from '@/modules/requisitions';
 import {
   INVITED_SUPPLIER_KEYS,
@@ -221,8 +222,17 @@ describe('P6a-AC2: creating an RFQ (RFQ-T01)', () => {
     const before = await rfqCount();
     const tooMuch = await run(u.dewi, createRfq, draftInput(pr.requisitionId, pr.lineIds, { lines: [{ requisitionLineId: pr.lineIds[1], quantity: '2.001' }] }));
     expect(tooMuch).toMatchObject({ ok: false, error: { rule: 'QUANTITY_EXCEEDS_REMAINING', details: [{ lineNo: 2, remaining: '2' }] } });
-    // Purchase orders (Phase 7) will raise ordered_qty; set it directly here.
-    await t.pool.query('UPDATE requisition_lines SET ordered_qty = 15 WHERE id = $1', [pr.lineIds[0]]);
+    // A purchase order (Phase 7) for 15 of the first line leaves 5.
+    data(
+      await run(u.dewi, createPurchaseOrder, {
+        requisitionId: pr.requisitionId,
+        supplierId: s.office,
+        paymentTerms: null,
+        deliveryAddress: null,
+        expectedDeliveryDate: null,
+        lines: [{ requisitionLineId: pr.lineIds[0], quantity: '15', unitPrice: '4', taxRatePct: '0' }],
+      }),
+    );
     expect(rule(await run(u.dewi, createRfq, draftInput(pr.requisitionId, pr.lineIds, { lines: [{ requisitionLineId: pr.lineIds[0], quantity: '6' }] })))).toBe(
       'QUANTITY_EXCEEDS_REMAINING',
     );

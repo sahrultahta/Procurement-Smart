@@ -105,6 +105,9 @@ export async function decideApprovalAction(_previous: ActionState, form: FormDat
   });
   if (!result.ok) return failed(result.error);
   refresh();
+  revalidatePath('/purchase-orders', 'layout');
   const notice = result.data.requestStatus === 'pending' ? 'step-approved' : `decided-${result.data.requestStatus}`;
-  redirect(`/requisitions/${result.data.documentId}?notice=${notice}`);
+  // The document type and id come from the approval request the command decided.
+  const page = result.data.documentType === 'purchase_order' ? '/purchase-orders' : '/requisitions';
+  redirect(`${page}/${result.data.documentId}?notice=${notice}`);
 }

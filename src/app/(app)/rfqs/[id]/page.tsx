@@ -23,7 +23,8 @@ const compared = (q: QuotationDto) => q.status === 'submitted' || q.status === '
 export default async function RfqPage(props: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { id } = await props.params;
   const notice = rfqNotice((await props.searchParams).notice);
-  const result = await runQuery(await getRequestContext(), getRfq, { rfqId: id });
+  const request = await getRequestContext();
+  const result = await runQuery(request, getRfq, { rfqId: id });
   if (!result.ok) {
     if (result.error.code === 'NOT_FOUND' || result.error.code === 'VALIDATION_FAILED') notFound();
     return (
@@ -171,7 +172,9 @@ export default async function RfqPage(props: { params: Promise<{ id: string }>; 
 
       {r.status !== 'draft' ? <QuotationsCard r={r} recordable={recordable} money={money} timezone={timezone} /> : null}
       {r.quotations.some(compared) ? <ComparisonCard r={r} money={money} /> : null}
-      {r.award ? <AwardResultCard r={r} money={money} timezone={timezone} /> : null}
+      {r.award ? (
+        <AwardResultCard r={r} money={money} timezone={timezone} canOrder={r.requisitionStatus === 'approved' && (request.actor?.permissions.has('po.create') ?? false)} />
+      ) : null}
 
       {can.has('award') ? (
         <Card>
@@ -424,7 +427,7 @@ function ComparisonCard({ r, money }: { r: RfqDetailDto; money: (value: string) 
   );
 }
 
-function AwardResultCard({ r, money, timezone }: { r: RfqDetailDto; money: (value: string) => string; timezone: string }) {
+function AwardResultCard({ r, money, timezone, canOrder }: { r: RfqDetailDto; money: (value: string) => string; timezone: string; canOrder: boolean }) {
   const a = r.award;
   if (!a) return null;
   const threshold = a.rfqRequiredAbove === null ? 'no minimum was set' : `from ${formatAmount(a.rfqRequiredAbove, r.currencyScale)} ${r.currencyCode}, ${a.minQuotes} expected`;
@@ -452,6 +455,13 @@ function AwardResultCard({ r, money, timezone }: { r: RfqDetailDto; money: (valu
           <dt className="text-muted-foreground">Justification</dt>
           <dd className="whitespace-pre-wrap">{a.justification ?? 'None given'}</dd>
         </dl>
+        {canOrder ? (
+          <div className="mt-4">
+            <Button asChild variant="outline">
+              <Link href={`/purchase-orders/new?requisitionId=${r.requisitionId}&quotationId=${a.quotationId}`}>Create purchase order from this award</Link>
+            </Button>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

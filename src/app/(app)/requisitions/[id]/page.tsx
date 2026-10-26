@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatAmount, formatDate, formatMoney, formatTimestamp } from '@/lib/format';
+import { PO_READ_PERMISSIONS, listPurchaseOrders } from '@/modules/purchasing';
 import { getRequisition, type RequisitionDetailDto } from '@/modules/requisitions';
 import { listRfqs } from '@/modules/sourcing';
 import { getOrganization } from '@/server/organization-profile';
@@ -13,6 +14,7 @@ import { getRequestContext } from '@/server/request-context';
 import { runQuery } from '@/shared/application/runner';
 import { ApprovalHistory } from '../_components/approval-history';
 import { CancelRequisitionForm, type CancelMode } from '../_components/cancel-form';
+import { PoStatusBadge } from '../../purchase-orders/_components/po-status';
 import { RfqStatusBadge } from '../../rfqs/_components/rfq-status';
 import { RequisitionStatusBadge, requisitionNotice } from '../_components/requisition-status';
 import { CloseRequisitionForm, DecisionForm, SubmitRequisitionForm } from '../_components/workflow-forms';
@@ -55,6 +57,9 @@ export default async function RequisitionPage(props: {
   // Sourcing is shown to those who may read RFQs; the page composes both modules' queries.
   const rfqs = request.actor?.permissions.has('rfq.read') ? await runQuery(request, listRfqs, { requisitionId: r.id, limit: 100 }) : null;
   const canSource = r.status === 'approved' && (request.actor?.permissions.has('rfq.manage') ?? false);
+  // The same for purchase orders (Phase 7): who reads them, and whether something is left to order.
+  const orders = PO_READ_PERMISSIONS.some((p) => request.actor?.permissions.has(p)) ? await runQuery(request, listPurchaseOrders, { requisitionId: r.id, limit: 100 }) : null;
+  const canOrder = r.status === 'approved' && (request.actor?.permissions.has('po.create') ?? false) && r.lines.some((l) => l.remainingQty !== '0');
 
   return (
     <div className="grid gap-6">
@@ -233,6 +238,53 @@ export default async function RequisitionPage(props: {
               <div>
                 <Button asChild variant="outline">
                   <Link href={`/rfqs/new?requisitionId=${r.id}`}>Request quotations</Link>
+                </Button>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {orders?.ok && (orders.data.items.length > 0 || canOrder) ? (
+        <Card>
+          <CardHeader>
+            <h2 className="font-semibold">Purchase orders</h2>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            {orders.data.items.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No purchase order for this requisition yet.</p>
+            ) : (
+              <Table aria-label="Purchase orders">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Number</TableHead>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orders.data.items.map((po) => (
+                    <TableRow key={po.id}>
+                      <TableCell className="font-mono">
+                        <Link href={`/purchase-orders/${po.id}`} className="underline-offset-4 hover:underline">
+                          {po.number}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="whitespace-normal">{po.supplierName}</TableCell>
+                      <TableCell className="text-right">{formatMoney(po.total, po.currencyCode, po.currencyScale)}</TableCell>
+                      <TableCell>
+                        <PoStatusBadge status={po.status} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            {canOrder ? (
+              <div>
+                <Button asChild variant="outline">
+                  <Link href={`/purchase-orders/new?requisitionId=${r.id}`}>Create purchase order</Link>
                 </Button>
               </div>
             ) : null}

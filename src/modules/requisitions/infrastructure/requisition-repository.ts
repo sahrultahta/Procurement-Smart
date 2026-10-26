@@ -123,3 +123,26 @@ export async function searchRequisitions(
     .orderBy(desc(purchaseRequisitions.number))
     .limit(search.limit);
 }
+
+/**
+ * ADR 0008 C2, for purchase orders: adds `quantity` to a line's ordered quantity only if it stays
+ * within what was requested. False means it would over-order (the CHECK is the backstop).
+ */
+export async function reserveLineQuantity(tx: Tx, lineId: string, quantity: string): Promise<boolean> {
+  const rows = await tx
+    .update(requisitionLines)
+    .set({ orderedQty: sql`${requisitionLines.orderedQty} + ${quantity}::numeric` })
+    .where(and(eq(requisitionLines.id, lineId), sql`${requisitionLines.orderedQty} + ${quantity}::numeric <= ${requisitionLines.quantity}`))
+    .returning({ id: requisitionLines.id });
+  return rows.length === 1;
+}
+
+/** The reverse of `reserveLineQuantity`, never below zero. False means nothing that large was reserved. */
+export async function releaseLineQuantity(tx: Tx, lineId: string, quantity: string): Promise<boolean> {
+  const rows = await tx
+    .update(requisitionLines)
+    .set({ orderedQty: sql`${requisitionLines.orderedQty} - ${quantity}::numeric` })
+    .where(and(eq(requisitionLines.id, lineId), sql`${requisitionLines.orderedQty} - ${quantity}::numeric >= 0`))
+    .returning({ id: requisitionLines.id });
+  return rows.length === 1;
+}

@@ -1,4 +1,5 @@
 export { awardQuotation } from './application/award';
+export { findAwardedQuotations, findQuotationForPurchasing, type QuotationForPurchasing } from './application/purchasing';
 export { recordQuotation, submitQuotation, updateQuotationDraft, withdrawQuotation } from './application/quotation-commands';
 export { cancelRfq, closeRfq, createRfq, issueRfq, updateRfqDraft } from './application/rfq-commands';
 export {

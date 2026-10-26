@@ -81,9 +81,9 @@ flowchart LR
 | AB-02 | One approver clears every step | SOD-02 (app + unique index) | Phase 5b (verified) |
 | AB-03 | Buyer creates a fake supplier and orders from it | SOD-03 maker-checker. Only active suppliers can be ordered from. | Phase 4 |
 | AB-04 | Supplier identity swapped after review | Identity change sends supplier back to review | Phase 4 |
-| AB-05 | Buyer inflates PO prices after PR approval | Price-variance tolerance triggers PO approval. SOD-01 and SOD-06 on PO approval. | Phase 7 |
-| AB-06 | Buyer orders more than approved | `OVER_ORDER` (C2 + CHECK) | Phase 7, CC-03 |
-| AB-07 | Buyer skips competitive sourcing | `RFQ_REQUIRED` above threshold. Justification for fewer than min quotes or non-lowest award. | Phases 6 and 7 |
+| AB-05 | Buyer inflates PO prices after PR approval | Price-variance tolerance triggers PO approval. SOD-01 and SOD-06 on PO approval. | Phase 7 (verified) |
+| AB-06 | Buyer orders more than approved | `OVER_ORDER` (C2 + CHECK) | Phase 7, CC-03 (verified) |
+| AB-07 | Buyer skips competitive sourcing | `RFQ_REQUIRED` above threshold. Justification for fewer than min quotes or non-lowest award. | Phases 6 and 7 (verified) |
 | AB-08 | Buyer confirms receipt of goods never delivered | SOD-04 (PO creator ≠ receiver) | Phase 8 |
 | AB-09 | Over-receipt to justify a larger invoice downstream | `OVER_RECEIPT` (C2 + CHECK) | Phase 8, CC-04 |
 | AB-10 | Splitting a purchase to stay under thresholds | Not preventable by rule. Detected by the potential-split-purchases report. | Phase 9 |
@@ -129,6 +129,17 @@ flowchart LR
 - **R-01:** every submission, decision, withdrawal, cancellation, and close is audited in the same transaction, with the comment or reason.
 - **Approval history is tamper-resistant in the database:** snapshot columns and completed requests are frozen, steps only move forward and cannot be added later, nothing can be deleted (`PFD01` for every role; no DELETE grant).
 - **Residual:** if nobody is eligible for a step (for example, the only approver of a department is the requester), the step stays pending; nothing is skipped automatically. The approval-aging report (Phase 9) will show it. There are no notifications yet: approvers have to open their inbox.
+
+### Phase 7 status (2026-10-26)
+
+- **AB-05 (inflating PO prices after PR approval) is controlled:** a unit price more than the tolerance above the requisition estimate, or a subtotal above the estimate for those quantities, sends the order to approval, as does any total from the threshold; the database recomputes the reasons from the lines and refuses an order approved on submit that needs approval, a rule other than the one in the settings, and edits after submission (`PFC01`, for every role). With a quotation, prices come from it, whatever the client sends.
+- **AB-06 (ordering more than approved) is controlled:** `OVER_ORDER` with C2 and the CHECK, proven under concurrency (CC-03, 20 forced overlaps), and PO-I1 (ordered quantity = what live orders hold) checked by the database at commit.
+- **AB-07 (skipping competitive sourcing), the last part:** `RFQ_REQUIRED` at create and again at submit, in the application and the database: at or above the threshold an order comes from an awarded, still valid quotation, at its prices, for no more than it quoted.
+- **SOD-01 and SOD-06 on PO approval:** the creator (the only one who submits) and the buyer who awarded the quotation get `SELF_APPROVAL`, are left out of the inbox, and are refused by the trigger; the PO trigger refuses a round that does not name the awarding buyer.
+- **T-01 (tampered fields):** number, status, totals, line amounts, descriptions, units, currency, department, and who and when sent by the client are `VALIDATION_FAILED`. **T-02:** issued orders and their lines are immutable for every role (only the receivable quantity is set, once, at issue).
+- **I-01 (IDOR):** POs are listed and read per `po.read.all` / `po.read.department` / `po.read.issued` in SQL; anything else is `NOT_FOUND`, also on the print view (`404`). **E-01:** 9 new operations in the matrix; `po.read.department` in the role matrix (ADR 0006 amendment).
+- **R-01:** create, edit, submit (with `BELOW_THRESHOLD` when no approval was needed), approval outcomes, issue (receivable quantities), cancel, and close (released quantities) are audited in the same transaction.
+- **Residual:** a quotation's validity is checked when its prices are taken (create, edit), not at submit or issue. Receivers see the supplier's contact block of issued orders, and approvers that of their departments' orders (what a printed order carries). ProcureFlow does not send the order: the buyer does, so "issued" records intent, not delivery.
 
 ### Phase 6b status (2026-10-25)
 

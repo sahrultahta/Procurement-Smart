@@ -4,7 +4,7 @@ export type { StepRole };
 
 /**
  * Approval request and step rules with no I/O (docs/state-machines.md §2), shared by every
- * document type that needs approval (requisitions now, purchase orders in Phase 7).
+ * document type that needs approval (requisitions, and purchase orders from Phase 7).
  */
 export const APPROVAL_DOCUMENT_TYPES = ['requisition', 'purchase_order'] as const;
 export type ApprovalDocumentType = (typeof APPROVAL_DOCUMENT_TYPES)[number];

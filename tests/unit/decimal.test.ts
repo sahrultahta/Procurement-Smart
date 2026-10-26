@@ -23,7 +23,8 @@ describe('decimal input schemas (ADR 0007)', () => {
     expect(quantityInput.safeParse(value).success).toBe(true);
   });
 
-  it.each(['0', '0.000', '-1', '1.0001', '1000000000'])('rejects quantity %j', (value) => {
+  // '', 'abc', and '1,5' are not decimals at all: refused, not thrown (found in Phase 7).
+  it.each(['0', '0.000', '-1', '1.0001', '1000000000', '', 'abc', '1,5', ' 1'])('rejects quantity %j', (value) => {
     expect(quantityInput.safeParse(value).success).toBe(false);
   });
 
@@ -31,7 +32,7 @@ describe('decimal input schemas (ADR 0007)', () => {
     expect(percentInput.safeParse(value).success).toBe(true);
   });
 
-  it.each(['100.0001', '101', '-5', '1e1'])('rejects percentage %j', (value) => {
+  it.each(['100.0001', '101', '-5', '1e1', '', 'abc', '1,5', ' 1'])('rejects percentage %j', (value) => {
     expect(percentInput.safeParse(value).success).toBe(false);
   });
 });

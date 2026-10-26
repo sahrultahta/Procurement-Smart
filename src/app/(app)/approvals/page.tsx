@@ -10,8 +10,7 @@ import { runQuery } from '@/shared/application/runner';
 export const metadata: Metadata = { title: 'Approvals' };
 
 function documentHref(item: InboxItemDto): string {
-  // Purchase orders join the inbox in Phase 7.
-  return `/requisitions/${item.documentId}`;
+  return item.documentType === 'purchase_order' ? `/purchase-orders/${item.documentId}` : `/requisitions/${item.documentId}`;
 }
 
 /** US-AP-01: the steps the signed-in person can decide now, oldest first. */

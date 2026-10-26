@@ -1,6 +1,6 @@
 # ADR 0008: Transactions and concurrency control
 
-- Status: Accepted. Amended 2026-10-22 (Phase 3b): mechanism C9, the admin-set lock. Phase 5b (2026-10-25): the lock order for approvals (C8) and CC-01, CC-02 implemented.
+- Status: Accepted. Amended 2026-10-22 (Phase 3b): mechanism C9, the admin-set lock. Phase 5b (2026-10-25): the lock order for approvals (C8) and CC-01, CC-02 implemented. Phase 7 (2026-10-26): C2 on ordered quantities, CC-03, CC-06.
 - Date: 2026-10-18
 
 ## Context
@@ -41,6 +41,19 @@ Row locks cannot protect an invariant over a **set** of rows that no single row 
 This narrows the earlier rejection of advisory locks below: they are not used *instead of* row locks and constraints, only for set-level invariants, and only inside the database.
 
 **CC-08:** two admins remove each other (revoke/revoke, deactivate/deactivate, revoke/deactivate). A third connection holds the set lock until both commands are waiting on it, then releases it. Over 20 iterations exactly one succeeds, the other gets `FORBIDDEN` or `LAST_ADMIN`, and exactly one admin remains. With the lock removed, both succeed on the first iteration (mutation check, Phase 3b report).
+
+## Implemented in Phase 7 (2026-10-26)
+
+- **C8, requisition → purchase order → approval round → requisition lines:** every purchase-order command except issuing locks the requisition row, then the order (the order is read once without a lock to find its requisition). `approval.decide` on a PO does the same through its document port, so a decision and a cancellation of one order queue on the requisition. Requisition lines are updated in ascending id order.
+- **C2:** `requisition_lines.ordered_qty` moves only through `UPDATE … SET ordered_qty = ordered_qty + $d WHERE … AND ordered_qty + $d <= quantity` (reserving) and `… - $d … >= 0` (releasing). The command first checks each change against what is left under the requisition's lock, to name every line in `OVER_ORDER`; the conditional update is the guard and the CHECK the backstop (C3). PO-I1 is also checked by the database at commit.
+- **C5** allocates `PO-YYYY-NNNNNN` numbers; **C6** makes `po.create` idempotent.
+- **Shared lock on the settings:** create, submit, and issue read the settings `FOR SHARE`, because the database compares the rule the order stores with them; a settings change waits until the command ends.
+
+| Test | Assertion |
+| --- | --- |
+| CC-03 | 5 parallel `po.create` of 1.5 pieces of the same 4-piece requisition line, forced to overlap (a third connection holds the requisition row until all wait), 20 times: exactly two succeed, three get `OVER_ORDER`, the ordered quantity is 3.000 and equals the sum of the order lines. |
+| CC-06 | The same idempotency key sent twice at once, forced to overlap, 20 times: both get the same result and one PO exists. |
+| Cancel vs reject | `po.cancel` and a rejecting `approval.decide` of the same pending order, forced to overlap, 20 times: one wins (the other gets `CONFLICT` or `INVALID_TRANSITION`), the order and its round end consistent (cancelled and cancelled, or rejected and rejected), and the quantity is released exactly once. |
 
 ## Implemented in Phase 6b (2026-10-25)
 

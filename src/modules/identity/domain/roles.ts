@@ -22,6 +22,7 @@ export const PERMISSIONS = [
   'quotation.award',
   'po.create',
   'po.read.all',
+  'po.read.department',
   'po.read.issued',
   'receipt.create',
   'receipt.read',
@@ -39,7 +40,8 @@ export const BASE_PERMISSIONS: readonly Permission[] = ['account.read'];
 
 export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
   requester: ['requisition.create', 'requisition.read.own'],
-  approver: ['requisition.read.department', 'approval.decide'],
+  // po.read.department: the purchase orders of the departments they approve for (ADR 0006 amendment, Phase 7).
+  approver: ['requisition.read.department', 'po.read.department', 'approval.decide'],
   procurement: [
     'requisition.read.all',
     'supplier.read',

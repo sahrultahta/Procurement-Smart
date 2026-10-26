@@ -23,12 +23,13 @@ export const moneyInput = z.string().regex(MONEY_INPUT_PATTERN, 'Enter an amount
 export const quantityInput = z
   .string()
   .regex(QUANTITY_INPUT_PATTERN, 'Enter a quantity with up to 3 decimal places, e.g. 12.5')
-  .refine((value) => new Dec(value).gt(0), 'Quantity must be greater than zero');
+  // Zod runs every check even after the pattern fails, so the refinement must not parse a malformed value.
+  .refine((value) => !QUANTITY_INPUT_PATTERN.test(value) || new Dec(value).gt(0), 'Quantity must be greater than zero');
 
 export const percentInput = z
   .string()
   .regex(PERCENT_INPUT_PATTERN, 'Enter a percentage with up to 4 decimal places, e.g. 11')
-  .refine((value) => new Dec(value).lte(100), 'Percentage cannot exceed 100');
+  .refine((value) => !PERCENT_INPUT_PATTERN.test(value) || new Dec(value).lte(100), 'Percentage cannot exceed 100');
 
 /** Parses a decimal string that has already been validated or read from PostgreSQL. */
 export function dec(value: string): DecimalValue {

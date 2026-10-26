@@ -10,6 +10,8 @@ export {
 } from './application/approval-policies';
 export {
   findOrganizationTimezone,
+  findPurchasingRules,
+  lockPurchasingRules,
   findSourcingRules,
   getOrganizationProfile,
   getSettings,
@@ -17,17 +19,20 @@ export {
   updateOrganizationSettings,
   SETTINGS_DTO_KEYS,
   type OrganizationProfileDto,
+  type PurchasingRules,
   type SettingsDto,
   type SourcingRules,
 } from './application/settings';
 export {
   MAX_RULES,
   MAX_STEPS,
+  POLICY_DOCUMENT_TYPES,
   SCOPE_MODES,
   STEP_ROLES,
   describeStep,
   resolveRule,
   validatePolicyRules,
+  type PolicyDocumentType,
   type PolicyRule,
   type PolicyStep,
   type ScopeMode,

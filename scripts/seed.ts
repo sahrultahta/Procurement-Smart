@@ -51,8 +51,8 @@ const { resolveActor } = await import('@/modules/identity');
 const { createSupplier, reviewSupplier } = await import('@/modules/suppliers');
 const { runCommand, runQuery } = await import('@/shared/application/runner');
 const { getActiveApprovalPolicy, getSettings, publishApprovalPolicy, updateOrganizationSettings } = await import('@/modules/organization');
-const { createRequisition, listRequisitions, submitRequisition } = await import('@/modules/requisitions');
-const { createRfq, getRfq, issueRfq, listRfqs, recordQuotation, rfqSourcingOptions, submitQuotation } = await import('@/modules/sourcing');
+const { createRequisition, getRequisition, listRequisitions, submitRequisition } = await import('@/modules/requisitions');
+const { awardQuotation, closeRfq, createRfq, getRfq, issueRfq, listRfqs, recordQuotation, rfqSourcingOptions, submitQuotation } = await import('@/modules/sourcing');
 const { decideApproval } = await import('@/server/approvals');
 
 type SeedUser = { email: string; name: string; departmentCode: string | null; roles: { role: string; departmentCode: string | null }[] };
@@ -94,6 +94,7 @@ const summary = {
   requisitionsCreated: 0,
   rfqsCreated: 0,
   quotationsCreated: 0,
+  awards: 0,
 };
 
 // Fictional quotations for the demo RFQ (by supplier name): Sample Industrial Parts is lower in
@@ -172,11 +173,13 @@ try {
   }
 
   // Organization name (USD scale 2 stays, decision D3), the award rule (from 500, 3 valid
-  // quotations), and the default approval policy, as Ada. A missing RFQ threshold is set again.
+  // quotations), the purchase-order rule (approval from 1,000, 5 % price tolerance, no
+  // over-receipt), and the default approval policies, as Ada. A missing threshold is set again.
   const admin = await actorOf('ada.admin');
   const settings = await runQuery(admin, getSettings, {});
   if (!settings.ok) throw new Error(`Reading settings failed: ${settings.error.message}`);
-  if (settings.data.orgName === 'My organization' || settings.data.rfqRequiredAbove === null) {
+  const poRuleMissing = settings.data.poApprovalThreshold === null;
+  if (settings.data.orgName === 'My organization' || settings.data.rfqRequiredAbove === null || poRuleMissing) {
     const updated = await runCommand(admin, updateOrganizationSettings, {
       orgName: settings.data.orgName === 'My organization' ? 'Example Organization' : settings.data.orgName,
       timezone: settings.data.timezone,
@@ -184,6 +187,9 @@ try {
       currencyScale: settings.data.currencyScale,
       rfqRequiredAbove: settings.data.rfqRequiredAbove ?? '500',
       minQuotes: settings.data.minQuotes,
+      poApprovalThreshold: settings.data.poApprovalThreshold ?? '1000',
+      poPriceTolerancePct: poRuleMissing ? '5' : settings.data.poPriceTolerancePct,
+      overReceiptTolerancePct: settings.data.overReceiptTolerancePct,
       expectedVersion: settings.data.version,
     });
     if (!updated.ok) throw new Error(`Updating settings failed: ${updated.error.message}`);
@@ -209,6 +215,29 @@ try {
       ],
     });
     if (!published.ok) throw new Error(`Publishing the approval policy failed: ${published.error.message}`);
+    summary.policiesPublished++;
+  }
+  // Purchase orders that need approval: finance under 5,000; from 5,000 the department approver first.
+  const activePo = await runQuery(admin, getActiveApprovalPolicy, { documentType: 'purchase_order' });
+  if (!activePo.ok) throw new Error(`Reading the purchase-order approval policy failed: ${activePo.error.message}`);
+  if (activePo.data === null) {
+    const published = await runCommand(admin, publishApprovalPolicy, {
+      documentType: 'purchase_order',
+      name: 'Standard purchase-order approvals',
+      rules: [
+        { departmentCode: null, minAmount: '0', maxAmount: '5000', steps: [{ role: 'finance', scopeMode: 'organization' }] },
+        {
+          departmentCode: null,
+          minAmount: '5000',
+          maxAmount: null,
+          steps: [
+            { role: 'approver', scopeMode: 'document_department' },
+            { role: 'finance', scopeMode: 'organization' },
+          ],
+        },
+      ],
+    });
+    if (!published.ok) throw new Error(`Publishing the purchase-order approval policy failed: ${published.error.message}`);
     summary.policiesPublished++;
   }
 
@@ -320,6 +349,98 @@ try {
     }
   }
 
+  // Phase 7 demo data. An approved requisition under the RFQ threshold, ready for a direct purchase
+  // order, and one above it whose RFQ is awarded, ready for a purchase order from the award. Each
+  // open approval step is decided by Bayu (OPS), then Sari (finance), so a second run finishes a
+  // requisition an earlier, interrupted run left waiting.
+  const approvedRequisition = async (title: string, justification: string, lines: { description: string; quantity: string; uom: string; estimatedUnitPrice: string }[]) => {
+    const found = await runQuery(requester, listRequisitions, { q: title });
+    if (!found.ok) throw new Error(`Listing requisitions failed: ${found.error.message}`);
+    let id = found.data.items[0]?.id;
+    if (!id) {
+      const created = await runCommand(requester, createRequisition, { title, justification, neededBy: '2030-05-31', lines });
+      if (!created.ok) throw new Error(`Creating "${title}" failed: ${created.error.message}`);
+      const submitted = await runCommand(requester, submitRequisition, { requisitionId: created.data.requisitionId, expectedVersion: created.data.version });
+      if (!submitted.ok) throw new Error(`Submitting "${title}" failed: ${submitted.error.message}`);
+      id = created.data.requisitionId;
+      summary.requisitionsCreated++;
+    }
+    for (const persona of ['bayu.approver', 'sari.finance']) {
+      const approver = await actorOf(persona);
+      const detail = await runQuery(approver, getRequisition, { requisitionId: id });
+      if (!detail.ok) throw new Error(`Reading "${title}" failed: ${detail.error.message}`);
+      const open = detail.data.openDecision;
+      if (!open) continue;
+      const decided = await runCommand(approver, decideApproval, {
+        approvalRequestId: open.approvalRequestId,
+        stepNo: open.stepNo,
+        expectedVersion: open.requestVersion,
+        decision: 'approve',
+        comment: 'Seed data: approved for the demo',
+      });
+      if (!decided.ok) throw new Error(`Approving "${title}" failed: ${decided.error.message}`);
+    }
+    return { id };
+  };
+  await approvedRequisition('Cleaning supplies for Operations', 'Fictional demo requisition (seed data), approved and ready to order.', [
+    { description: 'Floor cleaner, 5 l', quantity: '10', uom: 'can', estimatedUnitPrice: '8.50' },
+    { description: 'Microfibre cloth, pack of 10', quantity: '6', uom: 'pack', estimatedUnitPrice: '12.00' },
+  ]);
+  const desks = await approvedRequisition('Standing desks for Operations', 'Fictional demo requisition (seed data), sourced and awarded.', [
+    { description: 'Electric standing desk', quantity: '2', uom: 'pcs', estimatedUnitPrice: '650.00' },
+  ]);
+  const deskRfqs = await runQuery(buyer, listRfqs, { requisitionId: desks.id });
+  if (!deskRfqs.ok) throw new Error(`Listing RFQs failed: ${deskRfqs.error.message}`);
+  if (deskRfqs.data.items.length === 0) {
+    const options = await runQuery(buyer, rfqSourcingOptions, { requisitionId: desks.id });
+    if (!options.ok) throw new Error(`Reading RFQ options failed: ${options.error.message}`);
+    const rfq = await runCommand(buyer, createRfq, {
+      requisitionId: desks.id,
+      title: 'Standing desks for Operations',
+      responseDueAt: '2030-03-15T17:00',
+      lines: options.data.lines.map((l) => ({ requisitionLineId: l.id, quantity: l.remainingQty })),
+      supplierIds: options.data.suppliers.map((s) => s.id),
+    });
+    if (!rfq.ok) throw new Error(`Creating the desk RFQ failed: ${rfq.error.message}`);
+    const issued = await runCommand(buyer, issueRfq, { rfqId: rfq.data.rfqId, expectedVersion: rfq.data.version });
+    if (!issued.ok) throw new Error(`Issuing the desk RFQ failed: ${issued.error.message}`);
+    summary.rfqsCreated++;
+    const detail = await runQuery(buyer, getRfq, { rfqId: rfq.data.rfqId });
+    if (!detail.ok) throw new Error(`Reading the desk RFQ failed: ${detail.error.message}`);
+    const deskQuotes = [
+      { legalName: 'Example Office Supplies Ltd', supplierReference: 'EOS-Q-2030-031', price: '640.00' },
+      { legalName: 'Sample Industrial Parts Co.', supplierReference: 'SIP-7790', price: '655.00' },
+    ];
+    let lowest = '';
+    for (const quotation of deskQuotes) {
+      const supplier = detail.data.suppliers.find((s) => s.legalName === quotation.legalName);
+      if (!supplier) throw new Error(`${quotation.legalName} is not invited to the desk RFQ`);
+      const recorded = await runCommand(buyer, recordQuotation, {
+        rfqId: detail.data.id,
+        supplierId: supplier.id,
+        supplierReference: quotation.supplierReference,
+        validUntil: '2030-06-30',
+        leadTimeDays: 21,
+        lines: detail.data.lines.map((l) => ({ rfqLineId: l.id, unitPrice: quotation.price })),
+      });
+      if (!recorded.ok) throw new Error(`Recording the desk quotation from ${quotation.legalName} failed: ${recorded.error.message}`);
+      const submitted = await runCommand(buyer, submitQuotation, { quotationId: recorded.data.quotationId, expectedVersion: recorded.data.version });
+      if (!submitted.ok) throw new Error(`Submitting the desk quotation from ${quotation.legalName} failed: ${submitted.error.message}`);
+      if (!lowest) lowest = recorded.data.quotationId;
+      summary.quotationsCreated++;
+    }
+    const closed = await runCommand(buyer, closeRfq, { rfqId: detail.data.id, expectedVersion: issued.data.version });
+    if (!closed.ok) throw new Error(`Closing the desk RFQ failed: ${closed.error.message}`);
+    const awarded = await runCommand(buyer, awardQuotation, {
+      rfqId: detail.data.id,
+      quotationId: lowest,
+      expectedVersion: closed.data.version,
+      justification: 'Seed data: only two suppliers carry this desk model.',
+    });
+    if (!awarded.ok) throw new Error(`Awarding the desk RFQ failed: ${awarded.error.message}`);
+    summary.awards++;
+  }
+
   if (Object.keys(credentials).length > 0) {
     mkdirSync(dirname(outFile), { recursive: true });
     writeFileSync(outFile, `${JSON.stringify(credentials, null, 2)}\n`, { mode: 0o600 });
@@ -328,7 +449,7 @@ try {
     `Seed done: ${summary.departmentsCreated} departments created, ${summary.usersCreated} users created, ` +
       `${summary.usersSkipped} existing users skipped, ${summary.passwordsSet} passwords set, ` +
       `${summary.suppliersCreated} suppliers created, ${summary.suppliersSkipped} existing suppliers skipped, ` +
-      `${summary.settingsUpdated} settings updated, ${summary.policiesPublished} policies published, ${summary.requisitionsCreated} requisitions created, ${summary.rfqsCreated} RFQs created, ${summary.quotationsCreated} quotations created.`,
+      `${summary.settingsUpdated} settings updated, ${summary.policiesPublished} policies published, ${summary.requisitionsCreated} requisitions created, ${summary.rfqsCreated} RFQs created, ${summary.quotationsCreated} quotations created, ${summary.awards} RFQs awarded.`,
   );
   if (summary.passwordsSet > 0) console.log(`Sign-in credentials for the users above: ${outFile}`);
 } finally {

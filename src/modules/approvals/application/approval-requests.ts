@@ -43,7 +43,7 @@ async function departmentCodes(db: Database | Tx): Promise<Map<string, string>> 
 
 export type OpenedApprovalRequest = { approvalRequestId: string; round: number; route: string[] };
 
-/** AP-T01, inside PR-T03 (and PO-T03 later): a new round with a snapshot of the policy route. */
+/** AP-T01, inside PR-T03 and PO-T03: a new round with a snapshot of the policy route. */
 export async function openApprovalRequest(
   tx: Tx,
   request: RequestContext,
@@ -57,6 +57,8 @@ export async function openApprovalRequest(
     currencyScale: number;
     departmentId: string;
     submittedByUserId: string;
+    /** Purchase orders from an award: the buyer who awarded it, barred from deciding (SOD-06). */
+    awardedByUserId?: string | null;
     route: { policyId: string; versionNo: number; steps: readonly PolicyStep[] };
   },
 ): Promise<OpenedApprovalRequest> {
@@ -74,6 +76,7 @@ export async function openApprovalRequest(
     policyId: input.route.policyId,
     policyVersionNo: input.route.versionNo,
     submittedByUserId: input.submittedByUserId,
+    awardedByUserId: input.awardedByUserId ?? null,
   });
   const statuses = initialStepStatuses(input.route.steps.length);
   const steps = input.route.steps.map((s, i) => ({
@@ -104,7 +107,7 @@ export async function openApprovalRequest(
 }
 
 /**
- * AP-T05, inside a withdrawal (PR-T08): the pending request and its open steps are cancelled.
+ * AP-T05, inside a withdrawal (PR-T08, PO-T08): the pending request and its open steps are cancelled.
  * The caller has locked the document first (ADR 0008 C8).
  */
 export async function cancelApprovalRequest(tx: Tx, request: RequestContext, approvalRequestId: string, reason: string): Promise<void> {

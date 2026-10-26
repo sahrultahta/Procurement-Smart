@@ -10,6 +10,8 @@ import {
   submitRequisition,
   updateRequisitionDraft,
 } from '@/modules/requisitions';
+import { createPurchaseOrder } from '@/modules/purchasing';
+import { createSupplier, reviewSupplier } from '@/modules/suppliers';
 import { decideApproval } from '@/server/approvals';
 import { fixedClock, type Clock } from '@/shared/clock';
 import { runCommand, runQuery, type Operation } from '@/shared/application/runner';
@@ -454,8 +456,33 @@ describe('P5b-AC8: withdraw, cancel after approval, close (PR-T08 to T10)', () =
   it('ALREADY_ORDERED once any line is on a purchase order', async () => {
     const pr = await submitted(u.rina);
     data(await decide(u.bayu, pr.approvalRequestId, 1, 'approve'));
-    // Purchase orders arrive in Phase 7; the ordered quantity is set directly here.
-    await t.pool.query('UPDATE requisition_lines SET ordered_qty = 1 WHERE requisition_id = $1', [pr.requisitionId]);
+    // A purchase order (Phase 7) for one unit of the first line.
+    const supplier = data(
+      await run(u.dewi, createSupplier, {
+        legalName: 'Ordered From Ltd',
+        taxId: 'EX-5000-0001',
+        email: null,
+        phone: null,
+        addressLine1: null,
+        addressLine2: null,
+        city: null,
+        region: null,
+        postalCode: null,
+        countryCode: 'US',
+      }),
+    );
+    data(await run(u.sari, reviewSupplier, { supplierId: supplier.supplierId, expectedVersion: 1, decision: 'approve', note: null }));
+    const line = (await t.pool.query('SELECT id FROM requisition_lines WHERE requisition_id = $1 ORDER BY line_no LIMIT 1', [pr.requisitionId])).rows[0].id;
+    data(
+      await run(u.dewi, createPurchaseOrder, {
+        requisitionId: pr.requisitionId,
+        supplierId: supplier.supplierId,
+        paymentTerms: null,
+        deliveryAddress: null,
+        expectedDeliveryDate: null,
+        lines: [{ requisitionLineId: line, quantity: '1', unitPrice: '1', taxRatePct: '0' }],
+      }),
+    );
     const detail = await get(u.rina, pr.requisitionId);
     expect(detail.callerActions).toEqual([]);
     expect(rule(await run(u.rina, cancelRequisition, { requisitionId: pr.requisitionId, expectedVersion: detail.version, reason: 'x' }))).toBe('ALREADY_ORDERED');

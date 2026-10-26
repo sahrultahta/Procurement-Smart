@@ -68,7 +68,7 @@ describe('P5a-AC1: organization settings', () => {
   });
 
   it('updates with a version check, validates time zone and currency, and audits the change', async () => {
-    const input = { orgName: 'Example Holdings', timezone: 'Asia/Jakarta', currencyCode: 'IDR', currencyScale: 0, rfqRequiredAbove: null, minQuotes: 3, expectedVersion: 1 };
+    const input = { orgName: 'Example Holdings', timezone: 'Asia/Jakarta', currencyCode: 'IDR', currencyScale: 0, rfqRequiredAbove: null, minQuotes: 3, poApprovalThreshold: null, poPriceTolerancePct: '0', overReceiptTolerancePct: '0', expectedVersion: 1 };
     for (const bad of [
       { ...input, timezone: 'Mars/Olympus' },
       { ...input, currencyCode: 'XYZ' },
@@ -96,7 +96,7 @@ describe('P5a-AC1: organization settings', () => {
     data(await run(rina, createRequisition, { title: 'First', justification: null, neededBy: '2030-01-01', lines: [{ description: 'Pens', quantity: '1', uom: 'box', estimatedUnitPrice: '5' }] }));
     const settings = data(await run(ada, getSettings, {}));
     expect(settings.currencyLocked).toBe(true);
-    const base = { orgName: 'Example Holdings', timezone: 'UTC', currencyCode: 'USD', currencyScale: 2, rfqRequiredAbove: null, minQuotes: 3, expectedVersion: settings.version };
+    const base = { orgName: 'Example Holdings', timezone: 'UTC', currencyCode: 'USD', currencyScale: 2, rfqRequiredAbove: null, minQuotes: 3, poApprovalThreshold: null, poPriceTolerancePct: '0', overReceiptTolerancePct: '0', expectedVersion: settings.version };
     expect(await run(ada, updateOrganizationSettings, { ...base, currencyCode: 'EUR' })).toMatchObject({
       ok: false,
       error: { code: 'BUSINESS_RULE', rule: 'CURRENCY_LOCKED' },
@@ -132,6 +132,9 @@ describe('P6b-AC2: the award rule in the settings', () => {
       currencyScale: settings.currencyScale,
       rfqRequiredAbove: null as string | null,
       minQuotes: 3,
+      poApprovalThreshold: null,
+      poPriceTolerancePct: '0',
+      overReceiptTolerancePct: '0',
       expectedVersion: settings.version,
     };
     for (const bad of [
@@ -174,6 +177,81 @@ describe('P6b-AC2: the award rule in the settings', () => {
   });
 });
 
+describe('P7-AC2: the purchase-order rules in the settings', () => {
+  const rule = (result: Result<unknown>) => (result.ok ? 'ok' : (result.error.rule ?? result.error.code));
+
+  it('validates the PO approval threshold and both tolerances, admins only, audited; unchanged values write nothing', async () => {
+    const settings = data(await run(ada, getSettings, {}));
+    // Migration 0016: no threshold (every purchase order needs approval), tolerances 0.
+    expect(settings).toMatchObject({ poApprovalThreshold: null, poPriceTolerancePct: '0', overReceiptTolerancePct: '0' });
+    const base = {
+      orgName: settings.orgName,
+      timezone: settings.timezone,
+      currencyCode: settings.currencyCode,
+      currencyScale: settings.currencyScale,
+      rfqRequiredAbove: settings.rfqRequiredAbove,
+      minQuotes: settings.minQuotes,
+      poApprovalThreshold: null as string | null,
+      poPriceTolerancePct: '0',
+      overReceiptTolerancePct: '0',
+      expectedVersion: settings.version,
+    };
+    for (const bad of [
+      { poApprovalThreshold: 1000 }, // a JSON number, not a decimal string (ADR 0007)
+      { poApprovalThreshold: '-1' },
+      { poApprovalThreshold: '1e3' },
+      { poApprovalThreshold: '1.00001' },
+      { poApprovalThreshold: '' },
+      { poPriceTolerancePct: '100.0001' },
+      { poPriceTolerancePct: '-1' },
+      { poPriceTolerancePct: 5 },
+      { poPriceTolerancePct: null },
+      { poPriceTolerancePct: '5.12345' },
+      { overReceiptTolerancePct: '101' },
+      { overReceiptTolerancePct: '' },
+      { overReceiptTolerancePct: null },
+    ]) {
+      expect({ bad, result: rule(await run(ada, updateOrganizationSettings, { ...base, ...bad })) }).toEqual({ bad, result: 'VALIDATION_FAILED' });
+    }
+    for (const omitted of ['poApprovalThreshold', 'poPriceTolerancePct', 'overReceiptTolerancePct'] as const) {
+      const without: Record<string, unknown> = { ...base };
+      delete without[omitted];
+      expect({ omitted, result: rule(await run(ada, updateOrganizationSettings, without)) }).toEqual({ omitted, result: 'VALIDATION_FAILED' });
+    }
+    for (const as of [rina, lena]) expect(rule(await run(as, updateOrganizationSettings, { ...base, poApprovalThreshold: '1000' }))).toBe('FORBIDDEN');
+
+    const v = base.expectedVersion;
+    const changed = { ...base, poApprovalThreshold: '1000.00', poPriceTolerancePct: '5.5', overReceiptTolerancePct: '2.25' };
+    expect(data(await run(ada, updateOrganizationSettings, changed))).toEqual({ version: v + 1 });
+    expect(data(await run(ada, getSettings, {}))).toMatchObject({ poApprovalThreshold: '1000', poPriceTolerancePct: '5.5', overReceiptTolerancePct: '2.25', version: v + 1 });
+    expect((await auditOf('1')).at(-1)).toMatchObject({
+      action: 'settings.updated',
+      actor: ada,
+      changes: { poApprovalThreshold: [null, '1000'], poPriceTolerancePct: ['0', '5.5'], overReceiptTolerancePct: ['0', '2.25'] },
+    });
+    expect(Object.keys((await auditOf('1')).at(-1).changes).sort()).toEqual(['overReceiptTolerancePct', 'poApprovalThreshold', 'poPriceTolerancePct']);
+    const events = (await auditOf('1')).length;
+    expect(
+      data(await run(ada, updateOrganizationSettings, { ...changed, poApprovalThreshold: '1000.0000', poPriceTolerancePct: '5.50', overReceiptTolerancePct: '2.2500', expectedVersion: v + 1 })),
+    ).toEqual({ version: v + 1 });
+    expect((await auditOf('1')).length).toBe(events);
+    // 0 and 100 are allowed; back to "every purchase order needs approval".
+    expect(data(await run(ada, updateOrganizationSettings, { ...base, poPriceTolerancePct: '100', overReceiptTolerancePct: '0', expectedVersion: v + 1 }))).toEqual({ version: v + 2 });
+    expect(data(await run(ada, getSettings, {}))).toMatchObject({ poApprovalThreshold: null, poPriceTolerancePct: '100', overReceiptTolerancePct: '0' });
+    data(await run(ada, updateOrganizationSettings, { ...base, expectedVersion: v + 2 }));
+
+    for (const statement of [
+      'UPDATE org_settings SET po_approval_threshold = -1',
+      'UPDATE org_settings SET po_price_tolerance_pct = 100.0001',
+      'UPDATE org_settings SET po_price_tolerance_pct = -0.0001',
+      'UPDATE org_settings SET over_receipt_tolerance_pct = 101',
+    ]) {
+      expect(await sqlStateOf(() => t.appPool.query(statement))).toBe('23514');
+    }
+    expect(await sqlStateOf(() => t.appPool.query('UPDATE org_settings SET po_price_tolerance_pct = NULL'))).toBe('23502');
+  });
+});
+
 describe('P5a-AC2: publishing approval policies', () => {
   it('rejects invalid policies with field paths, and unknown or inactive departments', async () => {
     const publish = (rules: unknown) => run(ada, publishApprovalPolicy, { documentType: 'requisition', name: 'Bad', rules });
@@ -194,7 +272,7 @@ describe('P5a-AC2: publishing approval policies', () => {
       ok: false,
       error: { rule: 'UNKNOWN_DEPARTMENT' },
     });
-    expect(await run(ada, publishApprovalPolicy, { documentType: 'purchase_order', name: 'PO', rules: standardRules })).toMatchObject({
+    expect(await run(ada, publishApprovalPolicy, { documentType: 'invoice', name: 'Unknown', rules: standardRules })).toMatchObject({
       ok: false,
       error: { code: 'VALIDATION_FAILED' },
     });

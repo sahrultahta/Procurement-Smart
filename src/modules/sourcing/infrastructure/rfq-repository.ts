@@ -153,3 +153,12 @@ export async function searchRfqs(
     .limit(search.limit);
   return rows.map((r) => ({ ...r.rfq, lineCount: r.lineCount, supplierCount: r.supplierCount }));
 }
+
+/** Awarded RFQs of a requisition, newest first (purchase orders are created from their awards). */
+export async function findAwardedRfqs(db: Queryable, requisitionId: string): Promise<RfqRow[]> {
+  return db
+    .select()
+    .from(rfqs)
+    .where(and(eq(rfqs.requisitionId, requisitionId), eq(rfqs.status, 'awarded')))
+    .orderBy(desc(rfqs.number));
+}

@@ -7,6 +7,7 @@ import { moneyInput } from '@/shared/decimal/decimal';
 import type { Database, Tx } from '@/shared/db/transaction';
 import { failBusinessRule } from '@/shared/result';
 import {
+  POLICY_DOCUMENT_TYPES,
   SCOPE_MODES,
   STEP_ROLES,
   describeStep,
@@ -43,8 +44,8 @@ export const publishApprovalPolicy = defineCommand({
   name: 'admin.approvalPolicy.publish',
   permission: 'admin.approvalPolicies',
   input: z.strictObject({
-    // Purchase-order policies arrive with purchase orders (Phase 7).
-    documentType: z.literal('requisition'),
+    // Requisitions (Phase 5a) and purchase orders (Phase 7) each have their own policy versions.
+    documentType: z.enum(POLICY_DOCUMENT_TYPES),
     name: z.string().trim().min(1, 'Name this policy version').max(120),
     rules: z
       .array(ruleInput)
@@ -78,6 +79,7 @@ export const publishApprovalPolicy = defineCommand({
       entityType: 'approval_policy',
       entityId: policyId,
       changes: {
+        documentType: [current?.documentType ?? null, input.documentType],
         versionNo: [current?.versionNo ?? null, versionNo],
         name: [current?.name ?? null, input.name],
         rules: [current ? summarize(current.rules, codeOf) : null, summarize(rules, codeOf)],
@@ -113,7 +115,7 @@ export const APPROVAL_POLICY_KEYS = ['id', 'versionNo', 'name', 'createdBy', 'cr
 export const getActiveApprovalPolicy = defineQuery({
   name: 'admin.approvalPolicy.getActive',
   permission: 'admin.approvalPolicies',
-  input: z.strictObject({ documentType: z.literal('requisition') }),
+  input: z.strictObject({ documentType: z.enum(POLICY_DOCUMENT_TYPES) }),
   handler: async ({ tx }, input): Promise<ApprovalPolicyDto | null> => {
     const policy = await findActivePolicy(tx, input.documentType);
     if (!policy) return null;
@@ -144,7 +146,7 @@ export type ApprovalPolicyVersionDto = { id: string; versionNo: number; name: st
 export const listApprovalPolicyVersions = defineQuery({
   name: 'admin.approvalPolicy.list',
   permission: 'admin.approvalPolicies',
-  input: z.strictObject({ documentType: z.literal('requisition') }),
+  input: z.strictObject({ documentType: z.enum(POLICY_DOCUMENT_TYPES) }),
   handler: async ({ tx }, input): Promise<ApprovalPolicyVersionDto[]> => {
     const versions = await listPolicyVersions(tx, input.documentType);
     const names = await findUserDisplayNames(tx, versions.map((v) => v.createdByUserId));

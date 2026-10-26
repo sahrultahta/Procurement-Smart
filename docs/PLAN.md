@@ -1,6 +1,6 @@
 # ProcureFlow implementation plan
 
-- Status: **Phase 0 approved 2026-10-18. Phase 1 committed 2026-10-19 after maintainer review ([report](reports/phase-1.md)). Phase 2 committed 2026-10-21 after maintainer review ([report](reports/phase-2.md)). Phase 3 split into 3a (sign-in and identity) and 3b (administration) on 2026-10-21. Phase 3a committed 2026-10-21 after maintainer review ([report](reports/phase-3a.md)). Phase 3b committed 2026-10-22 after maintainer review ([report](reports/phase-3b.md)). Phase 4 committed 2026-10-22 after maintainer review ([report](reports/phase-4.md)). Phase 5 split into 5a and 5b on 2026-10-23. Phase 5a committed 2026-10-23 after maintainer review ([report](reports/phase-5a.md)). Phase 5b committed 2026-10-25 after maintainer review ([report](reports/phase-5b.md)). Phase 6 split into 6a and 6b on 2026-10-25. Phase 6a committed 2026-10-25 after maintainer review ([report](reports/phase-6a.md)). Form-state fix committed 2026-10-25 after maintainer review ([report](reports/fix-form-state.md)). Phase 6b committed 2026-10-26 after maintainer review ([report](reports/phase-6b.md)).**
+- Status: **Phase 0 approved 2026-10-18. Phase 1 committed 2026-10-19 after maintainer review ([report](reports/phase-1.md)). Phase 2 committed 2026-10-21 after maintainer review ([report](reports/phase-2.md)). Phase 3 split into 3a (sign-in and identity) and 3b (administration) on 2026-10-21. Phase 3a committed 2026-10-21 after maintainer review ([report](reports/phase-3a.md)). Phase 3b committed 2026-10-22 after maintainer review ([report](reports/phase-3b.md)). Phase 4 committed 2026-10-22 after maintainer review ([report](reports/phase-4.md)). Phase 5 split into 5a and 5b on 2026-10-23. Phase 5a committed 2026-10-23 after maintainer review ([report](reports/phase-5a.md)). Phase 5b committed 2026-10-25 after maintainer review ([report](reports/phase-5b.md)). Phase 6 split into 6a and 6b on 2026-10-25. Phase 6a committed 2026-10-25 after maintainer review ([report](reports/phase-6a.md)). Form-state fix committed 2026-10-25 after maintainer review ([report](reports/fix-form-state.md)). Phase 6b committed 2026-10-26 after maintainer review ([report](reports/phase-6b.md)). Phase 7 committed 2026-10-26 at the maintainer's request ([report](reports/phase-7.md)).**
 - Plan date: 2026-10-18
 - Inputs: [architecture](architecture.md), [ADRs](adr/README.md), [user stories](user-stories.md), [state machines](state-machines.md), [schema](schema.md), [API contracts](api-contracts.md), [threat model](threat-model.md)
 
@@ -196,6 +196,8 @@ Also adds the `org_settings` fields `rfq_required_above` and `min_quotes`, with 
 
 ## Phase 7: Purchase orders
 
+> **Implemented 2026-10-26** (maintainer: "lanjut mulai implementasi nya", without a separate plan stop). Criteria P7-AC1 to AC14 and the decisions taken are in [reports/phase-7.md](reports/phase-7.md). Changes to this plan: `over_receipt_tolerance_pct` moves here from Phase 8 (PO-T05 needs it); `po.receivable` moves to Phase 8; ADR 0006 gains `po.read.department` for approvers.
+
 Also adds the `org_settings` fields `po_approval_threshold` and `po_price_tolerance_pct`, with their admin screen (moved from Phase 3).
 
 | ID | Acceptance criterion | Verified by |
@@ -214,7 +216,7 @@ Also adds the `org_settings` fields `po_approval_threshold` and `po_price_tolera
 
 ## Phase 8: Goods receipts
 
-Also adds the `org_settings` field `over_receipt_tolerance_pct`, with its admin screen (moved from Phase 3).
+The `org_settings` field `over_receipt_tolerance_pct` and its admin screen arrived in Phase 7 (issuing a PO fixes the receivable quantities with it). Phase 8 adds `po.receivable` and the receipt-driven PO statuses (PO-T06), which the Phase 7 trigger still refuses.
 
 | ID | Acceptance criterion | Verified by |
 | --- | --- | --- |

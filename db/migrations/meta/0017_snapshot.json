@@ -1,0 +1,4745 @@
+{
+  "id": "752ea9a3-1c96-489d-965d-23522733dd54",
+  "prevId": "ac665195-1851-449b-a726-f1c75bbf2f5c",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.document_sequences": {
+      "name": "document_sequences",
+      "schema": "",
+      "columns": {
+        "doc_type": {
+          "name": "doc_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "year": {
+          "name": "year",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_value": {
+          "name": "last_value",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "document_sequences_pkey": {
+          "name": "document_sequences_pkey",
+          "columns": [
+            "doc_type",
+            "year"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "document_sequences_doc_type_format": {
+          "name": "document_sequences_doc_type_format",
+          "value": "\"document_sequences\".\"doc_type\" ~ '^[A-Z]{2,4}$'"
+        },
+        "document_sequences_year_range": {
+          "name": "document_sequences_year_range",
+          "value": "\"document_sequences\".\"year\" = 0 OR \"document_sequences\".\"year\" BETWEEN 2000 AND 2999"
+        },
+        "document_sequences_last_value_non_negative": {
+          "name": "document_sequences_last_value_non_negative",
+          "value": "\"document_sequences\".\"last_value\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.idempotency_keys": {
+      "name": "idempotency_keys",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operation": {
+          "name": "operation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_hash": {
+          "name": "request_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "response": {
+          "name": "response",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "idempotency_keys_pkey": {
+          "name": "idempotency_keys_pkey",
+          "columns": [
+            "user_id",
+            "key"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "idempotency_keys_key_format": {
+          "name": "idempotency_keys_key_format",
+          "value": "\"idempotency_keys\".\"key\" ~ '^[A-Za-z0-9_-]{8,100}$'"
+        },
+        "idempotency_keys_request_hash_format": {
+          "name": "idempotency_keys_request_hash_format",
+          "value": "\"idempotency_keys\".\"request_hash\" ~ '^[0-9a-f]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.audit_events": {
+      "name": "audit_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "audit_events_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
+          }
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_roles": {
+          "name": "actor_roles",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "changes": {
+          "name": "changes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ip": {
+          "name": "ip",
+          "type": "inet",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "audit_events_entity_idx": {
+          "name": "audit_events_entity_idx",
+          "columns": [
+            {
+              "expression": "entity_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "audit_events_actor_idx": {
+          "name": "audit_events_actor_idx",
+          "columns": [
+            {
+              "expression": "actor_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "audit_events_occurred_at_idx": {
+          "name": "audit_events_occurred_at_idx",
+          "columns": [
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "audit_events_action_idx": {
+          "name": "audit_events_action_idx",
+          "columns": [
+            {
+              "expression": "action",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "audit_events_action_format": {
+          "name": "audit_events_action_format",
+          "value": "\"audit_events\".\"action\" ~ '^[a-z][a-zA-Z0-9]*(\\.[a-z][a-zA-Z0-9]*)+$'"
+        },
+        "audit_events_entity_type_format": {
+          "name": "audit_events_entity_type_format",
+          "value": "\"audit_events\".\"entity_type\" ~ '^[a-z][a-z_]{0,63}$'"
+        },
+        "audit_events_entity_id_length": {
+          "name": "audit_events_entity_id_length",
+          "value": "char_length(\"audit_events\".\"entity_id\") BETWEEN 1 AND 128"
+        },
+        "audit_events_actor_user_id_length": {
+          "name": "audit_events_actor_user_id_length",
+          "value": "\"audit_events\".\"actor_user_id\" IS NULL OR char_length(\"audit_events\".\"actor_user_id\") <= 128"
+        },
+        "audit_events_reason_length": {
+          "name": "audit_events_reason_length",
+          "value": "\"audit_events\".\"reason\" IS NULL OR char_length(\"audit_events\".\"reason\") <= 2000"
+        },
+        "audit_events_user_agent_length": {
+          "name": "audit_events_user_agent_length",
+          "value": "\"audit_events\".\"user_agent\" IS NULL OR char_length(\"audit_events\".\"user_agent\") <= 512"
+        },
+        "audit_events_changes_is_object": {
+          "name": "audit_events_changes_is_object",
+          "value": "jsonb_typeof(\"audit_events\".\"changes\") = 'object'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.accounts": {
+      "name": "accounts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_token": {
+          "name": "id_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "access_token_expires_at": {
+          "name": "access_token_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token_expires_at": {
+          "name": "refresh_token_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "accounts_user_id_idx": {
+          "name": "accounts_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "accounts_user_id_users_id_fk": {
+          "name": "accounts_user_id_users_id_fk",
+          "tableFrom": "accounts",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.rate_limits": {
+      "name": "rate_limits",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_request": {
+          "name": "last_request",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "rate_limits_key_unique": {
+          "name": "rate_limits_key_unique",
+          "columns": [
+            "key"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.sessions": {
+      "name": "sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "sessions_user_id_idx": {
+          "name": "sessions_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "sessions_user_id_users_id_fk": {
+          "name": "sessions_user_id_users_id_fk",
+          "tableFrom": "sessions",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "sessions_token_unique": {
+          "name": "sessions_token_unique",
+          "columns": [
+            "token"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email_verified": {
+          "name": "email_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "image": {
+          "name": "image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "columns": [
+            "email"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "users_email_lowercase": {
+          "name": "users_email_lowercase",
+          "value": "\"users\".\"email\" = lower(\"users\".\"email\")"
+        },
+        "users_name_length": {
+          "name": "users_name_length",
+          "value": "char_length(\"users\".\"name\") BETWEEN 1 AND 120"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.verifications": {
+      "name": "verifications",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "pg_catalog.gen_random_uuid()"
+        },
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "verifications_identifier_idx": {
+          "name": "verifications_identifier_idx",
+          "columns": [
+            {
+              "expression": "identifier",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.departments": {
+      "name": "departments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "departments_code_unique": {
+          "name": "departments_code_unique",
+          "columns": [
+            "code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "departments_code_format": {
+          "name": "departments_code_format",
+          "value": "\"departments\".\"code\" ~ '^[A-Z0-9-]{2,16}$'"
+        },
+        "departments_name_length": {
+          "name": "departments_name_length",
+          "value": "char_length(\"departments\".\"name\") BETWEEN 1 AND 120"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.role_assignments": {
+      "name": "role_assignments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "department_id": {
+          "name": "department_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "granted_by": {
+          "name": "granted_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "granted_at": {
+          "name": "granted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "revoked_by": {
+          "name": "revoked_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoke_reason": {
+          "name": "revoke_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "role_assignments_active_unique": {
+          "name": "role_assignments_active_unique",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "coalesce(\"department_id\", '00000000-0000-0000-0000-000000000000'::uuid)",
+              "isExpression": true,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"role_assignments\".\"revoked_at\" IS NULL",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "role_assignments_user_id_users_id_fk": {
+          "name": "role_assignments_user_id_users_id_fk",
+          "tableFrom": "role_assignments",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "role_assignments_department_id_departments_id_fk": {
+          "name": "role_assignments_department_id_departments_id_fk",
+          "tableFrom": "role_assignments",
+          "columnsFrom": [
+            "department_id"
+          ],
+          "tableTo": "departments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "role_assignments_role": {
+          "name": "role_assignments_role",
+          "value": "\"role_assignments\".\"role\" IN ('admin', 'requester', 'approver', 'procurement', 'receiver', 'finance', 'auditor')"
+        },
+        "role_assignments_scope": {
+          "name": "role_assignments_scope",
+          "value": "\"role_assignments\".\"department_id\" IS NULL OR \"role_assignments\".\"role\" IN ('requester', 'approver')"
+        },
+        "role_assignments_not_self_granted": {
+          "name": "role_assignments_not_self_granted",
+          "value": "\"role_assignments\".\"granted_by\" <> \"role_assignments\".\"user_id\"::text"
+        },
+        "role_assignments_not_self_revoked": {
+          "name": "role_assignments_not_self_revoked",
+          "value": "\"role_assignments\".\"revoked_by\" IS NULL OR \"role_assignments\".\"revoked_by\" <> \"role_assignments\".\"user_id\"::text"
+        },
+        "role_assignments_revocation_consistent": {
+          "name": "role_assignments_revocation_consistent",
+          "value": "(\"role_assignments\".\"revoked_at\" IS NULL) = (\"role_assignments\".\"revoked_by\" IS NULL)"
+        },
+        "role_assignments_revoke_reason_length": {
+          "name": "role_assignments_revoke_reason_length",
+          "value": "\"role_assignments\".\"revoke_reason\" IS NULL OR char_length(\"role_assignments\".\"revoke_reason\") <= 500"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.user_profiles": {
+      "name": "user_profiles",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "department_id": {
+          "name": "department_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "deactivated_at": {
+          "name": "deactivated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deactivated_by_user_id": {
+          "name": "deactivated_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_profiles_user_id_users_id_fk": {
+          "name": "user_profiles_user_id_users_id_fk",
+          "tableFrom": "user_profiles",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "user_profiles_department_id_departments_id_fk": {
+          "name": "user_profiles_department_id_departments_id_fk",
+          "tableFrom": "user_profiles",
+          "columnsFrom": [
+            "department_id"
+          ],
+          "tableTo": "departments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "user_profiles_deactivated_by_user_id_users_id_fk": {
+          "name": "user_profiles_deactivated_by_user_id_users_id_fk",
+          "tableFrom": "user_profiles",
+          "columnsFrom": [
+            "deactivated_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "user_profiles_status": {
+          "name": "user_profiles_status",
+          "value": "\"user_profiles\".\"status\" IN ('active', 'deactivated')"
+        },
+        "user_profiles_deactivation_consistent": {
+          "name": "user_profiles_deactivation_consistent",
+          "value": "(\"user_profiles\".\"status\" = 'deactivated') = (\"user_profiles\".\"deactivated_at\" IS NOT NULL AND \"user_profiles\".\"deactivated_by_user_id\" IS NOT NULL)"
+        },
+        "user_profiles_not_self_deactivated": {
+          "name": "user_profiles_not_self_deactivated",
+          "value": "\"user_profiles\".\"deactivated_by_user_id\" IS NULL OR \"user_profiles\".\"deactivated_by_user_id\" <> \"user_profiles\".\"user_id\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.suppliers": {
+      "name": "suppliers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "legal_name": {
+          "name": "legal_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "normalized_name": {
+          "name": "normalized_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tax_id": {
+          "name": "tax_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tax_id_normalized": {
+          "name": "tax_id_normalized",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address_line1": {
+          "name": "address_line1",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address_line2": {
+          "name": "address_line2",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "region": {
+          "name": "region",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "postal_code": {
+          "name": "postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country_code": {
+          "name": "country_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending_review'"
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identity_changed_by_user_id": {
+          "name": "identity_changed_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_by_user_id": {
+          "name": "reviewed_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "review_note": {
+          "name": "review_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status_reason": {
+          "name": "status_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "suppliers_normalized_name_live_unique": {
+          "name": "suppliers_normalized_name_live_unique",
+          "columns": [
+            {
+              "expression": "normalized_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"suppliers\".\"status\" <> 'inactive'",
+          "concurrently": false
+        },
+        "suppliers_tax_id_normalized_unique": {
+          "name": "suppliers_tax_id_normalized_unique",
+          "columns": [
+            {
+              "expression": "tax_id_normalized",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"suppliers\".\"tax_id_normalized\" IS NOT NULL",
+          "concurrently": false
+        },
+        "suppliers_status_code_idx": {
+          "name": "suppliers_status_code_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "suppliers_created_by_user_id_users_id_fk": {
+          "name": "suppliers_created_by_user_id_users_id_fk",
+          "tableFrom": "suppliers",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "suppliers_identity_changed_by_user_id_users_id_fk": {
+          "name": "suppliers_identity_changed_by_user_id_users_id_fk",
+          "tableFrom": "suppliers",
+          "columnsFrom": [
+            "identity_changed_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "suppliers_reviewed_by_user_id_users_id_fk": {
+          "name": "suppliers_reviewed_by_user_id_users_id_fk",
+          "tableFrom": "suppliers",
+          "columnsFrom": [
+            "reviewed_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "suppliers_code_unique": {
+          "name": "suppliers_code_unique",
+          "columns": [
+            "code"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "suppliers_status": {
+          "name": "suppliers_status",
+          "value": "\"suppliers\".\"status\" IN ('pending_review', 'active', 'blocked', 'inactive')"
+        },
+        "suppliers_code_format": {
+          "name": "suppliers_code_format",
+          "value": "\"suppliers\".\"code\" ~ '^SUP-[0-9]{6}$'"
+        },
+        "suppliers_legal_name_length": {
+          "name": "suppliers_legal_name_length",
+          "value": "char_length(\"suppliers\".\"legal_name\") BETWEEN 1 AND 200"
+        },
+        "suppliers_normalized_name_length": {
+          "name": "suppliers_normalized_name_length",
+          "value": "char_length(\"suppliers\".\"normalized_name\") BETWEEN 1 AND 200"
+        },
+        "suppliers_tax_id_pair": {
+          "name": "suppliers_tax_id_pair",
+          "value": "(\"suppliers\".\"tax_id\" IS NULL) = (\"suppliers\".\"tax_id_normalized\" IS NULL) AND (\"suppliers\".\"tax_id\" IS NULL OR char_length(\"suppliers\".\"tax_id\") <= 40)"
+        },
+        "suppliers_tax_id_normalized_format": {
+          "name": "suppliers_tax_id_normalized_format",
+          "value": "\"suppliers\".\"tax_id_normalized\" IS NULL OR \"suppliers\".\"tax_id_normalized\" ~ '^[A-Z0-9]{5,30}$'"
+        },
+        "suppliers_text_lengths": {
+          "name": "suppliers_text_lengths",
+          "value": "coalesce(char_length(\"suppliers\".\"email\"), 0) <= 254 AND coalesce(char_length(\"suppliers\".\"phone\"), 0) <= 30\n        AND coalesce(char_length(\"suppliers\".\"address_line1\"), 0) <= 200 AND coalesce(char_length(\"suppliers\".\"address_line2\"), 0) <= 200\n        AND coalesce(char_length(\"suppliers\".\"city\"), 0) <= 100 AND coalesce(char_length(\"suppliers\".\"region\"), 0) <= 100\n        AND coalesce(char_length(\"suppliers\".\"postal_code\"), 0) <= 20 AND coalesce(char_length(\"suppliers\".\"review_note\"), 0) <= 2000\n        AND coalesce(char_length(\"suppliers\".\"status_reason\"), 0) <= 2000"
+        },
+        "suppliers_country_code_format": {
+          "name": "suppliers_country_code_format",
+          "value": "\"suppliers\".\"country_code\" ~ '^[A-Z]{2}$'"
+        },
+        "suppliers_review_consistent": {
+          "name": "suppliers_review_consistent",
+          "value": "(\"suppliers\".\"reviewed_by_user_id\" IS NULL) = (\"suppliers\".\"reviewed_at\" IS NULL)"
+        },
+        "suppliers_maker_checker": {
+          "name": "suppliers_maker_checker",
+          "value": "\"suppliers\".\"reviewed_by_user_id\" IS NULL OR (\"suppliers\".\"reviewed_by_user_id\" <> \"suppliers\".\"created_by_user_id\" AND \"suppliers\".\"reviewed_by_user_id\" IS DISTINCT FROM \"suppliers\".\"identity_changed_by_user_id\")"
+        },
+        "suppliers_active_is_reviewed": {
+          "name": "suppliers_active_is_reviewed",
+          "value": "\"suppliers\".\"status\" <> 'active' OR \"suppliers\".\"reviewed_by_user_id\" IS NOT NULL"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.approval_policies": {
+      "name": "approval_policies",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "document_type": {
+          "name": "document_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version_no": {
+          "name": "version_no",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "superseded_at": {
+          "name": "superseded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "approval_policies_one_active": {
+          "name": "approval_policies_one_active",
+          "columns": [
+            {
+              "expression": "document_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"approval_policies\".\"is_active\"",
+          "concurrently": false
+        },
+        "approval_policies_version_unique": {
+          "name": "approval_policies_version_unique",
+          "columns": [
+            {
+              "expression": "document_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "version_no",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "approval_policies_created_by_user_id_users_id_fk": {
+          "name": "approval_policies_created_by_user_id_users_id_fk",
+          "tableFrom": "approval_policies",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "approval_policies_document_type": {
+          "name": "approval_policies_document_type",
+          "value": "\"approval_policies\".\"document_type\" IN ('requisition', 'purchase_order')"
+        },
+        "approval_policies_name_length": {
+          "name": "approval_policies_name_length",
+          "value": "char_length(\"approval_policies\".\"name\") BETWEEN 1 AND 120"
+        },
+        "approval_policies_version_positive": {
+          "name": "approval_policies_version_positive",
+          "value": "\"approval_policies\".\"version_no\" >= 1"
+        },
+        "approval_policies_active_xor_superseded": {
+          "name": "approval_policies_active_xor_superseded",
+          "value": "\"approval_policies\".\"is_active\" = (\"approval_policies\".\"superseded_at\" IS NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.approval_policy_rules": {
+      "name": "approval_policy_rules",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "policy_id": {
+          "name": "policy_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rule_no": {
+          "name": "rule_no",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "department_id": {
+          "name": "department_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "min_amount": {
+          "name": "min_amount",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "max_amount": {
+          "name": "max_amount",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "approval_policy_rules_policy_rule_no": {
+          "name": "approval_policy_rules_policy_rule_no",
+          "columns": [
+            {
+              "expression": "policy_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "rule_no",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "approval_policy_rules_policy_idx": {
+          "name": "approval_policy_rules_policy_idx",
+          "columns": [
+            {
+              "expression": "policy_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "approval_policy_rules_policy_id_approval_policies_id_fk": {
+          "name": "approval_policy_rules_policy_id_approval_policies_id_fk",
+          "tableFrom": "approval_policy_rules",
+          "columnsFrom": [
+            "policy_id"
+          ],
+          "tableTo": "approval_policies",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "approval_policy_rules_department_id_departments_id_fk": {
+          "name": "approval_policy_rules_department_id_departments_id_fk",
+          "tableFrom": "approval_policy_rules",
+          "columnsFrom": [
+            "department_id"
+          ],
+          "tableTo": "departments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "approval_policy_rules_rule_no": {
+          "name": "approval_policy_rules_rule_no",
+          "value": "\"approval_policy_rules\".\"rule_no\" BETWEEN 1 AND 50"
+        },
+        "approval_policy_rules_min_non_negative": {
+          "name": "approval_policy_rules_min_non_negative",
+          "value": "\"approval_policy_rules\".\"min_amount\" >= 0"
+        },
+        "approval_policy_rules_band": {
+          "name": "approval_policy_rules_band",
+          "value": "\"approval_policy_rules\".\"max_amount\" IS NULL OR \"approval_policy_rules\".\"max_amount\" > \"approval_policy_rules\".\"min_amount\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.approval_policy_steps": {
+      "name": "approval_policy_steps",
+      "schema": "",
+      "columns": {
+        "rule_id": {
+          "name": "rule_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "step_no": {
+          "name": "step_no",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "required_role": {
+          "name": "required_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_mode": {
+          "name": "scope_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "approval_policy_steps_rule_id_approval_policy_rules_id_fk": {
+          "name": "approval_policy_steps_rule_id_approval_policy_rules_id_fk",
+          "tableFrom": "approval_policy_steps",
+          "columnsFrom": [
+            "rule_id"
+          ],
+          "tableTo": "approval_policy_rules",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {
+        "approval_policy_steps_pkey": {
+          "name": "approval_policy_steps_pkey",
+          "columns": [
+            "rule_id",
+            "step_no"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "approval_policy_steps_step_no": {
+          "name": "approval_policy_steps_step_no",
+          "value": "\"approval_policy_steps\".\"step_no\" BETWEEN 1 AND 5"
+        },
+        "approval_policy_steps_required_role": {
+          "name": "approval_policy_steps_required_role",
+          "value": "\"approval_policy_steps\".\"required_role\" IN ('approver', 'finance')"
+        },
+        "approval_policy_steps_scope_mode": {
+          "name": "approval_policy_steps_scope_mode",
+          "value": "\"approval_policy_steps\".\"scope_mode\" IN ('document_department', 'organization')"
+        },
+        "approval_policy_steps_finance_org_wide": {
+          "name": "approval_policy_steps_finance_org_wide",
+          "value": "\"approval_policy_steps\".\"required_role\" <> 'finance' OR \"approval_policy_steps\".\"scope_mode\" = 'organization'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.org_settings": {
+      "name": "org_settings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "smallint",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "org_name": {
+          "name": "org_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_code": {
+          "name": "currency_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_scale": {
+          "name": "currency_scale",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_locked_at": {
+          "name": "currency_locked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rfq_required_above": {
+          "name": "rfq_required_above",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "min_quotes": {
+          "name": "min_quotes",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 3
+        },
+        "po_approval_threshold": {
+          "name": "po_approval_threshold",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "po_price_tolerance_pct": {
+          "name": "po_price_tolerance_pct",
+          "type": "numeric(7, 4)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "over_receipt_tolerance_pct": {
+          "name": "over_receipt_tolerance_pct",
+          "type": "numeric(7, 4)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_by_user_id": {
+          "name": "updated_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "org_settings_updated_by_user_id_users_id_fk": {
+          "name": "org_settings_updated_by_user_id_users_id_fk",
+          "tableFrom": "org_settings",
+          "columnsFrom": [
+            "updated_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "org_settings_single_row": {
+          "name": "org_settings_single_row",
+          "value": "\"org_settings\".\"id\" = 1"
+        },
+        "org_settings_org_name_length": {
+          "name": "org_settings_org_name_length",
+          "value": "char_length(\"org_settings\".\"org_name\") BETWEEN 1 AND 120"
+        },
+        "org_settings_timezone_length": {
+          "name": "org_settings_timezone_length",
+          "value": "char_length(\"org_settings\".\"timezone\") BETWEEN 1 AND 64"
+        },
+        "org_settings_currency_code_format": {
+          "name": "org_settings_currency_code_format",
+          "value": "\"org_settings\".\"currency_code\" ~ '^[A-Z]{3}$'"
+        },
+        "org_settings_currency_scale_range": {
+          "name": "org_settings_currency_scale_range",
+          "value": "\"org_settings\".\"currency_scale\" BETWEEN 0 AND 4"
+        },
+        "org_settings_rfq_required_above_non_negative": {
+          "name": "org_settings_rfq_required_above_non_negative",
+          "value": "\"org_settings\".\"rfq_required_above\" IS NULL OR \"org_settings\".\"rfq_required_above\" >= 0"
+        },
+        "org_settings_min_quotes_range": {
+          "name": "org_settings_min_quotes_range",
+          "value": "\"org_settings\".\"min_quotes\" BETWEEN 1 AND 10"
+        },
+        "org_settings_po_approval_threshold_non_negative": {
+          "name": "org_settings_po_approval_threshold_non_negative",
+          "value": "\"org_settings\".\"po_approval_threshold\" IS NULL OR \"org_settings\".\"po_approval_threshold\" >= 0"
+        },
+        "org_settings_po_price_tolerance_range": {
+          "name": "org_settings_po_price_tolerance_range",
+          "value": "\"org_settings\".\"po_price_tolerance_pct\" BETWEEN 0 AND 100"
+        },
+        "org_settings_over_receipt_tolerance_range": {
+          "name": "org_settings_over_receipt_tolerance_range",
+          "value": "\"org_settings\".\"over_receipt_tolerance_pct\" BETWEEN 0 AND 100"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.approval_requests": {
+      "name": "approval_requests",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "document_type": {
+          "name": "document_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "round": {
+          "name": "round",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_number": {
+          "name": "document_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_title": {
+          "name": "document_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_snapshot": {
+          "name": "amount_snapshot",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_code": {
+          "name": "currency_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_scale": {
+          "name": "currency_scale",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "department_id": {
+          "name": "department_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_id": {
+          "name": "policy_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_version_no": {
+          "name": "policy_version_no",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "submitted_by_user_id": {
+          "name": "submitted_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "awarded_by_user_id": {
+          "name": "awarded_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "approval_requests_document_round": {
+          "name": "approval_requests_document_round",
+          "columns": [
+            {
+              "expression": "document_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "round",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "approval_requests_one_pending": {
+          "name": "approval_requests_one_pending",
+          "columns": [
+            {
+              "expression": "document_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"approval_requests\".\"status\" = 'pending'",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "approval_requests_department_id_departments_id_fk": {
+          "name": "approval_requests_department_id_departments_id_fk",
+          "tableFrom": "approval_requests",
+          "columnsFrom": [
+            "department_id"
+          ],
+          "tableTo": "departments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "approval_requests_policy_id_approval_policies_id_fk": {
+          "name": "approval_requests_policy_id_approval_policies_id_fk",
+          "tableFrom": "approval_requests",
+          "columnsFrom": [
+            "policy_id"
+          ],
+          "tableTo": "approval_policies",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "approval_requests_submitted_by_user_id_users_id_fk": {
+          "name": "approval_requests_submitted_by_user_id_users_id_fk",
+          "tableFrom": "approval_requests",
+          "columnsFrom": [
+            "submitted_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "approval_requests_awarded_by_user_id_users_id_fk": {
+          "name": "approval_requests_awarded_by_user_id_users_id_fk",
+          "tableFrom": "approval_requests",
+          "columnsFrom": [
+            "awarded_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "approval_requests_document_type": {
+          "name": "approval_requests_document_type",
+          "value": "\"approval_requests\".\"document_type\" IN ('requisition', 'purchase_order')"
+        },
+        "approval_requests_round_positive": {
+          "name": "approval_requests_round_positive",
+          "value": "\"approval_requests\".\"round\" >= 1"
+        },
+        "approval_requests_document_number_length": {
+          "name": "approval_requests_document_number_length",
+          "value": "char_length(\"approval_requests\".\"document_number\") BETWEEN 1 AND 32"
+        },
+        "approval_requests_document_title_length": {
+          "name": "approval_requests_document_title_length",
+          "value": "char_length(\"approval_requests\".\"document_title\") BETWEEN 1 AND 200"
+        },
+        "approval_requests_amount_positive": {
+          "name": "approval_requests_amount_positive",
+          "value": "\"approval_requests\".\"amount_snapshot\" > 0"
+        },
+        "approval_requests_currency_code_format": {
+          "name": "approval_requests_currency_code_format",
+          "value": "\"approval_requests\".\"currency_code\" ~ '^[A-Z]{3}$'"
+        },
+        "approval_requests_currency_scale_range": {
+          "name": "approval_requests_currency_scale_range",
+          "value": "\"approval_requests\".\"currency_scale\" BETWEEN 0 AND 4"
+        },
+        "approval_requests_policy_version_positive": {
+          "name": "approval_requests_policy_version_positive",
+          "value": "\"approval_requests\".\"policy_version_no\" >= 1"
+        },
+        "approval_requests_status": {
+          "name": "approval_requests_status",
+          "value": "\"approval_requests\".\"status\" IN ('pending', 'approved', 'rejected', 'returned', 'cancelled')"
+        },
+        "approval_requests_completed_consistent": {
+          "name": "approval_requests_completed_consistent",
+          "value": "(\"approval_requests\".\"status\" = 'pending') = (\"approval_requests\".\"completed_at\" IS NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.approval_steps": {
+      "name": "approval_steps",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "approval_request_id": {
+          "name": "approval_request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "step_no": {
+          "name": "step_no",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "required_role": {
+          "name": "required_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_department_id": {
+          "name": "scope_department_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'waiting'"
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decided_by_user_id": {
+          "name": "decided_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "comment": {
+          "name": "comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "approval_steps_request_step_no": {
+          "name": "approval_steps_request_step_no",
+          "columns": [
+            {
+              "expression": "approval_request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "step_no",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "approval_steps_distinct_deciders": {
+          "name": "approval_steps_distinct_deciders",
+          "columns": [
+            {
+              "expression": "approval_request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "decided_by_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "approval_steps_pending_idx": {
+          "name": "approval_steps_pending_idx",
+          "columns": [
+            {
+              "expression": "required_role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "scope_department_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"approval_steps\".\"status\" = 'pending'",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "approval_steps_approval_request_id_approval_requests_id_fk": {
+          "name": "approval_steps_approval_request_id_approval_requests_id_fk",
+          "tableFrom": "approval_steps",
+          "columnsFrom": [
+            "approval_request_id"
+          ],
+          "tableTo": "approval_requests",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "approval_steps_scope_department_id_departments_id_fk": {
+          "name": "approval_steps_scope_department_id_departments_id_fk",
+          "tableFrom": "approval_steps",
+          "columnsFrom": [
+            "scope_department_id"
+          ],
+          "tableTo": "departments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "approval_steps_decided_by_user_id_users_id_fk": {
+          "name": "approval_steps_decided_by_user_id_users_id_fk",
+          "tableFrom": "approval_steps",
+          "columnsFrom": [
+            "decided_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "approval_steps_step_no": {
+          "name": "approval_steps_step_no",
+          "value": "\"approval_steps\".\"step_no\" BETWEEN 1 AND 5"
+        },
+        "approval_steps_required_role": {
+          "name": "approval_steps_required_role",
+          "value": "\"approval_steps\".\"required_role\" IN ('approver', 'finance')"
+        },
+        "approval_steps_finance_org_wide": {
+          "name": "approval_steps_finance_org_wide",
+          "value": "\"approval_steps\".\"required_role\" <> 'finance' OR \"approval_steps\".\"scope_department_id\" IS NULL"
+        },
+        "approval_steps_status": {
+          "name": "approval_steps_status",
+          "value": "\"approval_steps\".\"status\" IN ('waiting', 'pending', 'approved', 'rejected', 'returned', 'cancelled')"
+        },
+        "approval_steps_activated_consistent": {
+          "name": "approval_steps_activated_consistent",
+          "value": "CASE \"approval_steps\".\"status\" WHEN 'waiting' THEN \"approval_steps\".\"activated_at\" IS NULL WHEN 'cancelled' THEN true ELSE \"approval_steps\".\"activated_at\" IS NOT NULL END"
+        },
+        "approval_steps_decided_consistent": {
+          "name": "approval_steps_decided_consistent",
+          "value": "(\"approval_steps\".\"status\" IN ('approved', 'rejected', 'returned')) = (\"approval_steps\".\"decided_by_user_id\" IS NOT NULL AND \"approval_steps\".\"decided_at\" IS NOT NULL)"
+        },
+        "approval_steps_decided_at_with_decider": {
+          "name": "approval_steps_decided_at_with_decider",
+          "value": "(\"approval_steps\".\"decided_by_user_id\" IS NULL) = (\"approval_steps\".\"decided_at\" IS NULL)"
+        },
+        "approval_steps_comment_length": {
+          "name": "approval_steps_comment_length",
+          "value": "\"approval_steps\".\"comment\" IS NULL OR char_length(\"approval_steps\".\"comment\") BETWEEN 1 AND 2000"
+        },
+        "approval_steps_comment_only_on_decision": {
+          "name": "approval_steps_comment_only_on_decision",
+          "value": "\"approval_steps\".\"comment\" IS NULL OR \"approval_steps\".\"decided_by_user_id\" IS NOT NULL"
+        },
+        "approval_steps_comment_required": {
+          "name": "approval_steps_comment_required",
+          "value": "\"approval_steps\".\"status\" NOT IN ('rejected', 'returned') OR \"approval_steps\".\"comment\" IS NOT NULL"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.purchase_requisitions": {
+      "name": "purchase_requisitions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "number": {
+          "name": "number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requester_user_id": {
+          "name": "requester_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "department_id": {
+          "name": "department_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "justification": {
+          "name": "justification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "needed_by": {
+          "name": "needed_by",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_code": {
+          "name": "currency_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_scale": {
+          "name": "currency_scale",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estimated_total": {
+          "name": "estimated_total",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "current_approval_request_id": {
+          "name": "current_approval_request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approved_at": {
+          "name": "approved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_by_user_id": {
+          "name": "cancelled_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancel_reason": {
+          "name": "cancel_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_by_user_id": {
+          "name": "closed_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "close_reason": {
+          "name": "close_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "purchase_requisitions_requester_status_idx": {
+          "name": "purchase_requisitions_requester_status_idx",
+          "columns": [
+            {
+              "expression": "requester_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "purchase_requisitions_department_status_idx": {
+          "name": "purchase_requisitions_department_status_idx",
+          "columns": [
+            {
+              "expression": "department_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "purchase_requisitions_status_submitted_idx": {
+          "name": "purchase_requisitions_status_submitted_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "submitted_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "purchase_requisitions_requester_user_id_users_id_fk": {
+          "name": "purchase_requisitions_requester_user_id_users_id_fk",
+          "tableFrom": "purchase_requisitions",
+          "columnsFrom": [
+            "requester_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_requisitions_department_id_departments_id_fk": {
+          "name": "purchase_requisitions_department_id_departments_id_fk",
+          "tableFrom": "purchase_requisitions",
+          "columnsFrom": [
+            "department_id"
+          ],
+          "tableTo": "departments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_requisitions_current_approval_request_id_approval_requests_id_fk": {
+          "name": "purchase_requisitions_current_approval_request_id_approval_requests_id_fk",
+          "tableFrom": "purchase_requisitions",
+          "columnsFrom": [
+            "current_approval_request_id"
+          ],
+          "tableTo": "approval_requests",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_requisitions_cancelled_by_user_id_users_id_fk": {
+          "name": "purchase_requisitions_cancelled_by_user_id_users_id_fk",
+          "tableFrom": "purchase_requisitions",
+          "columnsFrom": [
+            "cancelled_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_requisitions_closed_by_user_id_users_id_fk": {
+          "name": "purchase_requisitions_closed_by_user_id_users_id_fk",
+          "tableFrom": "purchase_requisitions",
+          "columnsFrom": [
+            "closed_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "purchase_requisitions_number_unique": {
+          "name": "purchase_requisitions_number_unique",
+          "columns": [
+            "number"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "purchase_requisitions_number_format": {
+          "name": "purchase_requisitions_number_format",
+          "value": "\"purchase_requisitions\".\"number\" ~ '^PR-[0-9]{4}-[0-9]{6}$'"
+        },
+        "purchase_requisitions_title_length": {
+          "name": "purchase_requisitions_title_length",
+          "value": "char_length(\"purchase_requisitions\".\"title\") BETWEEN 1 AND 200"
+        },
+        "purchase_requisitions_justification_length": {
+          "name": "purchase_requisitions_justification_length",
+          "value": "\"purchase_requisitions\".\"justification\" IS NULL OR char_length(\"purchase_requisitions\".\"justification\") <= 2000"
+        },
+        "purchase_requisitions_currency_code_format": {
+          "name": "purchase_requisitions_currency_code_format",
+          "value": "\"purchase_requisitions\".\"currency_code\" ~ '^[A-Z]{3}$'"
+        },
+        "purchase_requisitions_currency_scale_range": {
+          "name": "purchase_requisitions_currency_scale_range",
+          "value": "\"purchase_requisitions\".\"currency_scale\" BETWEEN 0 AND 4"
+        },
+        "purchase_requisitions_total_non_negative": {
+          "name": "purchase_requisitions_total_non_negative",
+          "value": "\"purchase_requisitions\".\"estimated_total\" >= 0"
+        },
+        "purchase_requisitions_status": {
+          "name": "purchase_requisitions_status",
+          "value": "\"purchase_requisitions\".\"status\" IN ('draft', 'pending_approval', 'returned', 'approved', 'rejected', 'cancelled', 'closed')"
+        },
+        "purchase_requisitions_cancel_consistent": {
+          "name": "purchase_requisitions_cancel_consistent",
+          "value": "(\"purchase_requisitions\".\"status\" = 'cancelled') = (\"purchase_requisitions\".\"cancelled_at\" IS NOT NULL AND \"purchase_requisitions\".\"cancelled_by_user_id\" IS NOT NULL)"
+        },
+        "purchase_requisitions_cancel_reason_length": {
+          "name": "purchase_requisitions_cancel_reason_length",
+          "value": "\"purchase_requisitions\".\"cancel_reason\" IS NULL OR char_length(\"purchase_requisitions\".\"cancel_reason\") <= 500"
+        },
+        "purchase_requisitions_submitted_consistent": {
+          "name": "purchase_requisitions_submitted_consistent",
+          "value": "(\"purchase_requisitions\".\"current_approval_request_id\" IS NULL) = (\"purchase_requisitions\".\"submitted_at\" IS NULL)"
+        },
+        "purchase_requisitions_submitted_states": {
+          "name": "purchase_requisitions_submitted_states",
+          "value": "\"purchase_requisitions\".\"status\" IN ('draft', 'cancelled') OR \"purchase_requisitions\".\"current_approval_request_id\" IS NOT NULL"
+        },
+        "purchase_requisitions_approved_states": {
+          "name": "purchase_requisitions_approved_states",
+          "value": "\"purchase_requisitions\".\"status\" NOT IN ('approved', 'closed') OR \"purchase_requisitions\".\"approved_at\" IS NOT NULL"
+        },
+        "purchase_requisitions_approved_at_states": {
+          "name": "purchase_requisitions_approved_at_states",
+          "value": "\"purchase_requisitions\".\"approved_at\" IS NULL OR \"purchase_requisitions\".\"status\" IN ('approved', 'closed', 'cancelled')"
+        },
+        "purchase_requisitions_close_consistent": {
+          "name": "purchase_requisitions_close_consistent",
+          "value": "(\"purchase_requisitions\".\"status\" = 'closed') = (\"purchase_requisitions\".\"closed_at\" IS NOT NULL AND \"purchase_requisitions\".\"closed_by_user_id\" IS NOT NULL AND \"purchase_requisitions\".\"close_reason\" IS NOT NULL)"
+        },
+        "purchase_requisitions_close_reason_length": {
+          "name": "purchase_requisitions_close_reason_length",
+          "value": "\"purchase_requisitions\".\"close_reason\" IS NULL OR char_length(\"purchase_requisitions\".\"close_reason\") BETWEEN 1 AND 500"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.requisition_lines": {
+      "name": "requisition_lines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "requisition_id": {
+          "name": "requisition_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "line_no": {
+          "name": "line_no",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "numeric(18, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "uom": {
+          "name": "uom",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estimated_unit_price": {
+          "name": "estimated_unit_price",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "line_total": {
+          "name": "line_total",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordered_qty": {
+          "name": "ordered_qty",
+          "type": "numeric(18, 3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        }
+      },
+      "indexes": {
+        "requisition_lines_requisition_line_no": {
+          "name": "requisition_lines_requisition_line_no",
+          "columns": [
+            {
+              "expression": "requisition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "line_no",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "requisition_lines_requisition_id_purchase_requisitions_id_fk": {
+          "name": "requisition_lines_requisition_id_purchase_requisitions_id_fk",
+          "tableFrom": "requisition_lines",
+          "columnsFrom": [
+            "requisition_id"
+          ],
+          "tableTo": "purchase_requisitions",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "requisition_lines_line_no": {
+          "name": "requisition_lines_line_no",
+          "value": "\"requisition_lines\".\"line_no\" BETWEEN 1 AND 200"
+        },
+        "requisition_lines_description_length": {
+          "name": "requisition_lines_description_length",
+          "value": "char_length(\"requisition_lines\".\"description\") BETWEEN 1 AND 500"
+        },
+        "requisition_lines_quantity_positive": {
+          "name": "requisition_lines_quantity_positive",
+          "value": "\"requisition_lines\".\"quantity\" > 0"
+        },
+        "requisition_lines_uom_length": {
+          "name": "requisition_lines_uom_length",
+          "value": "char_length(\"requisition_lines\".\"uom\") BETWEEN 1 AND 16"
+        },
+        "requisition_lines_price_non_negative": {
+          "name": "requisition_lines_price_non_negative",
+          "value": "\"requisition_lines\".\"estimated_unit_price\" >= 0"
+        },
+        "requisition_lines_total_non_negative": {
+          "name": "requisition_lines_total_non_negative",
+          "value": "\"requisition_lines\".\"line_total\" >= 0"
+        },
+        "requisition_lines_ordered_qty_range": {
+          "name": "requisition_lines_ordered_qty_range",
+          "value": "\"requisition_lines\".\"ordered_qty\" >= 0 AND \"requisition_lines\".\"ordered_qty\" <= \"requisition_lines\".\"quantity\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.quotation_lines": {
+      "name": "quotation_lines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "quotation_id": {
+          "name": "quotation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rfq_line_id": {
+          "name": "rfq_line_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "numeric(18, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_price": {
+          "name": "unit_price",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "line_total": {
+          "name": "line_total",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "quotation_lines_quotation_rfq_line": {
+          "name": "quotation_lines_quotation_rfq_line",
+          "columns": [
+            {
+              "expression": "quotation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "rfq_line_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "quotation_lines_rfq_line_idx": {
+          "name": "quotation_lines_rfq_line_idx",
+          "columns": [
+            {
+              "expression": "rfq_line_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "quotation_lines_quotation_id_quotations_id_fk": {
+          "name": "quotation_lines_quotation_id_quotations_id_fk",
+          "tableFrom": "quotation_lines",
+          "columnsFrom": [
+            "quotation_id"
+          ],
+          "tableTo": "quotations",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "quotation_lines_rfq_line_id_rfq_lines_id_fk": {
+          "name": "quotation_lines_rfq_line_id_rfq_lines_id_fk",
+          "tableFrom": "quotation_lines",
+          "columnsFrom": [
+            "rfq_line_id"
+          ],
+          "tableTo": "rfq_lines",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "quotation_lines_quantity_positive": {
+          "name": "quotation_lines_quantity_positive",
+          "value": "\"quotation_lines\".\"quantity\" > 0"
+        },
+        "quotation_lines_price_non_negative": {
+          "name": "quotation_lines_price_non_negative",
+          "value": "\"quotation_lines\".\"unit_price\" >= 0"
+        },
+        "quotation_lines_total_non_negative": {
+          "name": "quotation_lines_total_non_negative",
+          "value": "\"quotation_lines\".\"line_total\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.quotations": {
+      "name": "quotations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "rfq_id": {
+          "name": "rfq_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "supplier_id": {
+          "name": "supplier_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "supplier_reference": {
+          "name": "supplier_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "currency_code": {
+          "name": "currency_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "valid_until": {
+          "name": "valid_until",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lead_time_days": {
+          "name": "lead_time_days",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total": {
+          "name": "total",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recorded_by_user_id": {
+          "name": "recorded_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "submitted_by_user_id": {
+          "name": "submitted_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "withdrawn_at": {
+          "name": "withdrawn_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "withdrawn_by_user_id": {
+          "name": "withdrawn_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "withdraw_reason": {
+          "name": "withdraw_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "quotations_one_live_per_supplier": {
+          "name": "quotations_one_live_per_supplier",
+          "columns": [
+            {
+              "expression": "rfq_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "supplier_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"quotations\".\"status\" <> 'withdrawn'",
+          "concurrently": false
+        },
+        "quotations_rfq_idx": {
+          "name": "quotations_rfq_idx",
+          "columns": [
+            {
+              "expression": "rfq_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "quotations_supplier_idx": {
+          "name": "quotations_supplier_idx",
+          "columns": [
+            {
+              "expression": "supplier_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "quotations_rfq_id_rfqs_id_fk": {
+          "name": "quotations_rfq_id_rfqs_id_fk",
+          "tableFrom": "quotations",
+          "columnsFrom": [
+            "rfq_id"
+          ],
+          "tableTo": "rfqs",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "quotations_supplier_id_suppliers_id_fk": {
+          "name": "quotations_supplier_id_suppliers_id_fk",
+          "tableFrom": "quotations",
+          "columnsFrom": [
+            "supplier_id"
+          ],
+          "tableTo": "suppliers",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "quotations_recorded_by_user_id_users_id_fk": {
+          "name": "quotations_recorded_by_user_id_users_id_fk",
+          "tableFrom": "quotations",
+          "columnsFrom": [
+            "recorded_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "quotations_submitted_by_user_id_users_id_fk": {
+          "name": "quotations_submitted_by_user_id_users_id_fk",
+          "tableFrom": "quotations",
+          "columnsFrom": [
+            "submitted_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "quotations_withdrawn_by_user_id_users_id_fk": {
+          "name": "quotations_withdrawn_by_user_id_users_id_fk",
+          "tableFrom": "quotations",
+          "columnsFrom": [
+            "withdrawn_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "quotations_invited_supplier_fk": {
+          "name": "quotations_invited_supplier_fk",
+          "tableFrom": "quotations",
+          "columnsFrom": [
+            "rfq_id",
+            "supplier_id"
+          ],
+          "tableTo": "rfq_suppliers",
+          "columnsTo": [
+            "rfq_id",
+            "supplier_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "quotations_status": {
+          "name": "quotations_status",
+          "value": "\"quotations\".\"status\" IN ('draft', 'submitted', 'withdrawn', 'awarded', 'not_awarded')"
+        },
+        "quotations_supplier_reference_length": {
+          "name": "quotations_supplier_reference_length",
+          "value": "\"quotations\".\"supplier_reference\" IS NULL OR char_length(\"quotations\".\"supplier_reference\") BETWEEN 1 AND 100"
+        },
+        "quotations_currency_code_format": {
+          "name": "quotations_currency_code_format",
+          "value": "\"quotations\".\"currency_code\" ~ '^[A-Z]{3}$'"
+        },
+        "quotations_lead_time_range": {
+          "name": "quotations_lead_time_range",
+          "value": "\"quotations\".\"lead_time_days\" BETWEEN 0 AND 365"
+        },
+        "quotations_total_non_negative": {
+          "name": "quotations_total_non_negative",
+          "value": "\"quotations\".\"total\" >= 0"
+        },
+        "quotations_submitted_by_with_time": {
+          "name": "quotations_submitted_by_with_time",
+          "value": "(\"quotations\".\"submitted_at\" IS NULL) = (\"quotations\".\"submitted_by_user_id\" IS NULL)"
+        },
+        "quotations_submitted_states": {
+          "name": "quotations_submitted_states",
+          "value": "CASE \"quotations\".\"status\" WHEN 'draft' THEN \"quotations\".\"submitted_at\" IS NULL WHEN 'withdrawn' THEN true ELSE \"quotations\".\"submitted_at\" IS NOT NULL END"
+        },
+        "quotations_withdraw_consistent": {
+          "name": "quotations_withdraw_consistent",
+          "value": "(\"quotations\".\"status\" = 'withdrawn') = (\"quotations\".\"withdrawn_at\" IS NOT NULL AND \"quotations\".\"withdrawn_by_user_id\" IS NOT NULL AND \"quotations\".\"withdraw_reason\" IS NOT NULL)"
+        },
+        "quotations_withdraw_reason_length": {
+          "name": "quotations_withdraw_reason_length",
+          "value": "\"quotations\".\"withdraw_reason\" IS NULL OR char_length(\"quotations\".\"withdraw_reason\") BETWEEN 1 AND 500"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.rfq_lines": {
+      "name": "rfq_lines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "rfq_id": {
+          "name": "rfq_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "line_no": {
+          "name": "line_no",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requisition_line_id": {
+          "name": "requisition_line_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "numeric(18, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "uom": {
+          "name": "uom",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "rfq_lines_rfq_line_no": {
+          "name": "rfq_lines_rfq_line_no",
+          "columns": [
+            {
+              "expression": "rfq_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "line_no",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "rfq_lines_rfq_requisition_line": {
+          "name": "rfq_lines_rfq_requisition_line",
+          "columns": [
+            {
+              "expression": "rfq_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "requisition_line_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "rfq_lines_requisition_line_idx": {
+          "name": "rfq_lines_requisition_line_idx",
+          "columns": [
+            {
+              "expression": "requisition_line_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "rfq_lines_rfq_id_rfqs_id_fk": {
+          "name": "rfq_lines_rfq_id_rfqs_id_fk",
+          "tableFrom": "rfq_lines",
+          "columnsFrom": [
+            "rfq_id"
+          ],
+          "tableTo": "rfqs",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "rfq_lines_requisition_line_id_requisition_lines_id_fk": {
+          "name": "rfq_lines_requisition_line_id_requisition_lines_id_fk",
+          "tableFrom": "rfq_lines",
+          "columnsFrom": [
+            "requisition_line_id"
+          ],
+          "tableTo": "requisition_lines",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "rfq_lines_line_no": {
+          "name": "rfq_lines_line_no",
+          "value": "\"rfq_lines\".\"line_no\" BETWEEN 1 AND 200"
+        },
+        "rfq_lines_description_length": {
+          "name": "rfq_lines_description_length",
+          "value": "char_length(\"rfq_lines\".\"description\") BETWEEN 1 AND 500"
+        },
+        "rfq_lines_quantity_positive": {
+          "name": "rfq_lines_quantity_positive",
+          "value": "\"rfq_lines\".\"quantity\" > 0"
+        },
+        "rfq_lines_uom_length": {
+          "name": "rfq_lines_uom_length",
+          "value": "char_length(\"rfq_lines\".\"uom\") BETWEEN 1 AND 16"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.rfq_suppliers": {
+      "name": "rfq_suppliers",
+      "schema": "",
+      "columns": {
+        "rfq_id": {
+          "name": "rfq_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "supplier_id": {
+          "name": "supplier_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invited_by_user_id": {
+          "name": "invited_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invited_at": {
+          "name": "invited_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "rfq_suppliers_supplier_idx": {
+          "name": "rfq_suppliers_supplier_idx",
+          "columns": [
+            {
+              "expression": "supplier_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "rfq_suppliers_rfq_id_rfqs_id_fk": {
+          "name": "rfq_suppliers_rfq_id_rfqs_id_fk",
+          "tableFrom": "rfq_suppliers",
+          "columnsFrom": [
+            "rfq_id"
+          ],
+          "tableTo": "rfqs",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "rfq_suppliers_supplier_id_suppliers_id_fk": {
+          "name": "rfq_suppliers_supplier_id_suppliers_id_fk",
+          "tableFrom": "rfq_suppliers",
+          "columnsFrom": [
+            "supplier_id"
+          ],
+          "tableTo": "suppliers",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "rfq_suppliers_invited_by_user_id_users_id_fk": {
+          "name": "rfq_suppliers_invited_by_user_id_users_id_fk",
+          "tableFrom": "rfq_suppliers",
+          "columnsFrom": [
+            "invited_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {
+        "rfq_suppliers_pkey": {
+          "name": "rfq_suppliers_pkey",
+          "columns": [
+            "rfq_id",
+            "supplier_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.rfqs": {
+      "name": "rfqs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "number": {
+          "name": "number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requisition_id": {
+          "name": "requisition_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "response_due_at": {
+          "name": "response_due_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issued_at": {
+          "name": "issued_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "issued_by_user_id": {
+          "name": "issued_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_by_user_id": {
+          "name": "closed_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_by_user_id": {
+          "name": "cancelled_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancel_reason": {
+          "name": "cancel_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "awarded_quotation_id": {
+          "name": "awarded_quotation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "awarded_by_user_id": {
+          "name": "awarded_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "awarded_at": {
+          "name": "awarded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "award_justification": {
+          "name": "award_justification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "award_rfq_required_above": {
+          "name": "award_rfq_required_above",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "award_min_quotes": {
+          "name": "award_min_quotes",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "award_valid_quotes": {
+          "name": "award_valid_quotes",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "award_below_min_quotes": {
+          "name": "award_below_min_quotes",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "award_not_lowest": {
+          "name": "award_not_lowest",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "rfqs_requisition_idx": {
+          "name": "rfqs_requisition_idx",
+          "columns": [
+            {
+              "expression": "requisition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "rfqs_status_idx": {
+          "name": "rfqs_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "rfqs_requisition_id_purchase_requisitions_id_fk": {
+          "name": "rfqs_requisition_id_purchase_requisitions_id_fk",
+          "tableFrom": "rfqs",
+          "columnsFrom": [
+            "requisition_id"
+          ],
+          "tableTo": "purchase_requisitions",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "rfqs_created_by_user_id_users_id_fk": {
+          "name": "rfqs_created_by_user_id_users_id_fk",
+          "tableFrom": "rfqs",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "rfqs_issued_by_user_id_users_id_fk": {
+          "name": "rfqs_issued_by_user_id_users_id_fk",
+          "tableFrom": "rfqs",
+          "columnsFrom": [
+            "issued_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "rfqs_closed_by_user_id_users_id_fk": {
+          "name": "rfqs_closed_by_user_id_users_id_fk",
+          "tableFrom": "rfqs",
+          "columnsFrom": [
+            "closed_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "rfqs_cancelled_by_user_id_users_id_fk": {
+          "name": "rfqs_cancelled_by_user_id_users_id_fk",
+          "tableFrom": "rfqs",
+          "columnsFrom": [
+            "cancelled_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "rfqs_awarded_quotation_id_quotations_id_fk": {
+          "name": "rfqs_awarded_quotation_id_quotations_id_fk",
+          "tableFrom": "rfqs",
+          "columnsFrom": [
+            "awarded_quotation_id"
+          ],
+          "tableTo": "quotations",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "rfqs_awarded_by_user_id_users_id_fk": {
+          "name": "rfqs_awarded_by_user_id_users_id_fk",
+          "tableFrom": "rfqs",
+          "columnsFrom": [
+            "awarded_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "rfqs_number_unique": {
+          "name": "rfqs_number_unique",
+          "columns": [
+            "number"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "rfqs_number_format": {
+          "name": "rfqs_number_format",
+          "value": "\"rfqs\".\"number\" ~ '^RFQ-[0-9]{4}-[0-9]{6}$'"
+        },
+        "rfqs_title_length": {
+          "name": "rfqs_title_length",
+          "value": "char_length(\"rfqs\".\"title\") BETWEEN 1 AND 200"
+        },
+        "rfqs_status": {
+          "name": "rfqs_status",
+          "value": "\"rfqs\".\"status\" IN ('draft', 'issued', 'closed', 'awarded', 'cancelled')"
+        },
+        "rfqs_issued_by_with_time": {
+          "name": "rfqs_issued_by_with_time",
+          "value": "(\"rfqs\".\"issued_at\" IS NULL) = (\"rfqs\".\"issued_by_user_id\" IS NULL)"
+        },
+        "rfqs_issued_states": {
+          "name": "rfqs_issued_states",
+          "value": "CASE \"rfqs\".\"status\" WHEN 'draft' THEN \"rfqs\".\"issued_at\" IS NULL WHEN 'cancelled' THEN true ELSE \"rfqs\".\"issued_at\" IS NOT NULL END"
+        },
+        "rfqs_closed_by_with_time": {
+          "name": "rfqs_closed_by_with_time",
+          "value": "(\"rfqs\".\"closed_at\" IS NULL) = (\"rfqs\".\"closed_by_user_id\" IS NULL)"
+        },
+        "rfqs_closed_states": {
+          "name": "rfqs_closed_states",
+          "value": "CASE \"rfqs\".\"status\" WHEN 'closed' THEN \"rfqs\".\"closed_at\" IS NOT NULL WHEN 'awarded' THEN \"rfqs\".\"closed_at\" IS NOT NULL WHEN 'cancelled' THEN \"rfqs\".\"closed_at\" IS NULL OR \"rfqs\".\"issued_at\" IS NOT NULL ELSE \"rfqs\".\"closed_at\" IS NULL END"
+        },
+        "rfqs_cancel_consistent": {
+          "name": "rfqs_cancel_consistent",
+          "value": "(\"rfqs\".\"status\" = 'cancelled') = (\"rfqs\".\"cancelled_at\" IS NOT NULL AND \"rfqs\".\"cancelled_by_user_id\" IS NOT NULL AND \"rfqs\".\"cancel_reason\" IS NOT NULL)"
+        },
+        "rfqs_cancel_reason_length": {
+          "name": "rfqs_cancel_reason_length",
+          "value": "\"rfqs\".\"cancel_reason\" IS NULL OR char_length(\"rfqs\".\"cancel_reason\") BETWEEN 1 AND 500"
+        },
+        "rfqs_award_states": {
+          "name": "rfqs_award_states",
+          "value": "CASE WHEN \"rfqs\".\"status\" = 'awarded' THEN \"rfqs\".\"awarded_quotation_id\" IS NOT NULL AND \"rfqs\".\"awarded_by_user_id\" IS NOT NULL AND \"rfqs\".\"awarded_at\" IS NOT NULL AND \"rfqs\".\"award_min_quotes\" IS NOT NULL AND \"rfqs\".\"award_valid_quotes\" IS NOT NULL AND \"rfqs\".\"award_below_min_quotes\" IS NOT NULL AND \"rfqs\".\"award_not_lowest\" IS NOT NULL ELSE \"rfqs\".\"awarded_quotation_id\" IS NULL AND \"rfqs\".\"awarded_by_user_id\" IS NULL AND \"rfqs\".\"awarded_at\" IS NULL AND \"rfqs\".\"award_justification\" IS NULL AND \"rfqs\".\"award_rfq_required_above\" IS NULL AND \"rfqs\".\"award_min_quotes\" IS NULL AND \"rfqs\".\"award_valid_quotes\" IS NULL AND \"rfqs\".\"award_below_min_quotes\" IS NULL AND \"rfqs\".\"award_not_lowest\" IS NULL END"
+        },
+        "rfqs_award_justification_length": {
+          "name": "rfqs_award_justification_length",
+          "value": "\"rfqs\".\"award_justification\" IS NULL OR char_length(\"rfqs\".\"award_justification\") BETWEEN 1 AND 2000"
+        },
+        "rfqs_award_justified": {
+          "name": "rfqs_award_justified",
+          "value": "NOT (\"rfqs\".\"award_below_min_quotes\" OR \"rfqs\".\"award_not_lowest\") OR \"rfqs\".\"award_justification\" IS NOT NULL"
+        },
+        "rfqs_award_rule_range": {
+          "name": "rfqs_award_rule_range",
+          "value": "(\"rfqs\".\"award_min_quotes\" IS NULL OR \"rfqs\".\"award_min_quotes\" BETWEEN 1 AND 10) AND (\"rfqs\".\"award_valid_quotes\" IS NULL OR \"rfqs\".\"award_valid_quotes\" >= 1) AND (\"rfqs\".\"award_rfq_required_above\" IS NULL OR \"rfqs\".\"award_rfq_required_above\" >= 0)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.purchase_order_lines": {
+      "name": "purchase_order_lines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "purchase_order_id": {
+          "name": "purchase_order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "line_no": {
+          "name": "line_no",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requisition_line_id": {
+          "name": "requisition_line_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quotation_line_id": {
+          "name": "quotation_line_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "uom": {
+          "name": "uom",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "numeric(18, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_price": {
+          "name": "unit_price",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tax_rate_pct": {
+          "name": "tax_rate_pct",
+          "type": "numeric(7, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "line_subtotal": {
+          "name": "line_subtotal",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "line_tax": {
+          "name": "line_tax",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "line_total": {
+          "name": "line_total",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "received_qty": {
+          "name": "received_qty",
+          "type": "numeric(18, 3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "max_receivable_qty": {
+          "name": "max_receivable_qty",
+          "type": "numeric(18, 3)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "purchase_order_lines_po_line_no": {
+          "name": "purchase_order_lines_po_line_no",
+          "columns": [
+            {
+              "expression": "purchase_order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "line_no",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "purchase_order_lines_po_requisition_line": {
+          "name": "purchase_order_lines_po_requisition_line",
+          "columns": [
+            {
+              "expression": "purchase_order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "requisition_line_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "purchase_order_lines_requisition_line_idx": {
+          "name": "purchase_order_lines_requisition_line_idx",
+          "columns": [
+            {
+              "expression": "requisition_line_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "purchase_order_lines_quotation_line_idx": {
+          "name": "purchase_order_lines_quotation_line_idx",
+          "columns": [
+            {
+              "expression": "quotation_line_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "purchase_order_lines_purchase_order_id_purchase_orders_id_fk": {
+          "name": "purchase_order_lines_purchase_order_id_purchase_orders_id_fk",
+          "tableFrom": "purchase_order_lines",
+          "columnsFrom": [
+            "purchase_order_id"
+          ],
+          "tableTo": "purchase_orders",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_order_lines_requisition_line_id_requisition_lines_id_fk": {
+          "name": "purchase_order_lines_requisition_line_id_requisition_lines_id_fk",
+          "tableFrom": "purchase_order_lines",
+          "columnsFrom": [
+            "requisition_line_id"
+          ],
+          "tableTo": "requisition_lines",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_order_lines_quotation_line_id_quotation_lines_id_fk": {
+          "name": "purchase_order_lines_quotation_line_id_quotation_lines_id_fk",
+          "tableFrom": "purchase_order_lines",
+          "columnsFrom": [
+            "quotation_line_id"
+          ],
+          "tableTo": "quotation_lines",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "purchase_order_lines_line_no": {
+          "name": "purchase_order_lines_line_no",
+          "value": "\"purchase_order_lines\".\"line_no\" BETWEEN 1 AND 200"
+        },
+        "purchase_order_lines_description_length": {
+          "name": "purchase_order_lines_description_length",
+          "value": "char_length(\"purchase_order_lines\".\"description\") BETWEEN 1 AND 500"
+        },
+        "purchase_order_lines_uom_length": {
+          "name": "purchase_order_lines_uom_length",
+          "value": "char_length(\"purchase_order_lines\".\"uom\") BETWEEN 1 AND 16"
+        },
+        "purchase_order_lines_quantity_positive": {
+          "name": "purchase_order_lines_quantity_positive",
+          "value": "\"purchase_order_lines\".\"quantity\" > 0"
+        },
+        "purchase_order_lines_price_non_negative": {
+          "name": "purchase_order_lines_price_non_negative",
+          "value": "\"purchase_order_lines\".\"unit_price\" >= 0"
+        },
+        "purchase_order_lines_tax_rate_range": {
+          "name": "purchase_order_lines_tax_rate_range",
+          "value": "\"purchase_order_lines\".\"tax_rate_pct\" BETWEEN 0 AND 100"
+        },
+        "purchase_order_lines_amounts_non_negative": {
+          "name": "purchase_order_lines_amounts_non_negative",
+          "value": "\"purchase_order_lines\".\"line_subtotal\" >= 0 AND \"purchase_order_lines\".\"line_tax\" >= 0 AND \"purchase_order_lines\".\"line_total\" >= 0"
+        },
+        "purchase_order_lines_total_sum": {
+          "name": "purchase_order_lines_total_sum",
+          "value": "\"purchase_order_lines\".\"line_total\" = \"purchase_order_lines\".\"line_subtotal\" + \"purchase_order_lines\".\"line_tax\""
+        },
+        "purchase_order_lines_received_non_negative": {
+          "name": "purchase_order_lines_received_non_negative",
+          "value": "\"purchase_order_lines\".\"received_qty\" >= 0"
+        },
+        "purchase_order_lines_max_receivable": {
+          "name": "purchase_order_lines_max_receivable",
+          "value": "\"purchase_order_lines\".\"max_receivable_qty\" IS NULL OR \"purchase_order_lines\".\"max_receivable_qty\" >= \"purchase_order_lines\".\"quantity\""
+        },
+        "purchase_order_lines_received_within_max": {
+          "name": "purchase_order_lines_received_within_max",
+          "value": "\"purchase_order_lines\".\"received_qty\" = 0 OR (\"purchase_order_lines\".\"max_receivable_qty\" IS NOT NULL AND \"purchase_order_lines\".\"received_qty\" <= \"purchase_order_lines\".\"max_receivable_qty\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.purchase_orders": {
+      "name": "purchase_orders",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "number": {
+          "name": "number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requisition_id": {
+          "name": "requisition_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "department_id": {
+          "name": "department_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "supplier_id": {
+          "name": "supplier_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quotation_id": {
+          "name": "quotation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "currency_code": {
+          "name": "currency_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency_scale": {
+          "name": "currency_scale",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subtotal": {
+          "name": "subtotal",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tax_total": {
+          "name": "tax_total",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total": {
+          "name": "total",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payment_terms": {
+          "name": "payment_terms",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "delivery_address": {
+          "name": "delivery_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expected_delivery_date": {
+          "name": "expected_delivery_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_reasons": {
+          "name": "approval_reasons",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "approval_threshold": {
+          "name": "approval_threshold",
+          "type": "numeric(20, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_tolerance_pct": {
+          "name": "price_tolerance_pct",
+          "type": "numeric(7, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_approval_request_id": {
+          "name": "current_approval_request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "submitted_by_user_id": {
+          "name": "submitted_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approved_at": {
+          "name": "approved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "issued_at": {
+          "name": "issued_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "issued_by_user_id": {
+          "name": "issued_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "receipt_tolerance_pct": {
+          "name": "receipt_tolerance_pct",
+          "type": "numeric(7, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "closed_by_user_id": {
+          "name": "closed_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "close_reason": {
+          "name": "close_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_by_user_id": {
+          "name": "cancelled_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancel_reason": {
+          "name": "cancel_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "purchase_orders_requisition_idx": {
+          "name": "purchase_orders_requisition_idx",
+          "columns": [
+            {
+              "expression": "requisition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "purchase_orders_supplier_idx": {
+          "name": "purchase_orders_supplier_idx",
+          "columns": [
+            {
+              "expression": "supplier_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "purchase_orders_quotation_idx": {
+          "name": "purchase_orders_quotation_idx",
+          "columns": [
+            {
+              "expression": "quotation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "purchase_orders_department_status_idx": {
+          "name": "purchase_orders_department_status_idx",
+          "columns": [
+            {
+              "expression": "department_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "purchase_orders_status_idx": {
+          "name": "purchase_orders_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "purchase_orders_requisition_id_purchase_requisitions_id_fk": {
+          "name": "purchase_orders_requisition_id_purchase_requisitions_id_fk",
+          "tableFrom": "purchase_orders",
+          "columnsFrom": [
+            "requisition_id"
+          ],
+          "tableTo": "purchase_requisitions",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_orders_department_id_departments_id_fk": {
+          "name": "purchase_orders_department_id_departments_id_fk",
+          "tableFrom": "purchase_orders",
+          "columnsFrom": [
+            "department_id"
+          ],
+          "tableTo": "departments",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_orders_supplier_id_suppliers_id_fk": {
+          "name": "purchase_orders_supplier_id_suppliers_id_fk",
+          "tableFrom": "purchase_orders",
+          "columnsFrom": [
+            "supplier_id"
+          ],
+          "tableTo": "suppliers",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_orders_quotation_id_quotations_id_fk": {
+          "name": "purchase_orders_quotation_id_quotations_id_fk",
+          "tableFrom": "purchase_orders",
+          "columnsFrom": [
+            "quotation_id"
+          ],
+          "tableTo": "quotations",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_orders_current_approval_request_id_approval_requests_id_fk": {
+          "name": "purchase_orders_current_approval_request_id_approval_requests_id_fk",
+          "tableFrom": "purchase_orders",
+          "columnsFrom": [
+            "current_approval_request_id"
+          ],
+          "tableTo": "approval_requests",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_orders_created_by_user_id_users_id_fk": {
+          "name": "purchase_orders_created_by_user_id_users_id_fk",
+          "tableFrom": "purchase_orders",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_orders_submitted_by_user_id_users_id_fk": {
+          "name": "purchase_orders_submitted_by_user_id_users_id_fk",
+          "tableFrom": "purchase_orders",
+          "columnsFrom": [
+            "submitted_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_orders_issued_by_user_id_users_id_fk": {
+          "name": "purchase_orders_issued_by_user_id_users_id_fk",
+          "tableFrom": "purchase_orders",
+          "columnsFrom": [
+            "issued_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_orders_closed_by_user_id_users_id_fk": {
+          "name": "purchase_orders_closed_by_user_id_users_id_fk",
+          "tableFrom": "purchase_orders",
+          "columnsFrom": [
+            "closed_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_orders_cancelled_by_user_id_users_id_fk": {
+          "name": "purchase_orders_cancelled_by_user_id_users_id_fk",
+          "tableFrom": "purchase_orders",
+          "columnsFrom": [
+            "cancelled_by_user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "purchase_orders_number_unique": {
+          "name": "purchase_orders_number_unique",
+          "columns": [
+            "number"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "purchase_orders_number_format": {
+          "name": "purchase_orders_number_format",
+          "value": "\"purchase_orders\".\"number\" ~ '^PO-[0-9]{4}-[0-9]{6}$'"
+        },
+        "purchase_orders_status": {
+          "name": "purchase_orders_status",
+          "value": "\"purchase_orders\".\"status\" IN ('draft', 'pending_approval', 'approved', 'issued', 'partially_received', 'received', 'closed', 'rejected', 'cancelled')"
+        },
+        "purchase_orders_currency_code_format": {
+          "name": "purchase_orders_currency_code_format",
+          "value": "\"purchase_orders\".\"currency_code\" ~ '^[A-Z]{3}$'"
+        },
+        "purchase_orders_currency_scale_range": {
+          "name": "purchase_orders_currency_scale_range",
+          "value": "\"purchase_orders\".\"currency_scale\" BETWEEN 0 AND 4"
+        },
+        "purchase_orders_totals_non_negative": {
+          "name": "purchase_orders_totals_non_negative",
+          "value": "\"purchase_orders\".\"subtotal\" >= 0 AND \"purchase_orders\".\"tax_total\" >= 0 AND \"purchase_orders\".\"total\" >= 0"
+        },
+        "purchase_orders_total_sum": {
+          "name": "purchase_orders_total_sum",
+          "value": "\"purchase_orders\".\"total\" = \"purchase_orders\".\"subtotal\" + \"purchase_orders\".\"tax_total\""
+        },
+        "purchase_orders_payment_terms_length": {
+          "name": "purchase_orders_payment_terms_length",
+          "value": "\"purchase_orders\".\"payment_terms\" IS NULL OR char_length(\"purchase_orders\".\"payment_terms\") BETWEEN 1 AND 500"
+        },
+        "purchase_orders_delivery_address_length": {
+          "name": "purchase_orders_delivery_address_length",
+          "value": "\"purchase_orders\".\"delivery_address\" IS NULL OR char_length(\"purchase_orders\".\"delivery_address\") BETWEEN 1 AND 500"
+        },
+        "purchase_orders_approval_reasons_known": {
+          "name": "purchase_orders_approval_reasons_known",
+          "value": "\"purchase_orders\".\"approval_reasons\" <@ ARRAY['AMOUNT_THRESHOLD', 'NO_THRESHOLD', 'PRICE_VARIANCE', 'TOTAL_VARIANCE']::text[]"
+        },
+        "purchase_orders_approval_threshold_non_negative": {
+          "name": "purchase_orders_approval_threshold_non_negative",
+          "value": "\"purchase_orders\".\"approval_threshold\" IS NULL OR \"purchase_orders\".\"approval_threshold\" >= 0"
+        },
+        "purchase_orders_price_tolerance_range": {
+          "name": "purchase_orders_price_tolerance_range",
+          "value": "\"purchase_orders\".\"price_tolerance_pct\" IS NULL OR \"purchase_orders\".\"price_tolerance_pct\" BETWEEN 0 AND 100"
+        },
+        "purchase_orders_submitted_by_with_time": {
+          "name": "purchase_orders_submitted_by_with_time",
+          "value": "(\"purchase_orders\".\"submitted_at\" IS NULL) = (\"purchase_orders\".\"submitted_by_user_id\" IS NULL)"
+        },
+        "purchase_orders_submitted_rule": {
+          "name": "purchase_orders_submitted_rule",
+          "value": "(\"purchase_orders\".\"submitted_at\" IS NULL) = (\"purchase_orders\".\"price_tolerance_pct\" IS NULL)"
+        },
+        "purchase_orders_threshold_with_submission": {
+          "name": "purchase_orders_threshold_with_submission",
+          "value": "\"purchase_orders\".\"approval_threshold\" IS NULL OR \"purchase_orders\".\"submitted_at\" IS NOT NULL"
+        },
+        "purchase_orders_submitted_states": {
+          "name": "purchase_orders_submitted_states",
+          "value": "\"purchase_orders\".\"status\" IN ('draft', 'cancelled') OR \"purchase_orders\".\"submitted_at\" IS NOT NULL"
+        },
+        "purchase_orders_approval_round_states": {
+          "name": "purchase_orders_approval_round_states",
+          "value": "\"purchase_orders\".\"status\" NOT IN ('pending_approval', 'rejected') OR (\"purchase_orders\".\"current_approval_request_id\" IS NOT NULL AND cardinality(\"purchase_orders\".\"approval_reasons\") > 0)"
+        },
+        "purchase_orders_approved_states": {
+          "name": "purchase_orders_approved_states",
+          "value": "CASE WHEN \"purchase_orders\".\"status\" IN ('approved', 'issued', 'partially_received', 'received', 'closed') THEN \"purchase_orders\".\"approved_at\" IS NOT NULL WHEN \"purchase_orders\".\"status\" = 'cancelled' THEN true ELSE \"purchase_orders\".\"approved_at\" IS NULL END"
+        },
+        "purchase_orders_issued_fields": {
+          "name": "purchase_orders_issued_fields",
+          "value": "(\"purchase_orders\".\"issued_at\" IS NULL) = (\"purchase_orders\".\"issued_by_user_id\" IS NULL) AND (\"purchase_orders\".\"issued_at\" IS NULL) = (\"purchase_orders\".\"receipt_tolerance_pct\" IS NULL)"
+        },
+        "purchase_orders_issued_states": {
+          "name": "purchase_orders_issued_states",
+          "value": "CASE WHEN \"purchase_orders\".\"status\" IN ('issued', 'partially_received', 'received', 'closed') THEN \"purchase_orders\".\"issued_at\" IS NOT NULL WHEN \"purchase_orders\".\"status\" = 'cancelled' THEN true ELSE \"purchase_orders\".\"issued_at\" IS NULL END"
+        },
+        "purchase_orders_receipt_tolerance_range": {
+          "name": "purchase_orders_receipt_tolerance_range",
+          "value": "\"purchase_orders\".\"receipt_tolerance_pct\" IS NULL OR \"purchase_orders\".\"receipt_tolerance_pct\" BETWEEN 0 AND 100"
+        },
+        "purchase_orders_close_consistent": {
+          "name": "purchase_orders_close_consistent",
+          "value": "(\"purchase_orders\".\"status\" = 'closed') = (\"purchase_orders\".\"closed_at\" IS NOT NULL AND \"purchase_orders\".\"closed_by_user_id\" IS NOT NULL)"
+        },
+        "purchase_orders_close_reason": {
+          "name": "purchase_orders_close_reason",
+          "value": "\"purchase_orders\".\"close_reason\" IS NULL OR (\"purchase_orders\".\"status\" = 'closed' AND char_length(\"purchase_orders\".\"close_reason\") BETWEEN 1 AND 500)"
+        },
+        "purchase_orders_cancel_consistent": {
+          "name": "purchase_orders_cancel_consistent",
+          "value": "(\"purchase_orders\".\"status\" = 'cancelled') = (\"purchase_orders\".\"cancelled_at\" IS NOT NULL AND \"purchase_orders\".\"cancelled_by_user_id\" IS NOT NULL AND \"purchase_orders\".\"cancel_reason\" IS NOT NULL)"
+        },
+        "purchase_orders_cancel_reason_length": {
+          "name": "purchase_orders_cancel_reason_length",
+          "value": "\"purchase_orders\".\"cancel_reason\" IS NULL OR char_length(\"purchase_orders\".\"cancel_reason\") BETWEEN 1 AND 500"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -82,16 +82,16 @@ Personas (fictional): **Rina** (requester, Operations), **Bayu** (approver, Oper
 
 ## Purchase orders
 
-**US-PO-01 Create a PO.** Dewi creates a PO for an active supplier from approved PR lines, either from an awarded quotation (prices taken from it) or directly when the PR is below the RFQ threshold.
+**US-PO-01 Create a PO.** *(Phase 7.)* Dewi creates a PO for an active supplier from approved PR lines, either from an awarded quotation (prices taken from it) or directly when the PR is below the RFQ threshold.
 - She can't order more than the PR line's remaining quantity (`OVER_ORDER`), even if two buyers try at the same moment.
 - Above the RFQ threshold, a PO without an awarded quotation is rejected (`RFQ_REQUIRED`).
 
-**US-PO-02 PO approval when needed.** On submit, the PO goes to approval if it's at or above the PO threshold, or if its prices exceed the PR estimate by more than the tolerance. Otherwise it is approved automatically, and the reason is recorded in the audit trail.
+**US-PO-02 PO approval when needed.** *(Phase 7.)* On submit, the PO goes to approval if it's at or above the PO threshold, or if its prices exceed the PR estimate by more than the tolerance. Otherwise it is approved automatically, and the reason is recorded in the audit trail.
 - Dewi can't approve her own PO, and neither can the buyer who awarded its quotation.
 
-**US-PO-03 Issue.** Dewi issues an approved PO. From then on its lines and prices can't change. The maximum receivable quantity per line is fixed at issue time.
+**US-PO-03 Issue.** *(Phase 7; the print view too.)* Dewi issues an approved PO. From then on its lines and prices can't change. The maximum receivable quantity per line is fixed at issue time.
 
-**US-PO-04 Close or cancel.** Dewi cancels a PO that has no receipts (reserved PR quantity is released), or closes a PO with a reason (unreceived quantity is released back to the PR).
+**US-PO-04 Close or cancel.** *(Phase 7; closing with receipts arrives with goods receipts.)* Dewi cancels a PO that has no receipts (reserved PR quantity is released), or closes a PO with a reason (unreceived quantity is released back to the PR).
 
 ## Goods receipts
 
