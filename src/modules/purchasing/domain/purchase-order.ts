@@ -77,12 +77,27 @@ export function holdsOrderedQuantity(status: PurchaseOrderStatus): boolean {
 }
 
 /**
- * PO-T06, for goods receipts (Phase 8): every line received in full → received; anything
- * received → partially received; nothing → issued.
+ * PO-T06, after every posted goods receipt or reversal: every line received in full → received;
+ * anything received → partially received; nothing → issued.
  */
 export function receiptStatus(lines: readonly { quantity: string; receivedQty: string }[]): 'issued' | 'partially_received' | 'received' {
   if (lines.length > 0 && lines.every((l) => dec(l.receivedQty).gte(dec(l.quantity)))) return 'received';
   return lines.some((l) => dec(l.receivedQty).gt(0)) ? 'partially_received' : 'issued';
+}
+
+/** Issued orders, whatever was received since: what receivers read (ADR 0006, `po.read.issued`). */
+export const ISSUED_ORDER_STATUSES = ['issued', 'partially_received', 'received', 'closed'] as const;
+
+/** GR-T01 / T02: only an issued or partially received order takes goods receipts (else `PO_NOT_RECEIVABLE`). */
+export const RECEIVING_ORDER_STATUSES = ['issued', 'partially_received'] as const;
+
+export function takesReceipts(status: PurchaseOrderStatus): boolean {
+  return (RECEIVING_ORDER_STATUSES as readonly string[]).includes(status);
+}
+
+/** GR-T04: a receipt is reversed only while its order is not closed or cancelled (else `PO_CLOSED`). */
+export function takesReversals(status: PurchaseOrderStatus): boolean {
+  return status === 'issued' || status === 'partially_received' || status === 'received';
 }
 
 /** PO-T07: what a closed line gives back to its requisition line, max(0, quantity − received). */

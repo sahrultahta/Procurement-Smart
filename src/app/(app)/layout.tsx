@@ -47,6 +47,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
                 Purchase orders
               </Link>
             ) : null}
+            {actor.permissions.has('receipt.read') || actor.permissions.has('receipt.create') ? (
+              <Link href="/goods-receipts" className="text-muted-foreground hover:text-foreground">
+                Receiving
+              </Link>
+            ) : null}
             {actor.permissions.has('supplier.read') ? (
               <Link href="/suppliers" className="text-muted-foreground hover:text-foreground">
                 Suppliers

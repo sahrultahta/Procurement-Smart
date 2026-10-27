@@ -19,6 +19,7 @@ import {
   submitPurchaseOrder,
   updatePurchaseOrderDraft,
 } from '@/modules/purchasing';
+import { createGoodsReceipt, postGoodsReceipt } from '@/modules/receiving';
 import { cancelRequisition, closeRequisition, createRequisition, submitRequisition } from '@/modules/requisitions';
 import { awardQuotation, closeRfq, createRfq, getRfq, issueRfq, recordQuotation, submitQuotation } from '@/modules/sourcing';
 import { blockSupplier, createSupplier, reviewSupplier } from '@/modules/suppliers';
@@ -934,29 +935,19 @@ describe('P7-AC8: issuing (PO-T05)', () => {
   });
 });
 
-/**
- * Goods receipts arrive in Phase 8. To test what closing and cancelling do with received
- * quantities, receipts are simulated as the owner with the guards switched off for one statement.
- */
-async function simulateReceipt(purchaseOrderId: string, received: string, status: 'issued' | 'partially_received' | 'received'): Promise<void> {
-  const client = await t.pool.connect();
-  try {
-    await client.query('BEGIN');
-    await client.query('ALTER TABLE purchase_order_lines DISABLE TRIGGER purchase_order_lines_guard');
-    await client.query('ALTER TABLE purchase_orders DISABLE TRIGGER purchase_orders_guard');
-    await client.query('UPDATE purchase_order_lines SET received_qty = $2 WHERE purchase_order_id = $1', [purchaseOrderId, received]);
-    await client.query('UPDATE purchase_orders SET status = $2, version = version + 1 WHERE id = $1', [purchaseOrderId, status]);
-    // The commit-time checks (totals, PO-I1) run now, so the triggers can be switched back on.
-    await client.query('SET CONSTRAINTS ALL IMMEDIATE');
-    await client.query('ALTER TABLE purchase_orders ENABLE TRIGGER purchase_orders_guard');
-    await client.query('ALTER TABLE purchase_order_lines ENABLE TRIGGER purchase_order_lines_guard');
-    await client.query('COMMIT');
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
+/** Goods arrive (Phase 8): Agus records and posts a receipt for the order's first line. */
+async function receiveGoods(purchaseOrderId: string, quantity: string): Promise<void> {
+  const line = (await t.pool.query('SELECT id FROM purchase_order_lines WHERE purchase_order_id = $1 ORDER BY line_no LIMIT 1', [purchaseOrderId])).rows[0].id;
+  const receipt = data(
+    await run(u.agus, createGoodsReceipt, {
+      purchaseOrderId,
+      receivedOn: new Date().toISOString().slice(0, 10),
+      deliveryNoteRef: null,
+      notes: null,
+      lines: [{ purchaseOrderLineId: line, quantity, note: null }],
+    }),
+  );
+  data(await run(u.agus, postGoodsReceipt, { goodsReceiptId: receipt.goodsReceiptId, expectedVersion: receipt.version }));
 }
 
 describe('P7-AC9: cancelling and closing (PO-T07 to T09)', () => {
@@ -995,7 +986,8 @@ describe('P7-AC9: cancelling and closing (PO-T07 to T09)', () => {
   it('RECEIPTS_EXIST: an issued order with anything received cannot be cancelled, in the app and in the database', async () => {
     const { purchaseOrderId } = await approvedOrder();
     data(await issue(purchaseOrderId));
-    await simulateReceipt(purchaseOrderId, '0.5', 'issued');
+    await receiveGoods(purchaseOrderId, '0.5');
+    expect(await statusOf(purchaseOrderId)).toBe('partially_received');
     expect(rule(await cancel(purchaseOrderId))).toBe('RECEIPTS_EXIST');
     expect((await get(u.dewi, purchaseOrderId)).callerActions).toEqual(['close']);
     expect(
@@ -1021,7 +1013,7 @@ describe('P7-AC9: cancelling and closing (PO-T07 to T09)', () => {
     const partial = await created(pr, {}, [{ quantity: '4', unitPrice: '175' }, null]);
     data(await submit(partial.purchaseOrderId));
     data(await issue(partial.purchaseOrderId));
-    await simulateReceipt(partial.purchaseOrderId, '1.25', 'partially_received');
+    await receiveGoods(partial.purchaseOrderId, '1.25');
     expect(rule(await close(partial.purchaseOrderId, null))).toBe('VALIDATION_FAILED');
     data(await close(partial.purchaseOrderId, 'Rest is back-ordered for months'));
     expect(await ordered(pr.lineIds[0] as string)).toBe('1.250');
@@ -1029,7 +1021,7 @@ describe('P7-AC9: cancelling and closing (PO-T07 to T09)', () => {
 
     const full = await approvedOrder();
     data(await issue(full.purchaseOrderId));
-    await simulateReceipt(full.purchaseOrderId, '1', 'received');
+    await receiveGoods(full.purchaseOrderId, '1');
     expect((await get(u.dewi, full.purchaseOrderId)).callerActions).toEqual(['close']);
     expect(data(await close(full.purchaseOrderId, null))).toMatchObject({ status: 'closed' });
     expect(await ordered(full.pr.lineIds[0] as string)).toBe('1.000');
@@ -1185,8 +1177,9 @@ describe('P7-AC11: who sees which purchase order', () => {
       expect(rule(await run(as, listPurchaseOrders, {}))).toBe('FORBIDDEN');
     }
     expect(rule(await run(u.dewi, getPurchaseOrder, { purchaseOrderId: '01900000-0000-7000-8000-000000000000' }))).toBe('NOT_FOUND');
-    // Readers who are not buyers get no actions.
-    for (const as of [u.sari, u.lena, u.bayu, u.agus]) expect((await get(as, issued.purchaseOrderId)).callerActions).toEqual([]);
+    // Readers who are not buyers get no buyer actions; a receiver may receive an issued order (Phase 8).
+    for (const as of [u.sari, u.lena, u.bayu]) expect((await get(as, issued.purchaseOrderId)).callerActions).toEqual([]);
+    expect((await get(u.agus, issued.purchaseOrderId)).callerActions).toEqual(['receive']);
   });
 
   it('returns only allowlisted fields, with names instead of user ids', async () => {

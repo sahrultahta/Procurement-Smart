@@ -144,7 +144,7 @@ export const purchaseOrderLines = pgTable(
     lineSubtotal: numeric('line_subtotal', { precision: 20, scale: 4 }).notNull(),
     lineTax: numeric('line_tax', { precision: 20, scale: 4 }).notNull(),
     lineTotal: numeric('line_total', { precision: 20, scale: 4 }).notNull(),
-    /** Goods receipts (Phase 8) add to it; stays 0 until then. */
+    /** Posted goods receipts add to it and their reversals take it back (GR-I1); nothing else moves it. */
     receivedQty: numeric('received_qty', { precision: 18, scale: 3 }).notNull().default('0'),
     /** Fixed when the PO is issued: floor3(quantity × (1 + receipt tolerance / 100)). */
     maxReceivableQty: numeric('max_receivable_qty', { precision: 18, scale: 3 }),
@@ -158,7 +158,7 @@ export const purchaseOrderLines = pgTable(
     check('purchase_order_lines_tax_rate_range', sql`${t.taxRatePct} BETWEEN 0 AND 100`),
     check('purchase_order_lines_amounts_non_negative', sql`${t.lineSubtotal} >= 0 AND ${t.lineTax} >= 0 AND ${t.lineTotal} >= 0`),
     check('purchase_order_lines_total_sum', sql`${t.lineTotal} = ${t.lineSubtotal} + ${t.lineTax}`),
-    // Over-receipt backstop (ADR 0008 C3), ready for goods receipts in Phase 8.
+    // Over-receipt backstop for goods receipts (ADR 0008 C3, GR-I2).
     check('purchase_order_lines_received_non_negative', sql`${t.receivedQty} >= 0`),
     check('purchase_order_lines_max_receivable', sql`${t.maxReceivableQty} IS NULL OR ${t.maxReceivableQty} >= ${t.quantity}`),
     check(

@@ -4,7 +4,7 @@ An open-source procurement workflow system: suppliers, purchase requisitions wit
 
 ## Status
 
-**Phases 0–6 are done, and Phase 7 (purchase orders) is implemented.** What works today:
+**Phases 0–7 are done, and Phase 8 (goods receipts) is implemented.** What works today:
 - signing in and out;
 - one-time password-setup links;
 - seven roles with code-defined permissions;
@@ -16,10 +16,11 @@ An open-source procurement workflow system: suppliers, purchase requisitions wit
 - requests for quotation (RFQs): procurement drafts one from an approved requisition, picks lines and quantities (never more than is left to order, and never a line already on another open RFQ), invites active suppliers, sets a due time, and issues, closes, or cancels it; finance and auditors can read RFQs;
 - quotations: procurement records what each invited supplier quoted (a price per line, validity, lead time), submits it, and compares them in a server-computed table (lowest valid total and lowest price per line, late and expired quotations marked); awarding needs a justification when too few valid quotations arrived above a configurable amount, or for a quotation that is not the lowest;
 - purchase orders: procurement orders from an approved requisition, directly or from an awarded quotation (whose prices it takes), with a tax rate per line and server-computed totals; never more than the requisition asks for, also when two buyers order at once; above a configurable amount only from an awarded quotation; on submit, approval is needed from a configurable total or for prices above the requisition estimate by more than a tolerance (otherwise it is approved at once); neither the buyer who created it nor the one who awarded its quotation can approve it; issuing fixes it and how much may be received; cancel and close give unordered quantities back; a print view;
+- goods receipts: receivers record what arrived against an issued order (date, delivery note, quantity per line) and post it, which updates the order's received quantities and status (partially received, received); never more than ordered plus a configurable tolerance, also when two receipts are posted at once (the whole receipt is refused, naming the lines); whoever created the order cannot receive against it; a posted receipt is never changed, only reversed once by a separate reversal document;
 - an append-only audit trail;
 - decimal-safe money calculations.
 
-**Goods receipts and reporting are not implemented yet.** Work happens in gated phases, and each phase ends with a report of exactly what was run and what passed (`docs/reports/`). Local setup is described in [docs/development.md](docs/development.md).
+**Reporting is not implemented yet.** Work happens in gated phases, and each phase ends with a report of exactly what was run and what passed (`docs/reports/`). Local setup is described in [docs/development.md](docs/development.md).
 
 ## Design documents
 

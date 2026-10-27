@@ -3,7 +3,9 @@
  * suppliers registered by Dewi (procurement), two of them approved by Sari (finance); the organization
  * name, a default approval policy published by Ada (admin), one draft requisition by Rina, one she
  * submitted, waiting for Bayu (step 1) and then Sari (step 2), and one Bayu approved, with an RFQ
- * Dewi issued to the two approved suppliers. All of it goes through the real commands.
+ * Dewi issued to the two approved suppliers; two approved requisitions ready to order (one with an
+ * awarded RFQ); and an issued purchase order for printer supplies that Agus (receiver) has partly
+ * received. All of it goes through the real commands.
  * Idempotent: existing data is left as it is.
  *
  *   npm run seed                                   create missing demo users
@@ -54,6 +56,8 @@ const { getActiveApprovalPolicy, getSettings, publishApprovalPolicy, updateOrgan
 const { createRequisition, getRequisition, listRequisitions, submitRequisition } = await import('@/modules/requisitions');
 const { awardQuotation, closeRfq, createRfq, getRfq, issueRfq, listRfqs, recordQuotation, rfqSourcingOptions, submitQuotation } = await import('@/modules/sourcing');
 const { decideApproval } = await import('@/server/approvals');
+const { createPurchaseOrder, getPurchaseOrder, issuePurchaseOrder, listPurchaseOrders, purchaseOrderFormOptions, submitPurchaseOrder } = await import('@/modules/purchasing');
+const { createGoodsReceipt, goodsReceiptFormOptions, listGoodsReceipts, postGoodsReceipt } = await import('@/modules/receiving');
 
 type SeedUser = { email: string; name: string; departmentCode: string | null; roles: { role: string; departmentCode: string | null }[] };
 
@@ -95,6 +99,8 @@ const summary = {
   rfqsCreated: 0,
   quotationsCreated: 0,
   awards: 0,
+  purchaseOrdersCreated: 0,
+  receiptsPosted: 0,
 };
 
 // Fictional quotations for the demo RFQ (by supplier name): Sample Industrial Parts is lower in
@@ -441,6 +447,74 @@ try {
     summary.awards++;
   }
 
+  // Phase 8 demo data. A direct purchase order for printer supplies (418.00: below the RFQ
+  // threshold, and below the approval threshold, so approved on submission), issued by Dewi, of
+  // which Agus has received part. Each step runs only if an earlier run did not get that far.
+  const paper = await approvedRequisition('Printer supplies for Operations', 'Fictional demo requisition (seed data), ordered and partly delivered.', [
+    { description: 'Copy paper A4, box of 5 reams', quantity: '12', uom: 'box', estimatedUnitPrice: '24.00' },
+    { description: 'Toner cartridge, black', quantity: '2', uom: 'pcs', estimatedUnitPrice: '65.00' },
+  ]);
+  const paperOrders = await runQuery(buyer, listPurchaseOrders, { requisitionId: paper.id });
+  if (!paperOrders.ok) throw new Error(`Listing purchase orders failed: ${paperOrders.error.message}`);
+  let paperOrderId = paperOrders.data.items[0]?.id;
+  if (!paperOrderId) {
+    const options = await runQuery(buyer, purchaseOrderFormOptions, { requisitionId: paper.id });
+    if (!options.ok) throw new Error(`Reading purchase-order options failed: ${options.error.message}`);
+    const supplier = options.data.suppliers.find((s) => s.legalName === 'Example Office Supplies Ltd');
+    if (!supplier) throw new Error('Example Office Supplies Ltd is not an active supplier');
+    const created = await runCommand(buyer, createPurchaseOrder, {
+      requisitionId: paper.id,
+      supplierId: supplier.id,
+      paymentTerms: 'Net 30',
+      deliveryAddress: 'Operations stores, 1 Example Plaza, Springfield',
+      expectedDeliveryDate: '2030-05-15',
+      lines: options.data.lines.map((l) => ({ requisitionLineId: l.id, quantity: l.availableQty, unitPrice: l.estimatedUnitPrice, taxRatePct: '11' })),
+    });
+    if (!created.ok) throw new Error(`Creating the paper purchase order failed: ${created.error.message}`);
+    paperOrderId = created.data.purchaseOrderId;
+    summary.purchaseOrdersCreated++;
+  }
+  const paperOrder = async () => {
+    const detail = await runQuery(buyer, getPurchaseOrder, { purchaseOrderId: paperOrderId });
+    if (!detail.ok) throw new Error(`Reading the paper purchase order failed: ${detail.error.message}`);
+    return detail.data;
+  };
+  let order = await paperOrder();
+  if (order.status === 'draft') {
+    const submitted = await runCommand(buyer, submitPurchaseOrder, { purchaseOrderId: order.id, expectedVersion: order.version });
+    if (!submitted.ok || submitted.data.status !== 'approved') throw new Error(`Submitting the paper purchase order did not approve it: ${submitted.ok ? submitted.data.status : submitted.error.message}`);
+    order = await paperOrder();
+  }
+  if (order.status === 'approved') {
+    const issued = await runCommand(buyer, issuePurchaseOrder, { purchaseOrderId: order.id, expectedVersion: order.version });
+    if (!issued.ok) throw new Error(`Issuing the paper purchase order failed: ${issued.error.message}`);
+    order = await paperOrder();
+  }
+  if (order.status === 'issued') {
+    const receiver = await actorOf('agus.receiver');
+    const drafts = await runQuery(receiver, listGoodsReceipts, { purchaseOrderId: order.id, status: 'draft' });
+    if (!drafts.ok) throw new Error(`Listing goods receipts failed: ${drafts.error.message}`);
+    let receipt = drafts.data.items[0] ? { goodsReceiptId: drafts.data.items[0].id, version: 1 } : null;
+    if (!receipt) {
+      const options = await runQuery(receiver, goodsReceiptFormOptions, { purchaseOrderId: order.id });
+      if (!options.ok) throw new Error(`Reading goods-receipt options failed: ${options.error.message}`);
+      const paperLine = options.data.lines.find((l) => l.lineNo === 1);
+      if (!paperLine) throw new Error('The paper purchase order has no line 1');
+      const created = await runCommand(receiver, createGoodsReceipt, {
+        purchaseOrderId: order.id,
+        receivedOn: options.data.today,
+        deliveryNoteRef: 'DN-SEED-0001',
+        notes: 'Seed data: first delivery, the rest is back-ordered.',
+        lines: [{ purchaseOrderLineId: paperLine.id, quantity: '8', note: null }],
+      });
+      if (!created.ok) throw new Error(`Recording the paper receipt failed: ${created.error.message}`);
+      receipt = created.data;
+    }
+    const posted = await runCommand(receiver, postGoodsReceipt, { goodsReceiptId: receipt.goodsReceiptId, expectedVersion: receipt.version });
+    if (!posted.ok) throw new Error(`Posting the paper receipt failed: ${posted.error.message}`);
+    summary.receiptsPosted++;
+  }
+
   if (Object.keys(credentials).length > 0) {
     mkdirSync(dirname(outFile), { recursive: true });
     writeFileSync(outFile, `${JSON.stringify(credentials, null, 2)}\n`, { mode: 0o600 });
@@ -449,7 +523,8 @@ try {
     `Seed done: ${summary.departmentsCreated} departments created, ${summary.usersCreated} users created, ` +
       `${summary.usersSkipped} existing users skipped, ${summary.passwordsSet} passwords set, ` +
       `${summary.suppliersCreated} suppliers created, ${summary.suppliersSkipped} existing suppliers skipped, ` +
-      `${summary.settingsUpdated} settings updated, ${summary.policiesPublished} policies published, ${summary.requisitionsCreated} requisitions created, ${summary.rfqsCreated} RFQs created, ${summary.quotationsCreated} quotations created, ${summary.awards} RFQs awarded.`,
+      `${summary.settingsUpdated} settings updated, ${summary.policiesPublished} policies published, ${summary.requisitionsCreated} requisitions created, ${summary.rfqsCreated} RFQs created, ${summary.quotationsCreated} quotations created, ${summary.awards} RFQs awarded, ` +
+      `${summary.purchaseOrdersCreated} purchase orders created, ${summary.receiptsPosted} goods receipts posted.`,
   );
   if (summary.passwordsSet > 0) console.log(`Sign-in credentials for the users above: ${outFile}`);
 } finally {

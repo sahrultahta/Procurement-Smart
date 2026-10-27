@@ -509,11 +509,12 @@ export const cancelPurchaseOrder = defineCommand({
   handler: async ({ tx, actor, request }, input): Promise<{ version: number; status: PurchaseOrderStatus }> => {
     const { row, requisition } = await lockOrderWithRequisition(tx, input.purchaseOrderId);
     assertOrderVersion(row, input.expectedVersion);
-    const status = assertOrderTransition(row, 'cancel', 'cancelled');
     const lines = await findPurchaseOrderLines(tx, row.id);
-    if (lines.some((l) => dec(l.receivedQty).gt(0))) {
+    // An issued order with goods received is partially received or received (PO-T06): say why it cannot be cancelled.
+    if (row.status !== 'closed' && lines.some((l) => dec(l.receivedQty).gt(0))) {
       failBusinessRule('RECEIPTS_EXIST', 'Goods were already received against this purchase order, so it cannot be cancelled. Close it instead.');
     }
+    const status = assertOrderTransition(row, 'cancel', 'cancelled');
     if (row.status === 'pending_approval') {
       if (!row.currentApprovalRequestId) throw new Error(`purchase order ${row.id} is pending without an approval round`);
       await cancelApprovalRequest(tx, request, row.currentApprovalRequestId, input.reason);

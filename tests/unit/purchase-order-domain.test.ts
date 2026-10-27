@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ISSUED_ORDER_STATUSES,
   PURCHASE_ORDER_COMMANDS,
   PURCHASE_ORDER_STATUSES,
   approvalReasons,
+  takesReceipts,
+  takesReversals,
   closeNeedsReason,
   holdsOrderedQuantity,
   maxReceivableQuantity,
@@ -71,6 +74,12 @@ describe('P7-AC1: purchase order state machine, exhaustively', () => {
     expect(quantityReleasedOnClose('4', '1.25')).toBe('2.75');
     expect(quantityReleasedOnClose('4', '4')).toBe('0');
     expect(quantityReleasedOnClose('4', '4.1')).toBe('0');
+  });
+
+  it('P8-AC1: which orders take goods receipts (GR-T01 / T02), reversals (GR-T04), and receivers’ reads', () => {
+    expect(PURCHASE_ORDER_STATUSES.filter(takesReceipts)).toEqual(['issued', 'partially_received']);
+    expect(PURCHASE_ORDER_STATUSES.filter(takesReversals)).toEqual(['issued', 'partially_received', 'received']);
+    expect(ISSUED_ORDER_STATUSES).toEqual(['issued', 'partially_received', 'received', 'closed']);
   });
 });
 

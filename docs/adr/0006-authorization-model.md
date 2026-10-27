@@ -1,6 +1,6 @@
 # ADR 0006: Code-defined RBAC, scoped assignments, separation-of-duties policies
 
-- Status: Accepted. Amended by [ADR 0014](0014-identity-and-sign-in.md): `buyer` is renamed `procurement` (same permissions), and every active user gets the base permission `account.read`. Amended 2026-10-22 (Phase 4): new permission `supplier.block`, see below. SOD-01 and SOD-02 implemented in Phase 5b (2026-10-25), see the end. Amended 2026-10-25 (Phase 6a): new permission `rfq.read`, see the end.
+- Status: Accepted. Amended by [ADR 0014](0014-identity-and-sign-in.md): `buyer` is renamed `procurement` (same permissions), and every active user gets the base permission `account.read`. Amended 2026-10-22 (Phase 4): new permission `supplier.block`, see below. SOD-01 and SOD-02 implemented in Phase 5b (2026-10-25), see the end. Amended 2026-10-25 (Phase 6a): new permission `rfq.read`, see the end. SOD-04 implemented in Phase 8 (2026-10-27), see the end.
 - Date: 2026-10-18
 
 ## Context
@@ -119,3 +119,11 @@ The table above lets only procurement manage RFQs and quotations, and gives nobo
 | `rfq.read` | | | ✓ | | ✓ | ✓ | |
 
 These are exactly the roles with `requisition.read.all`, so RFQs need no row scoping. Managing stays with `rfq.manage`. Verified by `tests/unit/roles.test.ts` and the operation matrix in `tests/integration/permission-matrix.test.ts`; a mutation check that removes it from finance fails both.
+
+## Implementation of SOD-04 (Phase 8, 2026-10-27)
+
+No permission changes; this records where the rule lives and how the goods-receipt operations map to the table above.
+
+- **Permissions:** recording, posting, cancelling, and reversing goods receipts need `receipt.create` (receivers), and so do the list of orders waiting for goods (`po.receivable`) and the receipt form's options (`receipt.formOptions`). `receipt.read` (procurement, receivers, finance, auditors) reads every goods receipt, drafts included; it needs no row scoping, because each of these roles already reads every issued order (`po.read.all` or `po.read.issued`). Cancelling a draft is also limited to the user who recorded it.
+- **Application:** `receipt.create`, `receipt.post`, and `receipt.reverse` refuse the order's creator with `ORDER_RECEIVE_CONFLICT` after locking the order. `po.get` offers `receive`, and `receipt.get` offers `post` and `reverse`, only to receivers who did not create the order; `po.receivable` marks the caller's own orders (`ownOrder`).
+- **Database:** `goods_receipts_guard` (SQLSTATE `PFG01`) refuses a goods receipt recorded or posted by the order's creator, for every role. Proven by direct SQL as the app role in `tests/integration/goods-receipts.test.ts`.

@@ -94,6 +94,17 @@ const EXPECTED: Record<string, readonly Caller[]> = {
   'po.list': ['approver', 'procurement', 'receiver', 'finance', 'auditor'],
   'po.get': ['approver', 'procurement', 'receiver', 'finance', 'auditor'],
   'po.formOptions': ['procurement'],
+  // Phase 8. Recording, posting, cancelling, and reversing goods receipts need receipt.create
+  // (receivers); so does the list of orders waiting for goods (po.receivable) and the receipt
+  // form's options. Reading receipts is receipt.read (procurement, receivers, finance, auditor).
+  'po.receivable': ['receiver'],
+  'receipt.create': ['receiver'],
+  'receipt.post': ['receiver'],
+  'receipt.cancel': ['receiver'],
+  'receipt.reverse': ['receiver'],
+  'receipt.list': ['procurement', 'receiver', 'finance', 'auditor'],
+  'receipt.get': ['procurement', 'receiver', 'finance', 'auditor'],
+  'receipt.formOptions': ['receiver'],
 };
 
 let t: TestDatabase;

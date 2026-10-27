@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatDate, formatMoney, formatTimestamp, formatUnitPrice } from '@/lib/format';
 import { getPurchaseOrder } from '@/modules/purchasing';
+import { listGoodsReceipts } from '@/modules/receiving';
 import { getOrganization } from '@/server/organization-profile';
 import { getRequestContext } from '@/server/request-context';
 import { runQuery } from '@/shared/application/runner';
+import { ReceiptStatusBadge, receiptKindLabel } from '../../goods-receipts/_components/receipt-status';
 import { ApprovalHistory } from '../../requisitions/_components/approval-history';
 import { DecisionForm } from '../../requisitions/_components/workflow-forms';
 import { CancelPurchaseOrderForm, ClosePurchaseOrderForm, IssuePurchaseOrderForm, SubmitPurchaseOrderForm } from '../_components/po-actions';
@@ -38,6 +40,8 @@ export default async function PurchaseOrderPage(props: { params: Promise<{ id: s
   const issued = po.lines.some((l) => l.maxReceivableQty !== null);
   // Requisitions are readable by procurement, finance, the auditor, and approvers; receivers see the number only.
   const readsRequisitions = (['requisition.read.all', 'requisition.read.department'] as const).some((p) => request.actor?.permissions.has(p) ?? false);
+  // The order's goods receipts, for whoever reads receipts (approvers do not).
+  const receipts = issued && request.actor?.permissions.has('receipt.read') ? await runQuery(request, listGoodsReceipts, { purchaseOrderId: po.id, limit: 100 }) : null;
 
   return (
     <div className="grid gap-6">
@@ -189,6 +193,7 @@ export default async function PurchaseOrderPage(props: { params: Promise<{ id: s
                 <TableHead className="text-right">Estimate</TableHead>
                 <TableHead className="text-right">Tax</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                {issued ? <TableHead className="text-right">Received</TableHead> : null}
                 {issued ? <TableHead className="text-right">Receivable up to</TableHead> : null}
               </TableRow>
             </TableHeader>
@@ -211,6 +216,11 @@ export default async function PurchaseOrderPage(props: { params: Promise<{ id: s
                   <TableCell className="text-right">{money(l.lineTotal)}</TableCell>
                   {issued ? (
                     <TableCell className="text-right">
+                      {l.receivedQty} {l.uom}
+                    </TableCell>
+                  ) : null}
+                  {issued ? (
+                    <TableCell className="text-right">
                       {l.maxReceivableQty} {l.uom}
                     </TableCell>
                   ) : null}
@@ -228,6 +238,54 @@ export default async function PurchaseOrderPage(props: { params: Promise<{ id: s
           </dl>
         </CardContent>
       </Card>
+
+      {receipts ? (
+        <Card>
+          <CardHeader>
+            <h2 className="font-semibold">Goods receipts</h2>
+          </CardHeader>
+          <CardContent>
+            {!receipts.ok ? (
+              <p className="text-sm text-muted-foreground">{receipts.error.message}</p>
+            ) : receipts.data.items.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No goods received yet.</p>
+            ) : (
+              <Table aria-label="Goods receipts">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Number</TableHead>
+                    <TableHead>Kind</TableHead>
+                    <TableHead>Received on</TableHead>
+                    <TableHead>Recorded by</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {receipts.data.items.map((gr) => (
+                    <TableRow key={gr.id}>
+                      <TableCell className="font-mono">
+                        <Link href={`/goods-receipts/${gr.id}`} className="underline-offset-4 hover:underline">
+                          {gr.number}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="whitespace-normal">
+                        {receiptKindLabel(gr.kind)}
+                        {gr.reversesNumber ? <span className="block text-xs text-muted-foreground">of {gr.reversesNumber}</span> : null}
+                        {gr.reversedByNumber ? <span className="block text-xs text-muted-foreground">reversed by {gr.reversedByNumber}</span> : null}
+                      </TableCell>
+                      <TableCell>{formatDate(gr.receivedOn)}</TableCell>
+                      <TableCell>{gr.createdBy}</TableCell>
+                      <TableCell>
+                        <ReceiptStatusBadge status={gr.status} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -249,6 +307,11 @@ export default async function PurchaseOrderPage(props: { params: Promise<{ id: s
         {can.has('edit') ? (
           <Button asChild variant="outline">
             <Link href={`/purchase-orders/${po.id}/edit`}>Edit draft</Link>
+          </Button>
+        ) : null}
+        {can.has('receive') ? (
+          <Button asChild>
+            <Link href={`/goods-receipts/new?purchaseOrderId=${po.id}`}>Receive goods</Link>
           </Button>
         ) : null}
       </div>

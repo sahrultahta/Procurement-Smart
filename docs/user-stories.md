@@ -91,15 +91,15 @@ Personas (fictional): **Rina** (requester, Operations), **Bayu** (approver, Oper
 
 **US-PO-03 Issue.** *(Phase 7; the print view too.)* Dewi issues an approved PO. From then on its lines and prices can't change. The maximum receivable quantity per line is fixed at issue time.
 
-**US-PO-04 Close or cancel.** *(Phase 7; closing with receipts arrives with goods receipts.)* Dewi cancels a PO that has no receipts (reserved PR quantity is released), or closes a PO with a reason (unreceived quantity is released back to the PR).
+**US-PO-04 Close or cancel.** *(Phase 7; closing with real receipts since Phase 8.)* Dewi cancels a PO that has no receipts (reserved PR quantity is released), or closes a PO with a reason (unreceived quantity is released back to the PR).
 
 ## Goods receipts
 
-**US-GR-01 Receive goods.** Agus records a receipt against an issued PO: date, delivery-note reference, and quantity per line. Posting it updates the PO's received quantities and status.
+**US-GR-01 Receive goods.** *(Phase 8.)* Agus records a receipt against an issued PO: date, delivery-note reference, and quantity per line. Posting it updates the PO's received quantities and status.
 - Agus can't receive more than ordered (plus configured tolerance). The whole receipt is rejected with the offending lines named (`OVER_RECEIPT`), including when two receipts are posted at the same moment.
 - If Agus created the PO himself, he can't receive against it (`ORDER_RECEIVE_CONFLICT`).
 
-**US-GR-02 Reverse a receipt.** Agus reverses a posted receipt with a reason. A reversal document is created, received quantities go down, and the original stays unchanged. A receipt can be reversed only once.
+**US-GR-02 Reverse a receipt.** *(Phase 8.)* Agus reverses a posted receipt with a reason. A reversal document is created, received quantities go down, and the original stays unchanged. A receipt can be reversed only once.
 
 ## Audit and reporting
 

@@ -10,8 +10,16 @@ import { defineQuery } from '@/shared/application/runner';
 import { dec, toFixedScale } from '@/shared/decimal/decimal';
 import { compareAmounts } from '@/shared/decimal/pricing';
 import { fail } from '@/shared/result';
-import { PURCHASE_ORDER_STATUSES, nextPurchaseOrderStatus, type ApprovalReason, type PurchaseOrderStatus } from '../domain/purchase-order';
-import { findPurchaseOrder, findPurchaseOrderLines, isVisible, searchPurchaseOrders, type PurchaseOrderRow } from '../infrastructure/purchase-order-repository';
+import { PURCHASE_ORDER_STATUSES, nextPurchaseOrderStatus, takesReceipts, type ApprovalReason, type PurchaseOrderStatus } from '../domain/purchase-order';
+import {
+  findLinesOfOrders,
+  findPurchaseOrder,
+  findPurchaseOrderLines,
+  isVisible,
+  searchPurchaseOrders,
+  searchReceivableOrders,
+  type PurchaseOrderRow,
+} from '../infrastructure/purchase-order-repository';
 import { READ_PERMISSIONS, visibilityFor } from './visibility';
 
 /*
@@ -20,7 +28,7 @@ import { READ_PERMISSIONS, visibilityFor } from './visibility';
  * ids, reach clients.
  */
 
-export const PO_ACTIONS = ['edit', 'submit', 'issue', 'cancel', 'close'] as const;
+export const PO_ACTIONS = ['edit', 'submit', 'issue', 'cancel', 'close', 'receive'] as const;
 export type PurchaseOrderAction = (typeof PO_ACTIONS)[number];
 
 export type PurchaseOrderSummaryDto = {
@@ -236,15 +244,23 @@ export const listPurchaseOrders = defineQuery({
   },
 });
 
-function actionsFor(row: PurchaseOrderRow, status: PurchaseOrderStatus, actor: { userId: string; canBuy: boolean }, anyReceived: boolean): PurchaseOrderAction[] {
-  if (!actor.canBuy) return [];
+function actionsFor(
+  row: PurchaseOrderRow,
+  status: PurchaseOrderStatus,
+  actor: { userId: string; canBuy: boolean; canReceive: boolean },
+  anyReceived: boolean,
+): PurchaseOrderAction[] {
   const actions: PurchaseOrderAction[] = [];
   const creator = row.createdByUserId === actor.userId;
-  if (creator && nextPurchaseOrderStatus(status, 'update')) actions.push('edit');
-  if (creator && nextPurchaseOrderStatus(status, 'submit')) actions.push('submit');
-  if (nextPurchaseOrderStatus(status, 'issue')) actions.push('issue');
-  if (nextPurchaseOrderStatus(status, 'cancel') && !anyReceived) actions.push('cancel');
-  if (nextPurchaseOrderStatus(status, 'close')) actions.push('close');
+  if (actor.canBuy) {
+    if (creator && nextPurchaseOrderStatus(status, 'update')) actions.push('edit');
+    if (creator && nextPurchaseOrderStatus(status, 'submit')) actions.push('submit');
+    if (nextPurchaseOrderStatus(status, 'issue')) actions.push('issue');
+    if (nextPurchaseOrderStatus(status, 'cancel') && !anyReceived) actions.push('cancel');
+    if (nextPurchaseOrderStatus(status, 'close')) actions.push('close');
+  }
+  // SOD-04: whoever created the order never receives against it.
+  if (actor.canReceive && takesReceipts(status) && !creator) actions.push('receive');
   return actions;
 }
 
@@ -344,9 +360,65 @@ export const getPurchaseOrder = defineQuery({
       callerActions: actionsFor(
         row,
         status,
-        { userId: actor.userId, canBuy: actor.permissions.has('po.create') },
+        { userId: actor.userId, canBuy: actor.permissions.has('po.create'), canReceive: actor.permissions.has('receipt.create') },
         lines.some((l) => dec(l.receivedQty).gt(0)),
       ),
+    };
+  },
+});
+
+/** An order waiting for goods, for receivers (`po.receivable`). */
+export type ReceivableOrderDto = {
+  id: string;
+  number: string;
+  status: PurchaseOrderStatus;
+  supplierCode: string;
+  supplierName: string;
+  expectedDeliveryDate: string | null;
+  issuedAt: string;
+  /** Lines not yet received in full. */
+  openLines: number;
+  lineCount: number;
+  /** SOD-04: the caller created this order, so someone else must receive it. */
+  ownOrder: boolean;
+};
+export const PO_RECEIVABLE_KEYS = ['id', 'number', 'status', 'supplierCode', 'supplierName', 'expectedDeliveryDate', 'issuedAt', 'openLines', 'lineCount', 'ownOrder'] as const;
+
+/** Issued and partially received orders (GR-T01), newest first: what receivers can record goods against. */
+export const listReceivableOrders = defineQuery({
+  name: 'po.receivable',
+  permission: 'receipt.create',
+  input: z.strictObject({
+    q: z.string().trim().max(100).optional(),
+    cursor: z
+      .string()
+      .regex(/^PO-[0-9]{4}-[0-9]{6}$/, 'Invalid cursor')
+      .optional(),
+    limit: z.number().int().min(1).max(100).default(25),
+  }),
+  handler: async ({ tx, actor }, input): Promise<{ items: ReceivableOrderDto[]; nextCursor: string | null }> => {
+    const rows = await searchReceivableOrders(tx, { q: input.q ?? '', beforeNumber: input.cursor, limit: input.limit + 1 });
+    const page = rows.slice(0, input.limit);
+    const suppliers = await findSuppliersByIds(tx, page.map((r) => r.supplierId));
+    const lines = await findLinesOfOrders(tx, page.map((r) => r.id));
+    const last = page.at(-1);
+    return {
+      items: page.map((row) => {
+        const own = lines.filter((l) => l.purchaseOrderId === row.id);
+        return {
+          id: row.id,
+          number: row.number,
+          status: row.status as PurchaseOrderStatus,
+          supplierCode: suppliers.get(row.supplierId)?.code ?? '',
+          supplierName: suppliers.get(row.supplierId)?.legalName ?? 'Unknown supplier',
+          expectedDeliveryDate: row.expectedDeliveryDate,
+          issuedAt: row.issuedAt?.toISOString() ?? '',
+          openLines: own.filter((l) => dec(l.receivedQty).lt(dec(l.quantity))).length,
+          lineCount: own.length,
+          ownOrder: row.createdByUserId === actor.userId,
+        };
+      }),
+      nextCursor: rows.length > input.limit && last ? last.number : null,
     };
   },
 });

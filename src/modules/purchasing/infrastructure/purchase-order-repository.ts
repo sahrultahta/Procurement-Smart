@@ -1,6 +1,7 @@
 import 'server-only';
 import { and, asc, desc, eq, ilike, inArray, lt, or, sql, type SQL } from 'drizzle-orm';
 import type { Database, Tx } from '@/shared/db/transaction';
+import { ISSUED_ORDER_STATUSES, RECEIVING_ORDER_STATUSES } from '../domain/purchase-order';
 import { purchaseOrderLines, purchaseOrders } from './schema';
 
 type Queryable = Database | Tx;
@@ -41,6 +42,47 @@ export async function lockPurchaseOrder(tx: Tx, id: string): Promise<PurchaseOrd
 
 export async function findPurchaseOrderLines(db: Queryable, purchaseOrderId: string): Promise<PurchaseOrderLineRow[]> {
   return db.select().from(purchaseOrderLines).where(eq(purchaseOrderLines.purchaseOrderId, purchaseOrderId)).orderBy(asc(purchaseOrderLines.lineNo));
+}
+
+export async function findPurchaseOrdersByIds(db: Queryable, ids: readonly string[]): Promise<PurchaseOrderRow[]> {
+  if (ids.length === 0) return [];
+  return db
+    .select()
+    .from(purchaseOrders)
+    .where(inArray(purchaseOrders.id, [...new Set(ids)]));
+}
+
+/** The lines of several orders at once, by order and line number. */
+export async function findLinesOfOrders(db: Queryable, purchaseOrderIds: readonly string[]): Promise<PurchaseOrderLineRow[]> {
+  if (purchaseOrderIds.length === 0) return [];
+  return db
+    .select()
+    .from(purchaseOrderLines)
+    .where(inArray(purchaseOrderLines.purchaseOrderId, [...new Set(purchaseOrderIds)]))
+    .orderBy(asc(purchaseOrderLines.purchaseOrderId), asc(purchaseOrderLines.lineNo));
+}
+
+/**
+ * GR-T02 (ADR 0008 C2): adds to a line's received quantity only while it stays within its
+ * receivable quantity. False means it would over-receive (the CHECK is the backstop).
+ */
+export async function addReceivedQuantity(tx: Tx, lineId: string, quantity: string): Promise<boolean> {
+  const rows = await tx
+    .update(purchaseOrderLines)
+    .set({ receivedQty: sql`${purchaseOrderLines.receivedQty} + ${quantity}::numeric` })
+    .where(and(eq(purchaseOrderLines.id, lineId), sql`${purchaseOrderLines.receivedQty} + ${quantity}::numeric <= ${purchaseOrderLines.maxReceivableQty}`))
+    .returning({ id: purchaseOrderLines.id });
+  return rows.length === 1;
+}
+
+/** GR-T04: the reverse of `addReceivedQuantity`, never below zero. False means less than that was received. */
+export async function subtractReceivedQuantity(tx: Tx, lineId: string, quantity: string): Promise<boolean> {
+  const rows = await tx
+    .update(purchaseOrderLines)
+    .set({ receivedQty: sql`${purchaseOrderLines.receivedQty} - ${quantity}::numeric` })
+    .where(and(eq(purchaseOrderLines.id, lineId), sql`${purchaseOrderLines.receivedQty} - ${quantity}::numeric >= 0`))
+    .returning({ id: purchaseOrderLines.id });
+  return rows.length === 1;
 }
 
 /** PO-T05: each line's receivable quantity, fixed once after the header is issued (the trigger checks the value). */
@@ -91,20 +133,18 @@ export async function updatePurchaseOrder(
  */
 export type Visibility = { all: true } | { all: false; departmentIds: readonly string[]; issued: boolean };
 
-export const RECEIVABLE_VIEW_STATUSES = ['issued', 'partially_received', 'received', 'closed'] as const;
-
 export function visibilityCondition(visibility: Visibility): SQL | undefined {
   if (visibility.all) return undefined;
   const parts = [
     visibility.departmentIds.length > 0 ? inArray(purchaseOrders.departmentId, [...visibility.departmentIds]) : undefined,
-    visibility.issued ? inArray(purchaseOrders.status, [...RECEIVABLE_VIEW_STATUSES]) : undefined,
+    visibility.issued ? inArray(purchaseOrders.status, [...ISSUED_ORDER_STATUSES]) : undefined,
   ].filter((p) => p !== undefined);
   return parts.length > 0 ? or(...parts) : sql`false`;
 }
 
 export function isVisible(visibility: Visibility, row: Pick<PurchaseOrderRow, 'departmentId' | 'status'>): boolean {
   if (visibility.all) return true;
-  return visibility.departmentIds.includes(row.departmentId) || (visibility.issued && (RECEIVABLE_VIEW_STATUSES as readonly string[]).includes(row.status));
+  return visibility.departmentIds.includes(row.departmentId) || (visibility.issued && (ISSUED_ORDER_STATUSES as readonly string[]).includes(row.status));
 }
 
 function contains(text: string): string {
@@ -133,6 +173,23 @@ export async function searchPurchaseOrders(
         search.status ? eq(purchaseOrders.status, search.status) : undefined,
         search.requisitionId ? eq(purchaseOrders.requisitionId, search.requisitionId) : undefined,
         search.supplierId ? eq(purchaseOrders.supplierId, search.supplierId) : undefined,
+        q ? ilike(purchaseOrders.number, contains(q)) : undefined,
+        search.beforeNumber ? lt(purchaseOrders.number, search.beforeNumber) : undefined,
+      ),
+    )
+    .orderBy(desc(purchaseOrders.number))
+    .limit(search.limit);
+}
+
+/** po.receivable: the orders that take goods receipts now (GR-T01), newest first. */
+export async function searchReceivableOrders(db: Queryable, search: { q: string; beforeNumber: string | undefined; limit: number }): Promise<PurchaseOrderRow[]> {
+  const q = search.q.trim();
+  return db
+    .select()
+    .from(purchaseOrders)
+    .where(
+      and(
+        inArray(purchaseOrders.status, [...RECEIVING_ORDER_STATUSES]),
         q ? ilike(purchaseOrders.number, contains(q)) : undefined,
         search.beforeNumber ? lt(purchaseOrders.number, search.beforeNumber) : undefined,
       ),

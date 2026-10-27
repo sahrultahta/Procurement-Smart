@@ -84,8 +84,8 @@ flowchart LR
 | AB-05 | Buyer inflates PO prices after PR approval | Price-variance tolerance triggers PO approval. SOD-01 and SOD-06 on PO approval. | Phase 7 (verified) |
 | AB-06 | Buyer orders more than approved | `OVER_ORDER` (C2 + CHECK) | Phase 7, CC-03 (verified) |
 | AB-07 | Buyer skips competitive sourcing | `RFQ_REQUIRED` above threshold. Justification for fewer than min quotes or non-lowest award. | Phases 6 and 7 (verified) |
-| AB-08 | Buyer confirms receipt of goods never delivered | SOD-04 (PO creator ≠ receiver) | Phase 8 |
-| AB-09 | Over-receipt to justify a larger invoice downstream | `OVER_RECEIPT` (C2 + CHECK) | Phase 8, CC-04 |
+| AB-08 | Buyer confirms receipt of goods never delivered | SOD-04 (PO creator ≠ receiver) | Phase 8 (verified) |
+| AB-09 | Over-receipt to justify a larger invoice downstream | `OVER_RECEIPT` (C2 + CHECK) | Phase 8, CC-04 (verified) |
 | AB-10 | Splitting a purchase to stay under thresholds | Not preventable by rule. Detected by the potential-split-purchases report. | Phase 9 |
 | AB-11 | Colluding requester and approver (T4) | Not preventable by SoD. Detected by audit, aging, and spend reports. Residual risk accepted. | n/a |
 
@@ -129,6 +129,16 @@ flowchart LR
 - **R-01:** every submission, decision, withdrawal, cancellation, and close is audited in the same transaction, with the comment or reason.
 - **Approval history is tamper-resistant in the database:** snapshot columns and completed requests are frozen, steps only move forward and cannot be added later, nothing can be deleted (`PFD01` for every role; no DELETE grant).
 - **Residual:** if nobody is eligible for a step (for example, the only approver of a department is the requester), the step stays pending; nothing is skipped automatically. The approval-aging report (Phase 9) will show it. There are no notifications yet: approvers have to open their inbox.
+
+### Phase 8 status (2026-10-27)
+
+- **AB-08 (a buyer confirms goods never delivered) is controlled:** SOD-04 refuses the order's creator when recording, posting, or reversing a goods receipt (`ORDER_RECEIVE_CONFLICT`), in the application and in the database (`PFG01`, for every role); screens offer receiving only to receivers who did not create the order.
+- **AB-09 (over-receipt) is controlled:** `OVER_RECEIPT` refuses the whole receipt, naming every line, before and while posting (C2), with the CHECK `received_qty <= max_receivable_qty` as the backstop (C3, proven by a direct SQL attempt as the app role). CC-04 (five receivers posting the last units at once, 20 forced overlaps) never over-receives.
+- **T-02 (changing records after the fact):** posted and cancelled receipts never change, drafts are never edited, lines are only added to drafts, and nothing is deleted (`PFG01`; no DELETE grant). A received quantity changes only to what the posted receipts and reversals add up to (GR-I1), and an issued order's status only to what its lines say (PO-T06), checked by the database row by row and at commit. A reversal is a separate document with exactly the receipt's lines, once per receipt (unique index).
+- **T-01 (tampered fields):** number, kind, status, what an order line ordered or received, and who and when sent by the client are `VALIDATION_FAILED`; quantities over what a line can take are refused whatever the client checks.
+- **I-01 (IDOR):** `receipt.read` reads every receipt (no scoping needed: every role holding it reads every issued order). A receiver asking for the form of an order they cannot read gets `NOT_FOUND`. **E-01:** 8 new operations in the matrix.
+- **R-01:** recording, posting, cancelling, and reversing are audited in the same transaction, on the receipt (and the reversal), and every status change of the order on the order (`po.receiptStatusChanged`).
+- **Residual:** ProcureFlow records what a receiver says arrived; it cannot check the goods. SOD-04 keeps the buyer who ordered from confirming delivery, but a receiver colluding with a supplier (T4) is detected only by audit and reports. Drafts of an order that was closed or cancelled stay as drafts until their creator cancels them (they can no longer be posted).
 
 ### Phase 7 status (2026-10-26)
 

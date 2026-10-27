@@ -75,6 +75,7 @@ export const purchaseOrderAudit = defineAuditPolicy<{
   receiptTolerancePct: string;
   maxReceivable: string[];
   released: string[];
+  goodsReceipt: string;
 }>({
   entityType: 'purchase_order',
   fields: [
@@ -99,5 +100,6 @@ export const purchaseOrderAudit = defineAuditPolicy<{
     'receiptTolerancePct',
     'maxReceivable',
     'released',
+    'goodsReceipt',
   ],
 });

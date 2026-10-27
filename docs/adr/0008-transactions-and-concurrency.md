@@ -1,6 +1,6 @@
 # ADR 0008: Transactions and concurrency control
 
-- Status: Accepted. Amended 2026-10-22 (Phase 3b): mechanism C9, the admin-set lock. Phase 5b (2026-10-25): the lock order for approvals (C8) and CC-01, CC-02 implemented. Phase 7 (2026-10-26): C2 on ordered quantities, CC-03, CC-06.
+- Status: Accepted. Amended 2026-10-22 (Phase 3b): mechanism C9, the admin-set lock. Phase 5b (2026-10-25): the lock order for approvals (C8) and CC-01, CC-02 implemented. Phase 7 (2026-10-26): C2 on ordered quantities, CC-03, CC-06. Phase 8 (2026-10-27): C2 on received quantities, CC-04, and the goods-receipt lock order.
 - Date: 2026-10-18
 
 ## Context
@@ -129,3 +129,13 @@ This narrows the earlier rejection of advisory locks below: they are not used *i
 | CC-07 | Deterministic interleaving: connection A holds the lock (test hook) and B gets `CONFLICT` after `lock_timeout`, with no partial writes. |
 
 Each randomized test runs at least 20 iterations per CI run.
+
+## Implemented in Phase 8 (2026-10-27)
+
+No decision changes; this records how the mechanisms apply to goods receipts.
+
+- **C8, purchase order → goods receipt → order lines:** creating, posting, and reversing a goods receipt lock the purchase order row first (the receipt is read once without a lock to find its order), then the receipt, then move the order lines' received quantities in ascending id order. Cancelling a draft locks only the receipt: it touches nothing else. Purchase-order commands still lock the requisition, then the order, so a close or cancel and a posting of the same order queue on the order row. Posting does not lock the requisition: it does not change ordered quantities.
+- **C2:** `purchase_order_lines.received_qty` moves only through `UPDATE … SET received_qty = received_qty + $q WHERE … AND received_qty + $q <= max_receivable_qty` (posting) and `… - $q … >= 0` (reversing). The command first checks every line against what it can take under the order's lock, to name every line in `OVER_RECEIPT`; the conditional update is the guard and the CHECK the backstop (C3). The database also ties the counter to the documents (GR-I1) and the order's status to the counter (PO-T06).
+- **C1:** every posting and reversal changes the order's version, so a close or cancel based on what the buyer saw before is `CONFLICT`.
+- **C5** allocates `GR-YYYY-NNNNNN` numbers, for receipts and reversals alike; **C6** makes `receipt.create` idempotent; **C4**: the unique `reverses_goods_receipt_id` reverses a receipt at most once (GR-I3).
+- **Races verified** (`tests/concurrency/goods-receipts.test.ts`, each forced to overlap 20 times by a connection holding the order row): CC-04 (five receivers post one unit each at once on a line that can take two: two succeed, three are `OVER_RECEIPT`, GR-I1 holds); two reversals of one receipt at once (one succeeds, one is `ALREADY_REVERSED`); a posting and a short-close at once; a posting and a cancellation at once (one wins, the other is `CONFLICT` or `PO_NOT_RECEIVABLE`, and PO-I1 and GR-I1 hold).
