@@ -52,7 +52,8 @@ Rules:
 - The **organization** module (Phase 5a) holds settings and approval policies. Departments were built in Phase 3a inside **identity** (users are assigned to them) and stay there; organization and requisitions reach them through identity's public API.
 - `src/server/` is the composition root. `src/server/schema.ts` re-exports every module's tables for drizzle-kit.
 - **Approvals never imports requisitions or purchasing.** When a request completes, approvals calls an `ApprovalOutcomeHandler` port registered by each document module in the composition root (`src/server/`). The callback runs inside the same transaction.
-- **Reporting** reads through SQL views defined in migrations (one per report). It never writes and never imports other modules' internals. This is the one documented exception to "each module owns its tables": the views are its contract.
+- **Reporting** reads through SQL views defined in migrations (migration 0020, listed in docs/schema.md: one or two per report, plus the settings, audit events, and users it needs). It never writes and never imports other modules' internals; besides src/shared it uses only identity (the department list) and audit. This is the one documented exception to "each module owns its tables": the views are its contract, and a change to a table they read must keep them working (the reporting integration tests run against the real views). Audit search lives here too (Phase 9, decision 7).
+- **Document history** is read by each document's own get query through `findEntityHistory` (audit module), which takes the user-name lookup as a parameter, because audit cannot depend on identity.
 - The ESLint `no-restricted-imports` config encodes this graph. Phase 1 adds a test that a forbidden import fails lint.
 
 ## Request lifecycle (mutation)

@@ -629,6 +629,17 @@ describe('P6b-AC7: the award (RFQ-T05)', () => {
     });
     expect((await auditOf(parts)).at(-1)).toMatchObject({ action: 'quotation.awarded', changes: { status: ['submitted', 'awarded'] } });
     expect((await auditOf(office)).at(-1)).toMatchObject({ action: 'quotation.notAwarded', changes: { status: ['submitted', 'not_awarded'] } });
+    // Phase 9: the RFQ's history holds its own events and its quotations', in the order they happened.
+    const history = detail.history.map((h) => [h.entityType, h.action]);
+    expect(history.at(0)).toEqual(['rfq', 'rfq.created']);
+    expect(history).toContainEqual(['quotation', 'quotation.withdrawn']);
+    expect(history.slice(-4)).toEqual([
+      ['rfq', 'rfq.closed'],
+      ['quotation', 'quotation.notAwarded'],
+      ['quotation', 'quotation.awarded'],
+      ['rfq', 'rfq.awarded'],
+    ]);
+    expect(history.filter(([type]) => type === 'quotation').length).toBe((await t.pool.query("SELECT count(*)::int AS n FROM audit_events WHERE entity_type = 'quotation' AND entity_id = ANY($1)", [[office, parts, withdrawn]])).rows[0].n);
     // Awarded is final.
     expect(rule(await award(rfq, office, 'Changed our mind'))).toBe('INVALID_TRANSITION');
     expect(rule(await run(u.dewi, withdrawQuotation, { quotationId: parts, expectedVersion: 3, reason: 'Too late' }))).toBe('INVALID_TRANSITION');

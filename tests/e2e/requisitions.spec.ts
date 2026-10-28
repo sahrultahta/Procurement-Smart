@@ -81,7 +81,8 @@ test.describe('P5a-AC10: a requester drafts, edits, and cancels a requisition', 
     await expect(rina.getByRole('heading', { name: title, level: 1 })).toBeVisible();
     await expect(rina.getByRole('status')).toHaveText('Draft created. You can still edit it.');
     await expect(rina.getByTestId('estimated-total')).toHaveText('$31.19');
-    await expect(rina.getByText(/PR-\d{4}-\d{6}/)).toBeVisible();
+    // The number under the title (the history card shows it too, as the created number).
+    await expect(rina.locator('span.font-mono').getByText(/PR-\d{4}-\d{6}/)).toBeVisible();
     const url = rina.url();
 
     await rina.getByRole('link', { name: 'Edit requisition' }).click();

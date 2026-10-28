@@ -4,7 +4,7 @@ An open-source procurement workflow system: suppliers, purchase requisitions wit
 
 ## Status
 
-**Phases 0–7 are done, and Phase 8 (goods receipts) is implemented.** What works today:
+**Phases 0–8 are done, and Phase 9 (audit trail and reporting) is implemented.** What works today:
 - signing in and out;
 - one-time password-setup links;
 - seven roles with code-defined permissions;
@@ -17,10 +17,11 @@ An open-source procurement workflow system: suppliers, purchase requisitions wit
 - quotations: procurement records what each invited supplier quoted (a price per line, validity, lead time), submits it, and compares them in a server-computed table (lowest valid total and lowest price per line, late and expired quotations marked); awarding needs a justification when too few valid quotations arrived above a configurable amount, or for a quotation that is not the lowest;
 - purchase orders: procurement orders from an approved requisition, directly or from an awarded quotation (whose prices it takes), with a tax rate per line and server-computed totals; never more than the requisition asks for, also when two buyers order at once; above a configurable amount only from an awarded quotation; on submit, approval is needed from a configurable total or for prices above the requisition estimate by more than a tolerance (otherwise it is approved at once); neither the buyer who created it nor the one who awarded its quotation can approve it; issuing fixes it and how much may be received; cancel and close give unordered quantities back; a print view;
 - goods receipts: receivers record what arrived against an issued order (date, delivery note, quantity per line) and post it, which updates the order's received quantities and status (partially received, received); never more than ordered plus a configurable tolerance, also when two receipts are posted at once (the whole receipt is refused, naming the lines); whoever created the order cannot receive against it; a posted receipt is never changed, only reversed once by a separate reversal document;
-- an append-only audit trail;
+- an append-only audit trail: every document shows its own history, and auditors and admins search all of it (by record, person, action, and date);
+- reports for procurement, finance, and auditors, read live from the data and downloadable as CSV: spend by supplier and by department (as issued or as received), requisition cycle time (median and 90th percentile), approval aging, open purchase orders, and potential split purchases;
 - decimal-safe money calculations.
 
-**Reporting is not implemented yet.** Work happens in gated phases, and each phase ends with a report of exactly what was run and what passed (`docs/reports/`). Local setup is described in [docs/development.md](docs/development.md).
+Phase 10 (hardening, deployment documentation, release) is next. Work happens in gated phases, and each phase ends with a report of exactly what was run and what passed (`docs/reports/`). Local setup is described in [docs/development.md](docs/development.md).
 
 ## Design documents
 

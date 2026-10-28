@@ -282,6 +282,22 @@ Constraints (over-receipt backstop, ADR 0008 C3):
 - Purchase orders (0017's functions replaced): `purchase_orders_guard` allows `issued`, `partially_received`, and `received` to move among each other (or stay, for a version change) only to the status the lines give (`purchase_orders_receipt_status`, PO-T06); `purchase_order_lines_guard` allows an issued line's `received_qty` to change, alone, only to what its posted goods receipts add up to (`goods_receipts_received_quantity`, GR-I1), so the receipt is posted first; `purchase_orders_totals_check` (at commit) also requires an issued order's status to match its lines. With the CHECK `received_qty <= max_receivable_qty` (C3), a posted receipt for more than a line can take is refused even if every other check passes.
 - Grants: SELECT, INSERT, UPDATE on `goods_receipts`; SELECT, INSERT on `goods_receipt_lines` (drafts are never edited, nothing is deleted).
 
+## Reporting (implemented in Phase 9, migration 0020)
+
+The reporting module reads only these views, never the tables behind them (docs/architecture.md); the runtime role has SELECT on them and nothing else new. Dates are org dates: `(timestamp AT TIME ZONE org_settings.timezone)::date`. Money is rounded per line as ADR 0007 does it.
+
+| View | One row per | Notes |
+| --- | --- | --- |
+| `report_org_settings` | the settings row | time zone, currency, `rfq_required_above`, `po_approval_threshold` |
+| `report_audit_events` | audit event | `audit_events` with the actor's name (`users.name`); IP as text |
+| `report_users` | user | id and name, for the audit filter |
+| `report_spend_issued` | issued order, not cancelled | `spend_on` = issue date; `amount` = order total |
+| `report_spend_received` | line of a posted receipt or reversal | `spend_on` = `received_on`; `amount` = round(qty × price) + round(that × tax / 100), negative for a reversal |
+| `report_requisition_cycle` | approved requisition | first submission = round 1's `created_at`; `cycle_seconds` to `approved_at` |
+| `report_pending_approval_steps` | step with status `pending` | the request's document number, title, amount, department; `activated_at` |
+| `report_open_order_lines` | line of an `issued` or `partially_received` order | `outstanding_qty` = greatest(quantity − received, 0), and its value |
+| `report_split_candidates` | order approved and not cancelled | requester of its requisition, supplier, subtotal, total, `approved_on`, `from_quotation` |
+
 ## Infrastructure
 
 ### `document_sequences`
@@ -313,6 +329,8 @@ Grants: `procureflow_app` gets `INSERT, SELECT` on the table and nothing else. I
 Additional CHECKs (implemented in Phase 2): `action` format, `entity_type` format, length limits on `entity_id` (1–128), `actor_user_id` (≤128), `reason` (≤2000), `user_agent` (≤512), and `jsonb_typeof(changes) = 'object'`.
 
 **Implemented in Phase 2:** `document_sequences` and `audit_events` (migrations `0001`, `0002`). Every other table in this document is still a design.
+
+**Read in Phase 9:** audit search reads `report_audit_events`; a document's history reads `audit_events` by `(entity_type, entity_id)` (the entity index), oldest first, at most 500 events.
 
 ## Entity relationships (summary)
 

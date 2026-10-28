@@ -1,5 +1,6 @@
 import 'server-only';
 import { z } from 'zod';
+import { findEntityHistory, type HistoryEntryDto } from '@/modules/audit';
 import { findUserDisplayNames } from '@/modules/identity';
 import { defineQuery } from '@/shared/application/runner';
 import { fail } from '@/shared/result';
@@ -40,6 +41,8 @@ export type SupplierDetailDto = SupplierSummaryDto & {
   version: number;
   /** The caller created it or last changed its identity, so may not review it (SOD-03). */
   callerIsMaker: boolean;
+  /** The document's own audit trail, oldest first (Phase 9). */
+  history: HistoryEntryDto[];
 };
 export const SUPPLIER_DETAIL_KEYS = [
   ...SUPPLIER_SUMMARY_KEYS,
@@ -59,6 +62,7 @@ export const SUPPLIER_DETAIL_KEYS = [
   'updatedAt',
   'version',
   'callerIsMaker',
+  'history',
 ] as const;
 
 export type SelectableSupplierDto = { id: string; code: string; legalName: string };
@@ -132,6 +136,7 @@ export const getSupplier = defineQuery({
       updatedAt: row.updatedAt.toISOString(),
       version: row.version,
       callerIsMaker: isMaker(row, actor.userId),
+      history: await findEntityHistory(tx, [{ entityType: 'supplier', entityId: row.id }], (ids) => findUserDisplayNames(tx, ids)),
     };
   },
 });

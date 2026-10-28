@@ -96,7 +96,8 @@ test.describe('P4-AC11: who sees suppliers', () => {
     await expect(lena.getByRole('link', { name: 'Register supplier' })).toHaveCount(0);
     await lena.getByRole('link', { name: 'Example Office Supplies Ltd' }).click();
     await expect(lena.getByRole('heading', { name: 'Example Office Supplies Ltd', level: 1 })).toBeVisible();
-    await expect(lena.getByText('Sari Finance', { exact: false })).toBeVisible();
+    // The review line ("by Sari Finance on …"); the history card also names her.
+    await expect(lena.getByText(/^by Sari Finance on /)).toBeVisible();
     for (const button of ['Save changes', 'Approve', 'Block supplier', 'Deactivate supplier']) {
       await expect(lena.getByRole('button', { name: button })).toHaveCount(0);
     }

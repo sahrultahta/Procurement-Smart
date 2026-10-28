@@ -7,6 +7,7 @@ import { getSupplier } from '@/modules/suppliers';
 import { getOrganization } from '@/server/organization-profile';
 import { getRequestContext } from '@/server/request-context';
 import { runQuery } from '@/shared/application/runner';
+import { DocumentHistory } from '../../_components/document-history';
 import { BlockForm, DeactivateForm, ReactivateForm, ReviewForm, UnblockForm } from '../_components/supplier-actions';
 import { SupplierForm } from '../_components/supplier-form';
 import { SupplierStatusBadge } from '../_components/supplier-status';
@@ -147,6 +148,7 @@ export default async function SupplierPage(props: {
           </CardContent>
         </Card>
       ) : null}
+      <DocumentHistory entries={s.history} timezone={timezone} />
     </div>
   );
 }

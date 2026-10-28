@@ -11,6 +11,7 @@ import { getRfq, type QuotationDto, type RfqDetailDto } from '@/modules/sourcing
 import { getOrganization } from '@/server/organization-profile';
 import { getRequestContext } from '@/server/request-context';
 import { runQuery } from '@/shared/application/runner';
+import { DocumentHistory } from '../../_components/document-history';
 import { AwardForm, SubmitQuotationForm, WithdrawQuotationForm } from '../_components/quotation-actions';
 import { CancelRfqForm, CloseRfqForm, IssueRfqForm } from '../_components/rfq-actions';
 import { RfqStatusBadge, quotationStatusLabel, rfqNotice, validityLabel } from '../_components/rfq-status';
@@ -218,6 +219,7 @@ export default async function RfqPage(props: { params: Promise<{ id: string }>; 
           </CardContent>
         </Card>
       ) : null}
+      <DocumentHistory entries={r.history} timezone={timezone} />
     </div>
   );
 }

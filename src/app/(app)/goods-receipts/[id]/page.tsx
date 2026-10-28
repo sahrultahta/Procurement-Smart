@@ -9,6 +9,7 @@ import { getGoodsReceipt } from '@/modules/receiving';
 import { getOrganization } from '@/server/organization-profile';
 import { getRequestContext } from '@/server/request-context';
 import { runQuery } from '@/shared/application/runner';
+import { DocumentHistory } from '../../_components/document-history';
 import { PoStatusBadge } from '../../purchase-orders/_components/po-status';
 import { CancelGoodsReceiptForm, PostGoodsReceiptForm, ReverseGoodsReceiptForm } from '../_components/receipt-actions';
 import { ReceiptStatusBadge, receiptKindLabel, receiptNotice } from '../_components/receipt-status';
@@ -169,6 +170,7 @@ export default async function GoodsReceiptPage(props: { params: Promise<{ id: st
           </CardContent>
         </Card>
       ) : null}
+      <DocumentHistory entries={gr.history} timezone={timezone} />
     </div>
   );
 }

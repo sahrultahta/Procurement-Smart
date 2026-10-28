@@ -1,5 +1,6 @@
 import 'server-only';
 import { z } from 'zod';
+import { findEntityHistory, type HistoryEntryDto } from '@/modules/audit';
 import { findApprovalHistory, findOpenDecision, type ApprovalRoundDto, type OpenDecisionDto } from '@/modules/approvals';
 import { findDepartmentDirectory, findUserDisplayNames } from '@/modules/identity';
 import { findPurchasingRules, todayIn } from '@/modules/organization';
@@ -150,6 +151,8 @@ export type PurchaseOrderDetailDto = Omit<PurchaseOrderSummaryDto, 'supplierId' 
   approvalHistory: ApprovalRoundDto[];
   openDecision: OpenDecisionDto | null;
   callerActions: PurchaseOrderAction[];
+  /** The document's own audit trail, oldest first (Phase 9). */
+  history: HistoryEntryDto[];
 };
 export const PO_DETAIL_KEYS = [
   'id',
@@ -192,6 +195,7 @@ export const PO_DETAIL_KEYS = [
   'approvalHistory',
   'openDecision',
   'callerActions',
+  'history',
 ] as const;
 
 const plain = (value: string | null) => (value === null ? null : dec(value).toString());
@@ -363,6 +367,7 @@ export const getPurchaseOrder = defineQuery({
         { userId: actor.userId, canBuy: actor.permissions.has('po.create'), canReceive: actor.permissions.has('receipt.create') },
         lines.some((l) => dec(l.receivedQty).gt(0)),
       ),
+      history: await findEntityHistory(tx, [{ entityType: 'purchase_order', entityId: row.id }], (ids) => findUserDisplayNames(tx, ids)),
     };
   },
 });

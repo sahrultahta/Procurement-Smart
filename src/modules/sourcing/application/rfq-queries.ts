@@ -1,5 +1,6 @@
 import 'server-only';
 import { z } from 'zod';
+import { findEntityHistory, type HistoryEntryDto } from '@/modules/audit';
 import { findUserDisplayNames } from '@/modules/identity';
 import { findSourcingRules, todayIn } from '@/modules/organization';
 import { findRequisitionForSourcing, findRequisitionHeaders, type RequisitionStatus } from '@/modules/requisitions';
@@ -179,6 +180,8 @@ export type RfqDetailDto = Omit<RfqSummaryDto, 'lineCount' | 'supplierCount'> & 
   comparison: ComparisonDto;
   award: AwardDto | null;
   callerActions: RfqAction[];
+  /** The RFQ's and its quotations' audit trail, oldest first (Phase 9). */
+  history: HistoryEntryDto[];
 };
 export const RFQ_DETAIL_KEYS = [
   'id',
@@ -210,6 +213,7 @@ export const RFQ_DETAIL_KEYS = [
   'comparison',
   'award',
   'callerActions',
+  'history',
 ] as const;
 
 export const listRfqs = defineQuery({
@@ -436,6 +440,11 @@ export const getRfq = defineQuery({
         status,
         { manage: actor.permissions.has('rfq.manage'), record: canRecord, award: actor.permissions.has('quotation.award') },
         requisition.status === 'approved',
+      ),
+      history: await findEntityHistory(
+        tx,
+        [{ entityType: 'rfq', entityId: row.id }, ...quotations.map((q) => ({ entityType: 'quotation', entityId: q.id }))],
+        (ids) => findUserDisplayNames(tx, ids),
       ),
     };
   },

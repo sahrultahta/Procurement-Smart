@@ -105,6 +105,17 @@ const EXPECTED: Record<string, readonly Caller[]> = {
   'receipt.list': ['procurement', 'receiver', 'finance', 'auditor'],
   'receipt.get': ['procurement', 'receiver', 'finance', 'auditor'],
   'receipt.formOptions': ['receiver'],
+  // Phase 9. Audit search is audit.read (auditor, admin); reports and their CSV export are
+  // report.view (procurement, finance, auditor).
+  'audit.search': ['auditor', 'admin'],
+  'audit.filterOptions': ['auditor', 'admin'],
+  'report.spendBySupplier': ['procurement', 'finance', 'auditor'],
+  'report.spendByDepartment': ['procurement', 'finance', 'auditor'],
+  'report.requisitionCycleTime': ['procurement', 'finance', 'auditor'],
+  'report.approvalAging': ['procurement', 'finance', 'auditor'],
+  'report.openPurchaseOrders': ['procurement', 'finance', 'auditor'],
+  'report.potentialSplitPurchases': ['procurement', 'finance', 'auditor'],
+  'report.export': ['procurement', 'finance', 'auditor'],
 };
 
 let t: TestDatabase;

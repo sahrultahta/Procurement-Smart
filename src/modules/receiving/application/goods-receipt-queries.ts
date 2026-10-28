@@ -1,5 +1,6 @@
 import 'server-only';
 import { z } from 'zod';
+import { findEntityHistory, type HistoryEntryDto } from '@/modules/audit';
 import { findUserDisplayNames } from '@/modules/identity';
 import { findPurchasingRules, todayIn } from '@/modules/organization';
 import {
@@ -156,6 +157,8 @@ export type GoodsReceiptDetailDto = {
   version: number;
   lines: GoodsReceiptLineDto[];
   callerActions: GoodsReceiptAction[];
+  /** The document's own audit trail, oldest first (Phase 9). */
+  history: HistoryEntryDto[];
 };
 export const GR_DETAIL_KEYS = [
   'id',
@@ -180,6 +183,7 @@ export const GR_DETAIL_KEYS = [
   'version',
   'lines',
   'callerActions',
+  'history',
 ] as const;
 
 export const getGoodsReceipt = defineQuery({
@@ -249,6 +253,7 @@ export const getGoodsReceipt = defineQuery({
       version: row.version,
       lines,
       callerActions,
+      history: await findEntityHistory(tx, [{ entityType: 'goods_receipt', entityId: row.id }], (ids) => findUserDisplayNames(tx, ids)),
     };
   },
 });

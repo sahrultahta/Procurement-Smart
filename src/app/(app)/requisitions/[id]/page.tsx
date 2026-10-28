@@ -12,6 +12,7 @@ import { listRfqs } from '@/modules/sourcing';
 import { getOrganization } from '@/server/organization-profile';
 import { getRequestContext } from '@/server/request-context';
 import { runQuery } from '@/shared/application/runner';
+import { DocumentHistory } from '../../_components/document-history';
 import { ApprovalHistory } from '../_components/approval-history';
 import { CancelRequisitionForm, type CancelMode } from '../_components/cancel-form';
 import { PoStatusBadge } from '../../purchase-orders/_components/po-status';
@@ -311,6 +312,7 @@ export default async function RequisitionPage(props: {
           </CardContent>
         </Card>
       ) : null}
+      <DocumentHistory entries={r.history} timezone={timezone} />
     </div>
   );
 }

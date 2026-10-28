@@ -172,7 +172,8 @@ test.describe('P6b-AC11: quotations, comparison, and award', () => {
     await expect(dewi.getByRole('status')).toHaveText(/RFQ awarded/);
     await expect(badge(dewi)).toHaveText('Awarded');
     await expect(dewi.getByText('Example Office Supplies Ltd, $565.00')).toBeVisible();
-    await expect(dewi.getByText('Faster delivery of the monitor arms; only two suppliers stock them.')).toBeVisible();
+    // Exact: the history card also shows it, as "Reason: …".
+    await expect(dewi.getByText('Faster delivery of the monitor arms; only two suppliers stock them.', { exact: true })).toBeVisible();
     await expect(dewi.getByRole('table', { name: 'Quotations' })).toContainText('Not awarded');
     await expect(dewi.getByRole('button', { name: 'Award RFQ' })).toHaveCount(0);
 

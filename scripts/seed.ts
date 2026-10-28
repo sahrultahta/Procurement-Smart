@@ -515,6 +515,33 @@ try {
     summary.receiptsPosted++;
   }
 
+  // Phase 9 demo data: a potential split purchase. A second small order from the same supplier for
+  // the same requester (195.00 before tax). Each order is below the RFQ threshold (500), together
+  // they are above it, so the split-purchases report lists the pair. Approved, not issued.
+  const toner = await approvedRequisition('Toner cartridges for Operations', 'Fictional demo requisition (seed data), a second small order from the same supplier.', [
+    { description: 'Toner cartridge, black', quantity: '3', uom: 'pcs', estimatedUnitPrice: '65.00' },
+  ]);
+  const tonerOrders = await runQuery(buyer, listPurchaseOrders, { requisitionId: toner.id });
+  if (!tonerOrders.ok) throw new Error(`Listing purchase orders failed: ${tonerOrders.error.message}`);
+  if (tonerOrders.data.items.length === 0) {
+    const options = await runQuery(buyer, purchaseOrderFormOptions, { requisitionId: toner.id });
+    if (!options.ok) throw new Error(`Reading purchase-order options failed: ${options.error.message}`);
+    const supplier = options.data.suppliers.find((s) => s.legalName === 'Example Office Supplies Ltd');
+    if (!supplier) throw new Error('Example Office Supplies Ltd is not an active supplier');
+    const created = await runCommand(buyer, createPurchaseOrder, {
+      requisitionId: toner.id,
+      supplierId: supplier.id,
+      paymentTerms: 'Net 30',
+      deliveryAddress: 'Operations stores, 1 Example Plaza, Springfield',
+      expectedDeliveryDate: '2030-05-20',
+      lines: options.data.lines.map((l) => ({ requisitionLineId: l.id, quantity: l.availableQty, unitPrice: l.estimatedUnitPrice, taxRatePct: '11' })),
+    });
+    if (!created.ok) throw new Error(`Creating the toner purchase order failed: ${created.error.message}`);
+    summary.purchaseOrdersCreated++;
+    const submitted = await runCommand(buyer, submitPurchaseOrder, { purchaseOrderId: created.data.purchaseOrderId, expectedVersion: created.data.version });
+    if (!submitted.ok || submitted.data.status !== 'approved') throw new Error(`Submitting the toner purchase order did not approve it: ${submitted.ok ? submitted.data.status : submitted.error.message}`);
+  }
+
   if (Object.keys(credentials).length > 0) {
     mkdirSync(dirname(outFile), { recursive: true });
     writeFileSync(outFile, `${JSON.stringify(credentials, null, 2)}\n`, { mode: 0o600 });

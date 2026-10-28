@@ -57,7 +57,7 @@ flowchart LR
 | T-03 | TB3 | SQL injection | Drizzle parameterized queries. `sql.raw` banned outside `db/` scripts. Sort and filter fields whitelisted. | Lint rule. Phase 5: injection-string tests on search filters. |
 | T-04 | TB3 | Lost updates or races corrupting counters (T2/T3) | ADR 0008: row locks, versions, conditional updates, CHECK constraints | Concurrency suite CC-01 to CC-07 |
 | T-05 | TB1 | CSRF on Server Actions or route handlers | Server Actions are POST-only with Next.js Origin/Host comparison. `SameSite=Lax` cookies. No state change on GET (lint and review rule). Route handlers mutating state also check Origin. | Phase 3: cross-origin POST test |
-| T-06 | TB1 | CSV/formula injection in exports | Prefix cells starting with `= + - @`, TAB, or CR | Phase 9: unit test |
+| T-06 | TB1 | CSV/formula injection in exports | Prefix cells starting with `= + - @`, TAB, or CR | Phase 9 (verified): unit and integration tests |
 | R-01 | all | User denies performing an action | Append-only audit in the same transaction, DB clock, actor and role snapshot, request id | Phase 2: audit tests. Every command asserts its audit event. |
 | R-02 | TB3 | Audit rows edited or deleted through a compromised app (T2–T5) | App role has only INSERT/SELECT. Triggers block UPDATE/DELETE/TRUNCATE for all roles. | Phase 2: privilege and trigger tests |
 | I-01 | TB2 | IDOR: reading another user's PR or PO by id (T2) | Resource checks in every query. List queries scoped in SQL. Unauthorized reads return `NOT_FOUND`. | Phase 5 onward: cross-user read tests per entity |
@@ -86,7 +86,7 @@ flowchart LR
 | AB-07 | Buyer skips competitive sourcing | `RFQ_REQUIRED` above threshold. Justification for fewer than min quotes or non-lowest award. | Phases 6 and 7 (verified) |
 | AB-08 | Buyer confirms receipt of goods never delivered | SOD-04 (PO creator ≠ receiver) | Phase 8 (verified) |
 | AB-09 | Over-receipt to justify a larger invoice downstream | `OVER_RECEIPT` (C2 + CHECK) | Phase 8, CC-04 (verified) |
-| AB-10 | Splitting a purchase to stay under thresholds | Not preventable by rule. Detected by the potential-split-purchases report. | Phase 9 |
+| AB-10 | Splitting a purchase to stay under thresholds | Not preventable by rule. Detected by the potential-split-purchases report. | Phase 9 (verified) |
 | AB-11 | Colluding requester and approver (T4) | Not preventable by SoD. Detected by audit, aging, and spend reports. Residual risk accepted. | n/a |
 
 ### Phase 3a status (2026-10-21)
@@ -128,7 +128,17 @@ flowchart LR
 - **I-01 (IDOR) for approvals:** deciding on a requisition the caller cannot see is `NOT_FOUND`, the same as a request that does not exist; the inbox lists only steps whose documents the caller can open; history is returned only inside `requisition.get`, after its visibility check, with names instead of user ids.
 - **R-01:** every submission, decision, withdrawal, cancellation, and close is audited in the same transaction, with the comment or reason.
 - **Approval history is tamper-resistant in the database:** snapshot columns and completed requests are frozen, steps only move forward and cannot be added later, nothing can be deleted (`PFD01` for every role; no DELETE grant).
-- **Residual:** if nobody is eligible for a step (for example, the only approver of a department is the requester), the step stays pending; nothing is skipped automatically. The approval-aging report (Phase 9) will show it. There are no notifications yet: approvers have to open their inbox.
+- **Residual:** if nobody is eligible for a step (for example, the only approver of a department is the requester), the step stays pending; nothing is skipped automatically. The approval-aging report (Phase 9) shows it. There are no notifications yet: approvers have to open their inbox.
+
+### Phase 9 status (2026-10-28)
+
+- **T-06 (CSV/formula injection) is controlled:** every exported text cell starting with `=`, `+`, `-`, `@`, TAB, or CR gets a leading apostrophe; amount and count cells are written as numbers only when they are plain decimals, and as protected text otherwise (unit tests for each prefix, an integration test with an order line named `=2+3 desk lamps`). Exports need `report.view`, like the reports, and accept only the report's own parameters.
+- **AB-10 (splitting a purchase) is detected:** the potential-split-purchases report groups orders of one requester and supplier, approved within a window, each below the PO approval threshold (totals) or the RFQ threshold (subtotals, orders from an RFQ award left out), that together reach it. Seeded case and controls tested. It shows leads for review, not proof; a split across two requesters, two suppliers, or a longer window is not found.
+- **E-03 (threshold manipulation):** the split report shows the thresholds in force, and audit search finds every `settings.updated` and `approvalPolicy.published` event with before and after values.
+- **I-01 (IDOR) for history:** a document's history is returned only inside its get query, after the same visibility check (`NOT_FOUND` otherwise), with names instead of user ids and without request id, IP address, or user agent. Audit search, which shows those, needs `audit.read` (auditor, admin). **E-01:** 9 new operations in the matrix.
+- **I-02 (information disclosure through reports):** reports show amounts and names across departments; `report.view` is limited to procurement, finance, and auditors (ADR 0006), and `/reports/export` answers 403 to everyone else.
+- **R-01:** reads are not audited (as before); the audit trail stays append-only, and reporting reads it through a view without any write grant.
+- **Residual:** reports are computed when opened, with no caching or limits beyond the statement timeout (15 s) and the 10-year range cap; a very large installation could need indexes on the report filters. Audit search matches an action exactly (no prefix search). `report.view` users can export everything they can see; exports are not audited.
 
 ### Phase 8 status (2026-10-27)
 

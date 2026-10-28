@@ -11,6 +11,7 @@ import { listGoodsReceipts } from '@/modules/receiving';
 import { getOrganization } from '@/server/organization-profile';
 import { getRequestContext } from '@/server/request-context';
 import { runQuery } from '@/shared/application/runner';
+import { DocumentHistory } from '../../_components/document-history';
 import { ReceiptStatusBadge, receiptKindLabel } from '../../goods-receipts/_components/receipt-status';
 import { ApprovalHistory } from '../../requisitions/_components/approval-history';
 import { DecisionForm } from '../../requisitions/_components/workflow-forms';
@@ -329,6 +330,7 @@ export default async function PurchaseOrderPage(props: { params: Promise<{ id: s
           </CardContent>
         </Card>
       ) : null}
+      <DocumentHistory entries={po.history} timezone={timezone} />
     </div>
   );
 }

@@ -141,6 +141,13 @@
       "when": 1793006327955,
       "tag": "0019_goods_receipts_guards_and_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793156944883,
+      "tag": "0020_reporting_views",
+      "breakpoints": true
     }
   ]
 }

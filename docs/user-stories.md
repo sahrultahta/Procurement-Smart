@@ -103,17 +103,17 @@ Personas (fictional): **Rina** (requester, Operations), **Bayu** (approver, Oper
 
 ## Audit and reporting
 
-**US-AU-01 Audit search.** Lena searches the audit trail by document, user, action, and date range, and sees before/after values for changed fields.
+**US-AU-01 Audit search.** *(Phase 9.)* Lena searches the audit trail by document, user, action, and date range, and sees before/after values for changed fields.
 
 **US-AU-02 Audit cannot be altered.** No user, including admins, can edit or delete audit events through the application. Attempts at the database level by the app role fail.
 
-**US-RP-01 Spend reports.** Sari views spend by supplier and by department for a date range, on an issued or received basis, and exports to CSV. Numbers match the underlying documents exactly. Each report shows when it was computed.
+**US-RP-01 Spend reports.** *(Phase 9.)* Sari views spend by supplier and by department for a date range, on an issued or received basis, and exports to CSV. Numbers match the underlying documents exactly. Each report shows when it was computed.
 
-**US-RP-02 Process health.** Sari views PR cycle time (median and p90), approval aging, and open POs with outstanding quantities.
+**US-RP-02 Process health.** *(Phase 9.)* Sari views PR cycle time (median and p90), approval aging, and open POs with outstanding quantities.
 
-**US-RP-03 Fraud signals.** Lena views "potential split purchases": PRs or POs by the same requester and supplier within N days that are each below a threshold but exceed it together.
+**US-RP-03 Fraud signals.** *(Phase 9; orders only: requisitions are not ordered yet, so they cannot be a split purchase.)* Lena views "potential split purchases": PRs or POs by the same requester and supplier within N days that are each below a threshold but exceed it together.
 
-**US-RP-04 Honest empty states.** With no data in range, reports say so. They never show placeholder or sample numbers.
+**US-RP-04 Honest empty states.** *(Phase 9.)* With no data in range, reports say so. They never show placeholder or sample numbers.
 
 ## Out of scope for v1 (explicit)
 

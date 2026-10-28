@@ -197,14 +197,26 @@ Queries: `receipt.list`, `receipt.get`.
 
 | Query | Permission | Input | Output |
 | --- | --- | --- | --- |
-| `audit.search` | `audit.read` | entityType?, entityId?, actorUserId?, action?, from?, to?, cursor | events (redacted) |
-| `audit.entityHistory` | `audit.read`, or read access to that document | entityType, entityId | timeline |
-| `report.spendBySupplier` | `report.view` | from, to, basis `issued\|received` | rows {supplier, poCount, total} + `asOf` |
-| `report.spendByDepartment` | `report.view` | from, to, basis | rows + `asOf` |
-| `report.requisitionCycleTime` | `report.view` | from, to, departmentId? | median, p90, count (submit to approve, in hours) |
-| `report.approvalAging` | `report.view` | olderThanDays | pending steps with age |
-| `report.openPurchaseOrders` | `report.view` | supplierId? | POs with outstanding qty and value |
-| `report.potentialSplitPurchases` | `report.view` | windowDays, from, to | groups of PRs/POs by the same requester+supplier within a window whose individual totals are below a threshold but whose sum exceeds it |
-| `report.export` | `report.view` | reportName, params | CSV (formula-injection safe: cells starting with `= + - @` TAB or CR are prefixed with `'`) |
+| `audit.search` | `audit.read` | entityType?, entityId?, actorUserId?, action?, from?, to?, cursor?, limit? (1–100, 50) | events, newest first, + `nextCursor` |
+| `audit.filterOptions` | `audit.read` | (none) | the record types and the people to filter by |
+| `report.spendBySupplier` | `report.view` | from, to, basis `issued\|received` (default `issued`) | rows {id, code, name, currency, poCount, total} + totals per currency + `asOf` |
+| `report.spendByDepartment` | `report.view` | from, to, basis | as above, per department |
+| `report.requisitionCycleTime` | `report.view` | from, to, departmentId? | count, medianHours, p90Hours, the requisitions with their hours, the departments (for the filter) + `asOf` |
+| `report.approvalAging` | `report.view` | olderThanDays (0–365, default 0) | pending steps with document, step, pending since, whole days waited + `asOf` |
+| `report.openPurchaseOrders` | `report.view` | supplierId? | `issued` and `partially_received` orders with each line's outstanding quantity and value, totals per currency, the suppliers with open orders + `asOf` |
+| `report.potentialSplitPurchases` | `report.view` | from, to, windowDays (1–90, default 30) | the thresholds in force and the groups found + `asOf` |
+| `report.export` | `report.view` | report (one of the six names above without `report.`), params (the report's input as text) | { filename, contentType, csv } |
 
-Every report is a live SQL query over committed data. No number on any dashboard is hardcoded or sampled. Every report response carries `asOf` (DB `now()`). Empty data yields empty results and an explicit empty state, never placeholder numbers.
+Phase 9 (implemented 2026-10-28):
+
+- **No `audit.entityHistory` query** (decision 6). Like approval history, a document's audit trail is part of the document: `requisition.get`, `rfq.get` (the RFQ and its quotations), `po.get`, `receipt.get`, and `supplier.get` return `history`, oldest first, after their own visibility checks. Each entry has id, time, actor name (`System` without a user), action, record type, field changes (before → after, as text), and reason. Request id, IP address, and user agent appear only in `audit.search` (decision 8).
+- `audit.search` reads the view `report_audit_events` (decision 7). `entityType` is one of the recorded types; `action` must look like an action (`po.issued`) and matches exactly; `from` and `to` are org dates, both inclusive; the cursor is the last event id of the page. Events carry the actor's name and roles at the time, the changes as recorded (redacted fields stay `[redacted]`), reason, request id, IP address, and user agent.
+- Reports read only the reporting views (migration 0020, docs/architecture.md). Dates are org dates (`org_settings.timezone`), ranges inclusive, at most 3,660 days, `to` not before `from`. Amounts are decimal strings at the currency scale. Rows are grouped per currency as well, though one installation has one currency.
+- **Amounts** (decision 1): tax included, rounded per line as the order did (ADR 0007). **Issued basis** (decision 2): the order's total on the org date it was issued; orders closed short keep their full total; cancelled orders never count. **Received basis** (decision 3): each posted receipt line at the order line's price, `round(qty × price) + round(that × tax rate / 100)`, on the receipt's date; a reversal counts negative on its own date; received quantity above the ordered quantity (within tolerance) counts. `poCount` counts distinct orders.
+- **Cycle time** (decision 4): for requisitions approved (org date) in the range, from the first submission (round 1 of its approval) to the final approval. Median and 90th percentile interpolate between the closest values (as `percentile_cont`), in exact decimals, rounded half up to 2 decimals of an hour; `null` when none.
+- **Approval aging:** steps waiting for a decision since at least `olderThanDays` before `asOf`, oldest first.
+- **Potential split purchases** (decision 5): orders approved in the range and not cancelled, for the same requester (of the requisition), supplier, and currency. Two checks, each with the setting in force now, skipped when it is not set: `po_approval` adds order totals (tax included) of orders each below `po_approval_threshold`; `rfq` adds subtotals (tax excluded) of orders each below `rfq_required_above`, leaving out orders from an RFQ award. A window starts at an order and takes those approved up to `windowDays` later; it is reported when it has two or more orders that together reach the threshold, and the next window starts after it; otherwise the next window starts at the following order. Each group says which threshold it reaches.
+- **`asOf`** is the application clock when the report was read (the same instant for every figure in it), not the database `now()` first planned: the runner's clock can be fixed in tests.
+- **CSV** (decision 9): UTF-8 with a byte-order mark, comma separators, CRLF line ends, `.` decimals without thousands separators, ISO dates and timestamps, and an `As of` column. Text cells starting with `=`, `+`, `-`, `@`, TAB, or CR get a leading `'`; amount and count cells are written as plain decimals (a minus sign included) and anything else in them is treated as text. Cells with commas, quotes, or line breaks are quoted. The open-orders file has one row per order line, the split file one row per order in a group. In the app, `GET /reports/export/<report>?<params>` returns the file (401, 403, 400, 404 as plain text otherwise; `Cache-Control: no-store`).
+
+Every report is a live SQL query over committed data. No number on any dashboard is hardcoded or sampled. Every report response carries `asOf`. Empty data yields empty results and an explicit empty state, never placeholder numbers.

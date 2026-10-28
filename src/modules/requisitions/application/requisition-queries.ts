@@ -1,5 +1,6 @@
 import 'server-only';
 import { z } from 'zod';
+import { findEntityHistory, type HistoryEntryDto } from '@/modules/audit';
 import { findApprovalHistory, findOpenDecision, type ApprovalRoundDto, type OpenDecisionDto } from '@/modules/approvals';
 import { findDepartmentDirectory, findUserDisplayNames } from '@/modules/identity';
 import { defineQuery } from '@/shared/application/runner';
@@ -76,6 +77,8 @@ export type RequisitionDetailDto = RequisitionSummaryDto & {
   /** The caller is the requester and the requisition can still be edited (draft or returned). */
   callerCanEdit: boolean;
   callerActions: RequisitionAction[];
+  /** The document's own audit trail, oldest first (Phase 9). */
+  history: HistoryEntryDto[];
 };
 export const REQUISITION_DETAIL_KEYS = [
   ...REQUISITION_SUMMARY_KEYS,
@@ -94,6 +97,7 @@ export const REQUISITION_DETAIL_KEYS = [
   'openDecision',
   'callerCanEdit',
   'callerActions',
+  'history',
 ] as const;
 
 const money = (value: string, scale: number) => toFixedScale(dec(value), scale);
@@ -205,6 +209,7 @@ export const getRequisition = defineQuery({
       openDecision,
       callerCanEdit: callerActions.includes('edit'),
       callerActions,
+      history: await findEntityHistory(tx, [{ entityType: 'requisition', entityId: row.id }], (ids) => findUserDisplayNames(tx, ids)),
     };
   },
 });

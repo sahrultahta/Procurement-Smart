@@ -21,7 +21,7 @@ Auditors need to answer "who did what, when, and what changed?" for every procur
    - A `BEFORE UPDATE OR DELETE` row trigger and a `BEFORE TRUNCATE` statement trigger raise an exception for **every** role, including the owner. Removing them requires DDL, which the app role cannot run.
 3. **Coverage.** Every command that changes state writes at least one audit event. Login success, login failure, logout, password change, role grant and revoke, user deactivation, settings changes, and approval-policy changes are all audited.
 4. **Redaction.** Password hashes, session tokens, and secrets never enter `changes`. Each module declares a per-entity allowlist of audited fields.
-5. **Reading.** Only `audit.read` (auditor, admin) can read audit events. Entity history views show events for documents the actor can already see.
+5. **Reading.** Only `audit.read` (auditor, admin) can read audit events. Entity history views show events for documents the actor can already see. *(Implemented in Phase 9: audit search for `audit.read`; each document's get query embeds its own history, without request id, IP address, or user agent.)*
 6. **Access-denied events** go to the structured server log, not `audit_events`. That keeps an unauthenticated flood from amplifying writes to the audit table. Login failures are both rate-limited and audited.
 
 ## Limits (stated honestly)

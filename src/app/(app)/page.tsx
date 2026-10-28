@@ -22,8 +22,9 @@ export default async function HomePage() {
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           <p>
-            Available so far: suppliers (with maker-checker review), purchase requisitions, and their multi-step approvals.
-            Quotations, purchase orders, and receipts come in later phases.
+            ProcureFlow covers the whole purchase: suppliers (with maker-checker review), requisitions and their approvals, RFQs and
+            quotations, purchase orders, and goods receipts. Every document keeps its history; reports and the audit trail are for the
+            roles that need them. The menu above shows what your roles can open.
           </p>
         </CardContent>
       </Card>
