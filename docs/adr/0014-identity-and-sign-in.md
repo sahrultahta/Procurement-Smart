@@ -37,7 +37,7 @@ Phase 3a implemented authentication with Better Auth 1.7.7 and the role model. S
 
 ## Consequences
 
-- **The IP-based rate limit trusts `X-Forwarded-For`.** Without a reverse proxy that overwrites that header, a client can rotate it and bypass the per-IP limit. Production must run behind such a proxy, and Phase 10 configures `advanced.ipAddress.trustedProxies`. A per-account limit would be an additional control (not built).
+- **The IP-based rate limit trusts `X-Forwarded-For`.** Without a reverse proxy that overwrites that header, a client can rotate it and bypass the per-IP limit. Production must run behind such a proxy, and Phase 10 configures `advanced.ipAddress.trustedProxies`. A per-account limit would be an additional control (not built). *(Implemented in Phase 10: the optional `TRUSTED_PROXIES` setting feeds `advanced.ipAddress.trustedProxies`, and the request context and the sign-in audit events resolve the client IP by the same rule (`src/shared/application/client-ip.ts`), so the audit trail records the address the rate limit counts. Before, they took the leftmost address, which a client can write.)*
 - Auth audit rows are not in the same transaction as Better Auth's writes. Sign-in and password events fail closed (no audit, no change). Sign-out and failed-sign-in events are best effort, and their failures are logged.
 - Revoking another user's sessions (deactivation, Phase 3b) is done by deleting their `sessions` rows in the same transaction as the profile update, not through the admin plugin, whose own role model conflicts with ADR 0006.
 

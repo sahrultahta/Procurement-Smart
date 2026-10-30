@@ -1,10 +1,10 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, lt } from 'drizzle-orm';
 import { z } from 'zod';
 import { failBusinessRule } from '../result';
 import { idempotencyKeys } from './tables';
-import type { Tx } from './transaction';
+import type { Database, Tx } from './transaction';
 
 /** Optional field of every `*.create` command (docs/api-contracts.md). */
 export const idempotencyKeyField = z
@@ -63,4 +63,14 @@ export async function withIdempotency<T>(
     .set({ response: result as never })
     .where(and(eq(idempotencyKeys.userId, scope.userId), eq(idempotencyKeys.key, scope.key)));
   return result;
+}
+
+/**
+ * Deletes idempotency keys created before `olderThan` (docs/operations.md). A key only guards
+ * against a form being submitted twice in quick succession, so old keys protect nothing; a
+ * replay with a purged key simply runs the command again. Returns how many were deleted.
+ */
+export async function purgeIdempotencyKeys(db: Database | Tx, olderThan: Date): Promise<number> {
+  const deleted = await db.delete(idempotencyKeys).where(lt(idempotencyKeys.createdAt, olderThan)).returning({ key: idempotencyKeys.key });
+  return deleted.length;
 }

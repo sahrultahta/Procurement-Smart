@@ -78,14 +78,18 @@ For a real installation, create only the first administrator: `npm run bootstrap
 | `npm run test:unit` | Unit tests (no database) |
 | `npm test` | Unit + integration + concurrency tests (needs PostgreSQL running) |
 | `npm run test:coverage` | The same, plus the 85% line-coverage gate on `domain/` and `application/` code |
-| `npm run build` | Production build |
-| `npm run test:e2e` | Playwright against `next start` on port 3100, on its own database `pf_e2e` (run `npm run build` first) |
+| `npm run build` | Production build: the standalone server in `.next/standalone`, with its static assets and without `.env` files (docs/deployment.md) |
+| `npm run start` | Runs that server (`HOSTNAME`, `PORT`, and the variables in `.env.example` from the environment) |
+| `npm run test:e2e` | Playwright against the standalone server on port 3100, on its own database `pf_e2e` (run `npm run build` first) |
 | `npm run db:generate` | Generate a migration from schema changes (review the SQL before committing) |
 | `npm run db:migrate` | Apply migrations to `DATABASE_MIGRATION_URL` (falls back to `DATABASE_URL`) |
 | `npm run db:app-role` | Create or update `procureflow_app` outside the local cluster |
 | `npm run env:local` | Add missing auth settings to `.env` (never overwrites; backs up first) |
 | `npm run seed` | Fictional demo data (see above) |
 | `npm run bootstrap-admin -- --email … --name …` | First administrator plus a one-time password link |
+| `npm run audit:export -- --out <file>` / `npm run audit:verify -- --file <file>` | Hash-chained audit export and its check (docs/operations.md) |
+| `npm run db:checksums` | Row count and checksum per table, to compare a restored database |
+| `npm run maintenance:purge-idempotency` | Deletes idempotency keys older than 30 days |
 
 Integration tests clone a migrated template database (`pf_template`) once per test file (ADR 0011). Setup uses `TEST_DATABASE_URL` (needs `CREATEDB`). Application code under test runs through `TEST_APP_DATABASE_URL`, with the runtime role's real privileges.
 

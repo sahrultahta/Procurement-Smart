@@ -4,7 +4,7 @@ An open-source procurement workflow system: suppliers, purchase requisitions wit
 
 ## Status
 
-**Phases 0–8 are done, and Phase 9 (audit trail and reporting) is implemented.** What works today:
+**Version 0.1.0** ([CHANGELOG](CHANGELOG.md)): all ten planned phases are done. What works:
 - signing in and out;
 - one-time password-setup links;
 - seven roles with code-defined permissions;
@@ -19,9 +19,10 @@ An open-source procurement workflow system: suppliers, purchase requisitions wit
 - goods receipts: receivers record what arrived against an issued order (date, delivery note, quantity per line) and post it, which updates the order's received quantities and status (partially received, received); never more than ordered plus a configurable tolerance, also when two receipts are posted at once (the whole receipt is refused, naming the lines); whoever created the order cannot receive against it; a posted receipt is never changed, only reversed once by a separate reversal document;
 - an append-only audit trail: every document shows its own history, and auditors and admins search all of it (by record, person, action, and date);
 - reports for procurement, finance, and auditors, read live from the data and downloadable as CSV: spend by supplier and by department (as issued or as received), requisition cycle time (median and 90th percentile), approval aging, open purchase orders, and potential split purchases;
+- operations: a standalone production build, a tamper-evident (hash-chained) audit export with verification against the database, restore checks by per-table checksums, and maintenance commands;
 - decimal-safe money calculations.
 
-Phase 10 (hardening, deployment documentation, release) is next. Work happens in gated phases, and each phase ends with a report of exactly what was run and what passed (`docs/reports/`). Local setup is described in [docs/development.md](docs/development.md).
+To install it, follow [docs/deployment.md](docs/deployment.md); to run it, [docs/operations.md](docs/operations.md) (backups, restore drills, audit archives, maintenance, incidents). Work happened in gated phases, and each phase ended with a report of exactly what was run and what passed (`docs/reports/`). Local setup is described in [docs/development.md](docs/development.md).
 
 ## Design documents
 
@@ -35,6 +36,8 @@ Phase 10 (hardening, deployment documentation, release) is next. Work happens in
 | [docs/schema.md](docs/schema.md) | PostgreSQL schema design and constraints |
 | [docs/api-contracts.md](docs/api-contracts.md) | Application commands and queries, error codes |
 | [docs/threat-model.md](docs/threat-model.md) | STRIDE analysis and procurement abuse cases |
+| [docs/deployment.md](docs/deployment.md) | Installing a release: database roles, migrations, standalone server, reverse proxy, several instances, upgrades |
+| [docs/operations.md](docs/operations.md) | Runbook: backup and restore, audit archive, maintenance, secret rotation, incidents |
 
 ## Planned stack (versions checked 2026-10-18, see ADR 0011)
 

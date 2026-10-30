@@ -21,6 +21,9 @@ for (const [key, value] of Object.entries(process.env)) if (value !== undefined)
 // The auth base URL must be the origin the browser uses, or the origin check rejects requests.
 serverEnv.BETTER_AUTH_URL = baseURL;
 serverEnv.NEXT_TELEMETRY_DISABLED = '1';
+// The standalone server (npm run start) takes its address from the environment.
+serverEnv.HOSTNAME = '127.0.0.1';
+serverEnv.PORT = String(port);
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -39,9 +42,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // Requires a prior `npm run build`. Recreates the E2E database first (scripts/e2e-db.ts).
+    // Requires a prior `npm run build`: the tests run against the packaged standalone server, the
+    // deployment artifact (docs/deployment.md). Recreates the E2E database first (scripts/e2e-db.ts).
     // A server already running on this port is reused as is, without a fresh database.
-    command: `node scripts/e2e-db.ts && npm run start -- --hostname 127.0.0.1 --port ${port}`,
+    command: 'node scripts/e2e-db.ts && npm run start',
     url: `${baseURL}/api/health`,
     env: serverEnv,
     reuseExistingServer: !isCI,

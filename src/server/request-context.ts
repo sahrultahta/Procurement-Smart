@@ -2,8 +2,10 @@ import 'server-only';
 import { headers } from 'next/headers';
 import { cache } from 'react';
 import { resolveActor, type IdentityActor } from '@/modules/identity';
+import { clientIpFrom } from '@/shared/application/client-ip';
 import { createRequestContext, type RequestContext } from '@/shared/application/context';
 import { getDb } from '@/shared/db/client';
+import { getEnv } from '@/shared/env';
 import { getAuth } from './auth';
 
 export type AppRequestContext = Omit<RequestContext, 'actor'> & { readonly actor: IdentityActor | null };
@@ -20,7 +22,8 @@ export const getRequestContext = cache(async (): Promise<AppRequestContext> => {
   const context = createRequestContext({
     actor,
     requestId: requestHeaders.get('x-request-id'),
-    ip: requestHeaders.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null,
+    // The same client the sign-in rate limit sees (ADR 0014), not whatever a client wrote first.
+    ip: clientIpFrom(requestHeaders.get('x-forwarded-for'), getEnv().TRUSTED_PROXIES),
     userAgent: requestHeaders.get('user-agent'),
   });
   return { ...context, actor };

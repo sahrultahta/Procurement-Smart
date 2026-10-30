@@ -1,6 +1,6 @@
 {
   "name": "procureflow",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Open-source procurement workflow system",
   "license": "Apache-2.0",
@@ -10,8 +10,8 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "build": "next build && node scripts/package-standalone.ts",
+    "start": "node .next/standalone/server.js",
     "lint": "eslint --max-warnings=0 .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -25,6 +25,10 @@
     "env:local": "node scripts/env-local.ts",
     "bootstrap-admin": "tsx --conditions=react-server scripts/bootstrap-admin.ts",
     "seed": "tsx --conditions=react-server scripts/seed.ts",
+    "audit:export": "tsx --conditions=react-server scripts/audit-export.ts",
+    "audit:verify": "tsx --conditions=react-server scripts/audit-verify.ts",
+    "db:checksums": "node scripts/db-checksums.ts",
+    "maintenance:purge-idempotency": "tsx --conditions=react-server scripts/purge-idempotency.ts",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {

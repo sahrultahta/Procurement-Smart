@@ -9,7 +9,7 @@ const VALID = {
 
 describe('parseEnv (P1-AC6)', () => {
   it('accepts a valid configuration and applies defaults', () => {
-    expect(parseEnv(VALID)).toEqual({ ...VALID, NODE_ENV: 'development', LOG_LEVEL: 'info' });
+    expect(parseEnv(VALID)).toEqual({ ...VALID, NODE_ENV: 'development', LOG_LEVEL: 'info', TRUSTED_PROXIES: [] });
   });
 
   it('requires an auth secret of at least 32 characters and an http(s) base URL (Phase 3a)', () => {

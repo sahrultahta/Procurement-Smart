@@ -1,3 +1,15 @@
+export { compareExportWithDatabase, exportAuditEvents, exportedEvents, type DatabaseComparison } from './application/audit-export';
+export {
+  AUDIT_EXPORT_FORMAT,
+  GENESIS_HASH,
+  canonicalJson,
+  chainHash,
+  verifyExport,
+  type ExportFooter,
+  type ExportHeader,
+  type ExportedAuditEvent,
+  type VerifyResult,
+} from './application/hash-chain';
 export {
   HISTORY_ENTRY_KEYS,
   MAX_HISTORY_ENTRIES,

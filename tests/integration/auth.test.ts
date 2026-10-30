@@ -73,6 +73,31 @@ describe('P3a-AC2: sign-in rate limit', () => {
   });
 });
 
+describe('P10-AC7: behind trusted reverse proxies (TRUSTED_PROXIES, ADR 0014)', () => {
+  // Two proxy hops (10.0.0.2 and 10.0.0.3); the client is the first address from the right that is not one.
+  const proxied = (target: Auth, header: string, password = 'wrong-password') => signIn('rina@example.com', password, header, target);
+
+  it('limits the real client, whatever a client writes at the left of X-Forwarded-For', async () => {
+    const behind = makeAuth(t.appDb, { trustedProxies: ['10.0.0.0/8'] });
+    const statuses: number[] = [];
+    for (let i = 0; i < SIGN_IN_RATE_LIMIT.max + 1; i++) {
+      // A different forged address every time: the client is still 203.0.113.60.
+      statuses.push((await proxied(behind, `192.0.2.${i + 1}, 203.0.113.60, 10.0.0.3, 10.0.0.2`)).status);
+    }
+    expect(statuses.slice(0, SIGN_IN_RATE_LIMIT.max).every((s) => s === 401)).toBe(true);
+    expect(statuses.at(-1)).toBe(429);
+    // Another client behind the same proxies is unaffected.
+    expect((await proxied(behind, '203.0.113.61, 10.0.0.2', PASSWORD)).status).toBe(200);
+  });
+
+  it('records that same client in the audit trail', async () => {
+    const behind = makeAuth(t.appDb, { trustedProxies: ['10.0.0.0/8'] });
+    expect((await proxied(behind, '192.0.2.99, 203.0.113.62, 10.0.0.2', PASSWORD)).status).toBe(200);
+    const { rows } = await t.pool.query("SELECT host(ip) AS ip FROM audit_events WHERE action = 'auth.signedIn' ORDER BY id DESC LIMIT 1");
+    expect(rows[0].ip).toBe('203.0.113.62');
+  });
+});
+
 describe('P3a-AC3: session cookie attributes', () => {
   it('development: HttpOnly and SameSite=Lax', async () => {
     const response = await signIn('rina@example.com', PASSWORD, '198.51.100.20');

@@ -28,6 +28,8 @@ export type AuthOptions = {
   secret: string;
   /** Secure (__Secure-) cookies. True whenever the public URL is HTTPS. */
   secureCookies: boolean;
+  /** `TRUSTED_PROXIES`: how the rate limiter finds the client in X-Forwarded-For (src/shared/application/client-ip.ts). */
+  trustedProxies?: readonly string[];
 };
 
 export const SIGN_IN_RATE_LIMIT = { window: 60, max: 5 } as const;
@@ -39,6 +41,7 @@ const setupTokenCapture = new AsyncLocalStorage<{ token?: string }>();
 
 export function createAuth(options: AuthOptions) {
   const { db } = options;
+  const proxies = options.trustedProxies ?? [];
   return betterAuth({
     ...authSchemaOptions,
     appName: 'ProcureFlow',
@@ -90,6 +93,7 @@ export function createAuth(options: AuthOptions) {
       disableCSRFCheck: false,
       useSecureCookies: options.secureCookies,
       defaultCookieAttributes: { httpOnly: true, sameSite: 'lax', secure: options.secureCookies },
+      ipAddress: { trustedProxies: [...(options.trustedProxies ?? [])] },
     },
     databaseHooks: {
       session: {
@@ -99,16 +103,16 @@ export function createAuth(options: AuthOptions) {
             // A deactivated user (or one without a profile) gets no session at all, and the
             // same answer as a wrong password, so the response reveals nothing about the account.
             if (!(await resolveActor(db, session.userId))) {
-              await auditAuthEvent(db, context, { action: 'auth.signInRejected', userId: session.userId });
+              await auditAuthEvent(db, proxies, context, { action: 'auth.signInRejected', userId: session.userId });
               throw new APIError('UNAUTHORIZED', { code: 'INVALID_EMAIL_OR_PASSWORD', message: 'Invalid email or password' });
             }
-            await auditAuthEvent(db, context, { action: 'auth.signedIn', userId: session.userId });
+            await auditAuthEvent(db, proxies, context, { action: 'auth.signedIn', userId: session.userId });
           },
         },
         delete: {
           // After, and never blocking: signing out must always work.
           after: async (session, context) => {
-            await auditAuthEvent(db, context, { action: 'auth.signedOut', userId: session.userId }).catch((error: unknown) =>
+            await auditAuthEvent(db, proxies, context, { action: 'auth.signedOut', userId: session.userId }).catch((error: unknown) =>
               logger.error('auth.audit_failed', { error: { name: 'AuditError', message: String(error) } }),
             );
           },
@@ -118,14 +122,14 @@ export function createAuth(options: AuthOptions) {
         create: {
           before: async (account, context) => {
             if (account.providerId === 'credential' && account.password) {
-              await auditAuthEvent(db, context, { action: 'auth.passwordSet', userId: account.userId });
+              await auditAuthEvent(db, proxies, context, { action: 'auth.passwordSet', userId: account.userId });
             }
           },
         },
         update: {
           before: async (account, context) => {
             if (account.password && account.userId) {
-              await auditAuthEvent(db, context, { action: 'auth.passwordChanged', userId: account.userId });
+              await auditAuthEvent(db, proxies, context, { action: 'auth.passwordChanged', userId: account.userId });
             }
           },
         },
@@ -135,7 +139,7 @@ export function createAuth(options: AuthOptions) {
       after: createAuthMiddleware(async (ctx) => {
         if (ctx.path === '/sign-in/email' && isAPIError(ctx.context.returned)) {
           const email = typeof ctx.body?.email === 'string' ? ctx.body.email : '';
-          await auditAuthEvent(db, ctx, { action: 'auth.signInFailed', emailFingerprint: emailFingerprint(email) }).catch(
+          await auditAuthEvent(db, proxies, ctx, { action: 'auth.signInFailed', emailFingerprint: emailFingerprint(email) }).catch(
             (error: unknown) => logger.error('auth.audit_failed', { error: { name: 'AuditError', message: String(error) } }),
           );
         }
@@ -157,6 +161,7 @@ export function getAuth(): Auth {
       baseURL: env.BETTER_AUTH_URL,
       secret: env.BETTER_AUTH_SECRET,
       secureCookies: env.BETTER_AUTH_URL.startsWith('https://'),
+      trustedProxies: env.TRUSTED_PROXIES,
     });
   }
   return instance;

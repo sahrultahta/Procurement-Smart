@@ -48,7 +48,7 @@ flowchart LR
 
 | ID | Boundary | Threat | Mitigation | Verified by |
 | --- | --- | --- | --- | --- |
-| S-01 | TB1 | Credential stuffing or brute force on login (T1) | Better Auth rate limiting (DB-backed). Generic error messages. Minimum password length 12 plus a common-password blocklist. | Phase 3: rate-limit integration test, E2E message test |
+| S-01 | TB1 | Credential stuffing or brute force on login (T1) | Better Auth rate limiting (DB-backed), per client IP resolved past `TRUSTED_PROXIES`. Generic error messages. Minimum password length 12. | Phase 3: rate-limit integration test, E2E message test. Phase 10: behind proxies. |
 | S-02 | TB1 | Session theft through XSS | `HttpOnly` cookies. React escaping. `dangerouslySetInnerHTML` banned by lint. Nonce-based CSP. | Phase 3: header test. Lint rule. |
 | S-03 | TB1 | Session fixation or replay after logout | Better Auth issues a new session on sign-in. Logout deletes the session row. Deactivation revokes all sessions. | Phase 3: tests US-ID-02 and US-ID-03 |
 | S-04 | TB1 | Public self-registration creates accounts (T1) | Sign-up disabled. Users are created only by admins. | Phase 3: sign-up endpoint rejected |
@@ -130,6 +130,17 @@ flowchart LR
 - **Approval history is tamper-resistant in the database:** snapshot columns and completed requests are frozen, steps only move forward and cannot be added later, nothing can be deleted (`PFD01` for every role; no DELETE grant).
 - **Residual:** if nobody is eligible for a step (for example, the only approver of a department is the requester), the step stays pending; nothing is skipped automatically. The approval-aging report (Phase 9) shows it. There are no notifications yet: approvers have to open their inbox.
 
+### Phase 10 status (2026-10-30, release v0.1.0)
+
+Every row of sections 5 and 6 was reviewed against the code and the tests; the mapping is in [reports/phase-10.md](reports/phase-10.md) ("Threat-model review"). Changes in this phase:
+
+- **S-01 residual closed:** `TRUSTED_PROXIES` (IPs or CIDR ranges) feeds Better Auth's `advanced.ipAddress.trustedProxies`, and the request context and the sign-in audit events resolve the client by the same rule (the first `X-Forwarded-For` address from the right that is not a proxy). Before, the audit trail recorded the leftmost address, which a client can write; and a proxy that appends to the header left every sign-in in one shared rate-limit bucket. Tested with forged leftmost addresses (`tests/integration/auth.test.ts`, `tests/unit/client-ip.test.ts`). Still no per-account limit.
+- **R-02 / section 7 (owner or superuser):** the hash-chained audit export (`npm run audit:export`, `audit:verify --against-db`) gives tamper *evidence*: a changed, deleted, or added event in the database, or a changed file, is reported. Kept last hashes are the anchor. It does not prevent tampering.
+- **A8 (secrets in build output):** Next.js copies `.env` into the standalone build; `npm run build` now removes it, and a test checks the packaged server has none. The build still holds per-build keys (preview mode, Server Action encryption): docs/deployment.md treats `.next/` as confidential.
+- **I-04 / E-04:** gitleaks 8.30.1 over the full history (15 commits): no leaks; over the working tree only ignored local files (`.env`, `.local/`, `.next/`). `npm audit`: nothing at high or critical (4 moderate in development tooling, unchanged since Phase 7, accepted below). actionlint 1.7.12 finds nothing in the CI workflow.
+- **Availability of operations:** backup, restore, and a backup → drop → restore drill with per-table checksums and audit verification (docs/operations.md), done on a drill cluster.
+- **Deferred, accepted for v0.1.0 (maintainer decision 2026-10-29):** TOTP two-factor authentication (section 7, compromised device: passwords only, rate-limited) and PostgreSQL row-level security as a second authorization layer (authorization is enforced in the application and checked for every operation by the permission matrix; the runtime role cannot change the schema or the audit trail).
+
 ### Phase 9 status (2026-10-28)
 
 - **T-06 (CSV/formula injection) is controlled:** every exported text cell starting with `=`, `+`, `-`, `@`, TAB, or CR gets a leading apostrophe; amount and count cells are written as numbers only when they are plain decimals, and as protected text otherwise (unit tests for each prefix, an integration test with an order line named `=2+3 desk lamps`). Exports need `report.view`, like the reports, and accept only the report's own parameters.
@@ -183,17 +194,17 @@ flowchart LR
 
 ## 7. Accepted risks and out of scope
 
-- **DB superuser or schema owner** can alter data and drop triggers. Mitigations are operational: separate credentials, backups, and optional hash-chained audit export in Phase 10.
+- **DB superuser or schema owner** can alter data and drop triggers. Mitigations are operational: separate credentials, backups, and the hash-chained audit export with its database check (Phase 10, docs/operations.md), which detects such changes but cannot prevent them.
 - **Collusion** between users with complementary roles (AB-11) is detectable, not preventable.
-- **Compromised endpoint device** of a legitimate user: optional TOTP 2FA (Phase 10) reduces but doesn't remove this.
+- **Compromised endpoint device** of a legitimate user: TOTP 2FA would reduce but not remove this; it was deferred past v0.1.0 (Phase 10 decision), so passwords (12 characters minimum, rate-limited sign-in) are the only factor.
 - **Availability under DDoS** is the reverse proxy and hosting provider's job, not the application's.
 
 ## 8. Security requirements checklist (verified in phases noted)
 
 - [x] (P3a) Response headers: `Content-Security-Policy` (nonce, `frame-ancestors 'none'`), `Strict-Transport-Security` (production), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` minimal. Verified by `tests/e2e/security-headers.spec.ts`. HSTS and `upgrade-insecure-requests` are sent only over HTTPS (direct or via `x-forwarded-proto`).
 - [x] (P3a) Cookies: `HttpOnly`, `Secure` in production, `SameSite=Lax`, host-only. `Secure` and `__Secure-` are tied to an HTTPS `BETTER_AUTH_URL` (ADR 0014). Verified by `tests/integration/auth.test.ts` and E2E.
-- [ ] (P1) Environment validated at startup with Zod. The app refuses to start with missing or weak secrets (length ≥ 32 bytes).
-- [x] (P2) The app connects as `procureflow_app` (no DDL). Migrations run as `procureflow_owner`. Verified in Phase 2 by `tests/integration/audit.test.ts` (`current_user`, 42501 on DDL/UPDATE/DELETE/TRUNCATE/DISABLE TRIGGER). Deployment wiring is still Phase 10.
-- [ ] (P3) `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` documented for multi-instance deployments.
-- [ ] (P1) No source maps served in production unless explicitly enabled.
-- [ ] (P10) Dependency audit clean at `high` or accepted with a written note.
+- [x] (P1, verified P10) Environment validated at startup with Zod. The packaged server refuses to start with a missing or invalid `DATABASE_URL` or a `BETTER_AUTH_SECRET` under 32 characters, and names the variable without its value (`tests/e2e/startup-config.spec.ts`, against `.next/standalone/server.js`).
+- [x] (P2) The app connects as `procureflow_app` (no DDL). Migrations run as `procureflow_owner`. Verified in Phase 2 by `tests/integration/audit.test.ts` (`current_user`, 42501 on DDL/UPDATE/DELETE/TRUNCATE/DISABLE TRIGGER). Deployment wiring documented and followed in Phase 10 (docs/deployment.md steps 3 to 6).
+- [x] (P10) `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` documented for multi-instance deployments and rebuilds (docs/deployment.md, "Several instances"; rotation in docs/operations.md).
+- [x] (P1, verified P10) No source maps served in production: `productionBrowserSourceMaps: false`, and the packaged server's static files contain no `.js.map` (`tests/e2e/startup-config.spec.ts`).
+- [x] (P10) Dependency audit clean at `high`: `npm audit` reports no high or critical advisory. The 4 moderate ones (esbuild ≤ 0.24.2 through `drizzle-kit`, a development-only tool that never runs in production and whose dev server is not used) are accepted until drizzle-kit ships without them (Phase 10 report).

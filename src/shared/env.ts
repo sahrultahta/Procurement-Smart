@@ -1,5 +1,6 @@
 import 'server-only';
 import { z } from 'zod';
+import { isProxyEntry } from './application/client-ip';
 
 /**
  * The only place that reads process.env (enforced by ESLint).
@@ -13,6 +14,15 @@ const envSchema = z.object({
   /** Public origin of the app, e.g. https://procureflow.example.com. Also the only trusted origin. */
   BETTER_AUTH_URL: z.url({ protocol: /^https?$/ }),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  /**
+   * The reverse proxies in front of the app, comma-separated IPs or CIDR ranges (docs/deployment.md).
+   * With them, the client IP is the first X-Forwarded-For address from the right that is not a proxy.
+   */
+  TRUSTED_PROXIES: z
+    .string()
+    .optional()
+    .transform((value) => (value ?? '').split(',').map((entry) => entry.trim()).filter(Boolean))
+    .refine((entries) => entries.every(isProxyEntry), 'Each entry must be an IP address or CIDR range'),
 });
 
 export type Env = z.infer<typeof envSchema>;

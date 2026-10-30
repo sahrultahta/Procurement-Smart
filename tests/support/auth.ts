@@ -7,8 +7,14 @@ import { createAuth, issuePasswordSetupToken, type Auth } from '@/server/auth';
 export const BASE_URL = 'http://localhost:3000';
 const TEST_SECRET = randomBytes(32).toString('base64url');
 
-export function makeAuth(db: NodePgDatabase, options: { secureCookies?: boolean; baseURL?: string } = {}): Auth {
-  return createAuth({ db, baseURL: options.baseURL ?? BASE_URL, secret: TEST_SECRET, secureCookies: options.secureCookies ?? false });
+export function makeAuth(db: NodePgDatabase, options: { secureCookies?: boolean; baseURL?: string; trustedProxies?: string[] } = {}): Auth {
+  return createAuth({
+    db,
+    baseURL: options.baseURL ?? BASE_URL,
+    secret: TEST_SECRET,
+    secureCookies: options.secureCookies ?? false,
+    ...(options.trustedProxies ? { trustedProxies: options.trustedProxies } : {}),
+  });
 }
 
 /** Calls Better Auth's HTTP handler the way a browser would (Origin header, JSON body). */

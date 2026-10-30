@@ -2,6 +2,7 @@ import 'server-only';
 import { createHash } from 'node:crypto';
 import { recordAuditEvent } from '@/modules/audit';
 import { resolveActor } from '@/modules/identity';
+import { clientIpFrom } from '@/shared/application/client-ip';
 import { createRequestContext } from '@/shared/application/context';
 import type { Database } from '@/shared/db/transaction';
 
@@ -28,9 +29,10 @@ function headersOf(context: HookContext): Headers | undefined {
   return context?.headers ?? context?.request?.headers;
 }
 
-export async function auditAuthEvent(db: Database, context: HookContext, event: AuthEvent): Promise<void> {
+export async function auditAuthEvent(db: Database, trustedProxies: readonly string[], context: HookContext, event: AuthEvent): Promise<void> {
   const headers = headersOf(context);
-  const forwarded = headers?.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+  // The client the sign-in rate limit sees (ADR 0014).
+  const forwarded = clientIpFrom(headers?.get('x-forwarded-for'), trustedProxies);
   const actor = 'userId' in event ? await resolveActor(db, event.userId) : null;
   const request = createRequestContext({
     // The actor snapshot for the user the event is about (null for unknown users).
