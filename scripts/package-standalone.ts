@@ -7,6 +7,12 @@
 import { cpSync, existsSync, readdirSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
+// Vercel makes its own functions from the build: there is no standalone server to package.
+if (process.env.VERCEL) {
+  console.log('Building on Vercel: no standalone server to package.');
+  process.exit(0);
+}
+
 const root = resolve(import.meta.dirname, '..');
 const standalone = join(root, '.next', 'standalone');
 const server = join(standalone, 'server.js');

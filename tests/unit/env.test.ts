@@ -9,7 +9,14 @@ const VALID = {
 
 describe('parseEnv (P1-AC6)', () => {
   it('accepts a valid configuration and applies defaults', () => {
-    expect(parseEnv(VALID)).toEqual({ ...VALID, NODE_ENV: 'development', LOG_LEVEL: 'info', TRUSTED_PROXIES: [] });
+    expect(parseEnv(VALID)).toEqual({ ...VALID, NODE_ENV: 'development', LOG_LEVEL: 'info', TRUSTED_PROXIES: [], DATABASE_POOL_MAX: 10 });
+  });
+
+  it('takes a database pool size from 1 to 50', () => {
+    expect(parseEnv({ ...VALID, DATABASE_POOL_MAX: '2' }).DATABASE_POOL_MAX).toBe(2);
+    for (const value of ['0', '51', 'many', '1.5']) {
+      expect(() => parseEnv({ ...VALID, DATABASE_POOL_MAX: value })).toThrowError(/DATABASE_POOL_MAX/);
+    }
   });
 
   it('requires an auth secret of at least 32 characters and an http(s) base URL (Phase 3a)', () => {

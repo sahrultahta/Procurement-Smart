@@ -9,6 +9,8 @@ import { isProxyEntry } from './application/client-ip';
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+  /** Connections per server process. On serverless hosting each instance has its own pool: keep it small. */
+  DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(50).default(10),
   /** Signs session cookies and tokens. At least 32 characters (threat model section 8). */
   BETTER_AUTH_SECRET: z.string().min(32),
   /** Public origin of the app, e.g. https://procureflow.example.com. Also the only trusted origin. */

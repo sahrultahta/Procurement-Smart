@@ -10,9 +10,10 @@ let db: NodePgDatabase | undefined;
 /** Lazily creates the shared connection pool on first use. */
 export function getDb(): NodePgDatabase {
   if (!db) {
+    const env = getEnv();
     pool = new pg.Pool({
-      connectionString: getEnv().DATABASE_URL,
-      max: 10,
+      connectionString: env.DATABASE_URL,
+      max: env.DATABASE_POOL_MAX,
       connectionTimeoutMillis: 5_000,
       idleTimeoutMillis: 30_000,
       statement_timeout: 15_000,
