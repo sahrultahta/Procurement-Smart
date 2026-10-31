@@ -262,6 +262,17 @@ Scope: threat-model review against the code; dependency and secret audit; option
 
 ---
 
+## Roadmap after v0.1.0
+
+Agreed with the maintainer on 2026-10-31, in this order:
+
+1. **Manual test** by the maintainer: one full purchase through the demo accounts.
+2. **v0.1.1:** fixes from that test, and the open review items of Phases 8 to 10.
+3. **v0.2.0: Dashboard.** It was in the original brief and was not built; the home page shows only the user's access. Real figures per role.
+4. **GitHub:** create the remote, push, run CI (D5). Needs the maintainer's approval.
+5. **Vercel + Neon demo (D7):** adapt to serverless (database connections, migration job, client IP, build packaging, all still to be tested), document it, publish fictional data only. Needs the maintainer's approval.
+6. **Portfolio:** screenshots, README summary, demo video.
+
 ## Optional later phases (not scheduled)
 
 REST `/api/v1` + OpenAPI (ADR 0010); email notifications; attachments (needs malware scanning and content-type validation design); supplier portal; invoices and three-way match; budgets; multi-currency; SSO/OIDC; Drizzle 1.0 migration; TypeScript 7 once typescript-eslint supports it.
@@ -278,6 +289,7 @@ Settled by the maintainer on 2026-10-18 unless marked open.
 | D4 | UI language for v1 | **English**, with strings externalized for later translation |
 | D5 | GitHub remote (needed to run CI and for P1-AC9 / P10-AC4) | *Open.* Create when ready. CI stays "not verified" until then. |
 | D6 | Git author identity | Repo-local `Sahrul Tahta <sahrul.onederland@gmail.com>`. Never use the HRGA team address. |
+| D7 | Hosting of the public demo | **Vercel with Neon PostgreSQL** (maintainer, 2026-10-31). The original brief named Vercel; v0.1.0 was documented for self-hosting and has not been tried there. Neon: PostgreSQL 18 is generally available, and the migrations need it (`uuidv7()`). Supabase's PostgreSQL 18 status could not be confirmed. Better Auth stays. Demo data is fictional only. Needs accounts and the maintainer's approval before anything is published. |
 
 ## Risks
 
