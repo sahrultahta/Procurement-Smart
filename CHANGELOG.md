@@ -4,6 +4,10 @@ All notable changes to ProcureFlow. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Added
+
+- Deployment on Vercel with Neon PostgreSQL: the build skips the standalone server on Vercel, `DATABASE_POOL_MAX` sizes the connection pool, and docs/deployment.md has a "Vercel with Neon" section. A demo with fictional data is live.
+
 ### Changed
 
 - The repository is on GitHub (private), and continuous integration has run: the first run was green, as reported by the maintainer. This resolves the CI limitation listed under 0.1.0.

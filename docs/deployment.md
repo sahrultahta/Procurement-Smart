@@ -186,6 +186,29 @@ server {
 
 The app sets its own security headers (CSP with a nonce, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `frame-ancestors 'none'`); the proxy does not need to add them.
 
+## Vercel with Neon
+
+The public demo runs this way (decision D7): https://procurement-smart.vercel.app. It was set up and checked on 2026-10-31, from health and security headers through a demo sign-in in the browser. Steps 5 to 8 above do not apply; Vercel builds and serves the app.
+
+1. **Neon:** create a project on PostgreSQL 18 (the migrations need `uuidv7()`), in the region you will use on Vercel. Copy the direct connection string, the one without `-pooler`. It connects as `neondb_owner`, which owns the schema and can create roles.
+2. **Roles and migrations,** from the operator checkout, over the direct connection, with `sslmode=verify-full`: `npm run db:app-role` with `DATABASE_ADMIN_URL` set to that string and `APP_DB_PASSWORD` to a new password, then `npm run db:migrate` with `DATABASE_MIGRATION_URL` set to it. Migrations must not go through the pooler.
+3. **Vercel:** import the GitHub repository (Next.js is detected, no build settings to change) and set these variables:
+
+   | Variable | Value |
+   | --- | --- |
+   | `DATABASE_URL` | the **pooled** host (`-pooler`), as `procureflow_app`, with `sslmode=verify-full` |
+   | `DATABASE_POOL_MAX` | `2`: every function instance opens its own pool |
+   | `BETTER_AUTH_SECRET` | as in step 2 of the main guide |
+   | `BETTER_AUTH_URL` | the exact production address, `https://…vercel.app`; sign-in is refused from any other origin |
+   | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | as in step 2 of the main guide |
+   | `NEXT_TELEMETRY_DISABLED` | `1` |
+
+   Leave `TRUSTED_PROXIES` unset: Vercel overwrites `X-Forwarded-For` with the visitor's address. Do not put another proxy in front of Vercel.
+4. **Region:** set **Settings → Functions → Function Region** to the database's region, and redeploy. Across continents every query waits on the round trip.
+5. **First users:** `npm run bootstrap-admin` from the operator checkout, with the Vercel values and the direct or pooled `DATABASE_URL`. For the fictional demo instead: `npm run seed -- --out .local/neon-seed-credentials.json` (it refuses `NODE_ENV=production`, so leave that unset). Never seed a real installation.
+
+Vercel sets `VERCEL` during the build, so `next.config.ts` skips the standalone output and `npm run build` skips packaging. Keep the Neon owner password out of Vercel; a push to `main` deploys code, but migrations stay a manual step, run before the code that needs them is pushed.
+
 ## Several instances
 
 ProcureFlow keeps no state in the process: sessions, sign-in rate limits, and idempotency keys are in PostgreSQL. To run more than one instance behind a load balancer:
