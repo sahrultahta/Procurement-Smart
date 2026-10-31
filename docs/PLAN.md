@@ -287,7 +287,7 @@ Settled by the maintainer on 2026-10-18 unless marked open.
 | D2 | Copyright holder | **"ProcureFlow contributors"** (`NOTICE`) |
 | D3 | Default currency for seed data and demos | **USD (scale 2).** Tests also cover a 0-scale currency (IDR). |
 | D4 | UI language for v1 | **English**, with strings externalized for later translation |
-| D5 | GitHub remote (needed to run CI and for P1-AC9 / P10-AC4) | *Open.* Create when ready. CI stays "not verified" until then. |
+| D5 | GitHub remote (needed to run CI and for P1-AC9 / P10-AC4) | **Private repository** `sahrultahta/Procurement-Smart` (2026-10-31). `main` and `v0.1.0` pushed; the maintainer reported the first CI run green on GitHub Actions. |
 | D6 | Git author identity | Repo-local `Sahrul Tahta <sahrul.onederland@gmail.com>`. Never use the HRGA team address. |
 | D7 | Hosting of the public demo | **Vercel with Neon PostgreSQL** (maintainer, 2026-10-31). The original brief named Vercel; v0.1.0 was documented for self-hosting and has not been tried there. Neon: PostgreSQL 18 is generally available, and the migrations need it (`uuidv7()`). Supabase's PostgreSQL 18 status could not be confirmed. Better Auth stays. Demo data is fictional only. Needs accounts and the maintainer's approval before anything is published. |
 

@@ -2,6 +2,12 @@
 
 All notable changes to ProcureFlow. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/). Each release links to the phase reports that record what was run and verified.
 
+## [Unreleased]
+
+### Changed
+
+- The repository is on GitHub (private), and continuous integration has run: the first run was green, as reported by the maintainer. This resolves the CI limitation listed under 0.1.0.
+
 ## [0.1.0] - 2026-10-30
 
 The first release: a complete purchase-to-receipt workflow with separation of duties, an append-only audit trail, and reporting. Built in gated phases; every phase report lists the commands run, their results, and what was not verified ([docs/reports/](docs/reports/)).

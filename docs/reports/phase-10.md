@@ -196,7 +196,7 @@ None. Two tools outside the dependency tree, in gitignored `.local/tools`: gitle
 
 - **Not a clean machine:** the drill used this machine's Node, npm cache, and PostgreSQL binaries; a different operating system or a container was not tried. The guide's commands are POSIX; the drill ran their PowerShell form.
 - **Reverse proxy, TLS, HSTS through a proxy, and the systemd unit were not run.** HSTS over `X-Forwarded-Proto` is covered by the existing header tests.
-- **CI has never run** (no remote). The workflow passes actionlint.
+- **CI at release time had never run** (no remote). Update 2026-10-31: pushed to the private repository `sahrultahta/Procurement-Smart` (merge commit `733cf3c`, tag `v0.1.0`); the maintainer reported the first GitHub Actions run green. The agent cannot read Actions on this private repository, so per-job results and logs were not inspected here.
 - **Deferred:** TOTP two-factor authentication, row-level security, a per-account sign-in limit, a common-password blocklist, email delivery of setup links.
 - The audit export is evidence, not prevention; it depends on the operator keeping each export's last hash elsewhere.
 - Backups are logical (`pg_dump`); point-in-time recovery is the database platform's job and was not set up.
@@ -211,5 +211,5 @@ None. Two tools outside the dependency tree, in gitignored `.local/tools`: gitle
 
 - Done (2026-10-30): the maintainer asked to commit Phase 10 and create the tag `v0.1.0`; not pushed.
 - Maintainer review of the choices made inside the plan (above); any change is a follow-up commit.
-- After a remote exists: push, let CI run, and record the result (D5, P1-AC9, P10-AC4).
+- Done (2026-10-31): the remote exists, and CI ran green as reported by the maintainer (D5, P1-AC9, P10-AC4).
 - Optional later phases (PLAN.md): two-factor authentication, email, REST API, and the rest of that list.
